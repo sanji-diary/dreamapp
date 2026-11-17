@@ -36,8 +36,22 @@ export function authorizeUrl(origin: string, state: string): string {
   return `https://kauth.kakao.com/oauth/authorize?${p}`;
 }
 
-/** Exchanges the code for a token and returns the Kakao user id, or null when anything fails. */
-export async function kakaoUserId(code: string, origin: string): Promise<string | null> {
+export type KakaoIdResult = { id: string } | { id: null; errorCode: string };
+
+/** Kakao error bodies carry a short code such as KOE010; keep only that, never tokens or keys. */
+async function kakaoErrorCode(res: Response, step: string): Promise<string> {
+  let code = "";
+  try {
+    const j = (await res.json()) as { error_code?: unknown; error?: unknown; code?: unknown };
+    code = String(j.error_code ?? j.error ?? j.code ?? "");
+  } catch {}
+  const safe = /^[A-Za-z0-9_-]{1,30}$/.test(code) ? code : `HTTP${res.status}`;
+  console.error(`kakao ${step} failed: ${res.status} ${safe}`);
+  return safe;
+}
+
+/** Exchanges the code for a token and returns the Kakao user id, or the Kakao error code when a step fails. */
+export async function kakaoUserId(code: string, origin: string): Promise<KakaoIdResult> {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     client_id: process.env.KAKAO_REST_API_KEY ?? "",
@@ -52,17 +66,18 @@ export async function kakaoUserId(code: string, origin: string): Promise<string 
       body,
       cache: "no-store",
     });
-    if (!tokenRes.ok) return null;
+    if (!tokenRes.ok) return { id: null, errorCode: await kakaoErrorCode(tokenRes, "token") };
     const token = (await tokenRes.json()) as { access_token?: unknown };
-    if (typeof token.access_token !== "string") return null;
+    if (typeof token.access_token !== "string") return { id: null, errorCode: "NO_TOKEN" };
     const meRes = await fetch("https://kapi.kakao.com/v2/user/me", { headers: { authorization: `Bearer ${token.access_token}` }, cache: "no-store" });
-    if (!meRes.ok) return null;
+    if (!meRes.ok) return { id: null, errorCode: await kakaoErrorCode(meRes, "user") };
     const me = (await meRes.json()) as { id?: unknown };
-    if (typeof me.id !== "number" && typeof me.id !== "string") return null;
+    if (typeof me.id !== "number" && typeof me.id !== "string") return { id: null, errorCode: "NO_ID" };
     const id = String(me.id);
-    return /^\d{1,30}$/.test(id) ? id : null;
-  } catch {
-    return null;
+    return /^\d{1,30}$/.test(id) ? { id } : { id: null, errorCode: "BAD_ID" };
+  } catch (e) {
+    console.error("kakao request failed", e);
+    return { id: null, errorCode: "NETWORK" };
   }
 }
 

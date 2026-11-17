@@ -27,10 +27,10 @@ export async function GET(req: Request) {
   // The state must match the cookie set when the sign-in started (CSRF protection).
   if (!expected || !state || !same(state, expected) || !code) redirect("/staff/login?error=state");
 
-  const kakaoId = await kakaoUserId(code, appOrigin(url.origin));
-  if (!kakaoId) redirect("/staff/login?error=kakao");
+  const k = await kakaoUserId(code, appOrigin(url.origin));
+  if (k.id === null) redirect(`/staff/login?error=kakao&code=${encodeURIComponent(k.errorCode)}`);
 
-  const r = await resolveKakaoStaff(kakaoId, invite);
+  const r = await resolveKakaoStaff(k.id, invite);
   if (!r.ok) redirect(`/staff/login?error=${r.reason}`);
   await setSession("staff", r.staffId);
   redirect("/staff");

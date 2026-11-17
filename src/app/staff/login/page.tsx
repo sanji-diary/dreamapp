@@ -23,6 +23,8 @@ export default async function StaffLoginPage({ searchParams }: PageProps<"/staff
   const sp = await searchParams;
   const invite = typeof sp.invite === "string" ? sp.invite.slice(0, 100) : "";
   const error = typeof sp.error === "string" ? (ERRORS[sp.error] ?? null) : null;
+  // Kakao's own error code (for example KOE010) helps the admin fix the Kakao app settings.
+  const kakaoCode = typeof sp.code === "string" && /^[A-Za-z0-9_-]{1,30}$/.test(sp.code) ? sp.code : "";
   const invited = invite ? await inviteName(invite) : null;
   const dev = devLoginAllowed();
   const staff = dev ? await db.query<{ id: number; name: string; role: Role }>("select id, name, role from staff where active order by id") : [];
@@ -41,6 +43,7 @@ export default async function StaffLoginPage({ searchParams }: PageProps<"/staff
       {error ? (
         <p role="alert" className="mt-4 mb-0 rounded-[10px] bg-danger-tint px-3 py-[11px] text-[14px] leading-5 font-bold text-[#8E2A22]">
           {error}
+          {kakaoCode ? <span className="mt-1 block text-[12px] font-semibold">오류 코드: {kakaoCode}</span> : null}
         </p>
       ) : null}
 
