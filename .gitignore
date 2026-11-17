@@ -42,3 +42,8 @@ next-env.d.ts
 
 # local database and uploads
 .data/
+
+# agent worktrees
+.claude/worktrees/
+
+!.env.example
