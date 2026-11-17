@@ -6,9 +6,10 @@ import { requireAdmin } from "@/lib/auth";
 import { readQuizJson } from "@/lib/quiz";
 import { saveUpload } from "@/lib/uploads";
 import { adjustPoints, archiveClass, copyPreviousWorship, deleteNotice, deletePost, moveChildren, moveClass, reissueJoinCode, saveClass, saveNotice, savePost, saveSettings, saveWorship, setSelfJoin } from "./admin-misc";
-import { duplicateToNextWeek, saveMission, setMissionActive } from "./admin-missions";
-import { createStaff, renewInvite, updateStaff } from "./admin-staff";
-import { clean, cleanOrNull, fail, toInt, type Result } from "./util";
+import { weekStart } from "@/lib/time";
+import { copyWeek, duplicateToNextWeek, getMission, saveMission, setMissionActive, setMissionChallenge } from "./admin-missions";
+import { createStaff, getStaffRow, renewInvite, setStaffSwitch, updateStaff } from "./admin-staff";
+import { clean, cleanOrNull, fail, isDate, toInt, type Result } from "./util";
 
 /**
  * Server actions for the admin screens. requireAdmin() runs first in every action, and the
@@ -54,18 +55,49 @@ export async function missionSaveAction(formData: FormData) {
     quiz_pass: toInt(formData.get("quiz_pass")),
     game_id: cleanOrNull(formData.get("game_id"), 40),
   });
-  finish(r, "/staff/admin/missions", id === null ? "미션을 올렸어요" : "미션을 고쳤어요", id === null ? "/staff/admin/missions/new" : `/staff/admin/missions/${id}`);
+  // Back to the list, on the week the mission starts in and with the mission open.
+  const starts = clean(formData.get("starts_on"), 10);
+  const list = r.ok && isDate(starts) ? missionsPath(weekStart(starts), r.id) : MISSIONS;
+  finish(r, list, id === null ? "미션을 올렸어요" : "미션을 고쳤어요", id === null ? `${MISSIONS}/new` : `${MISSIONS}/${id}`);
+}
+
+const MISSIONS = "/staff/admin/missions";
+
+/** The mission list on one week (a Sunday, or "past" for the list of old missions) with one mission open. Both are checked here. */
+function missionsPath(week: unknown, openId: number | null): string {
+  const p = new URLSearchParams();
+  if (week === "past" || isDate(week)) p.set("w", week);
+  if (openId !== null) p.set("id", String(openId));
+  const s = p.toString();
+  return s ? `${MISSIONS}?${s}` : MISSIONS;
 }
 
 export async function missionOpAction(formData: FormData) {
   const staff = await requireAdmin();
   const id = toInt(formData.get("id"));
-  if (id === null) redirect("/staff/admin/missions");
-  const op = clean(formData.get("op"), 12);
-  if (op === "duplicate") finish(await duplicateToNextWeek(staff, id), "/staff/admin/missions", "다음 주로 복사했어요");
-  if (op === "deactivate") finish(await setMissionActive(staff, id, false), "/staff/admin/missions", "미션을 내렸어요");
-  if (op === "activate") finish(await setMissionActive(staff, id, true), "/staff/admin/missions", "미션을 다시 올렸어요");
-  redirect("/staff/admin/missions");
+  if (id === null) redirect(MISSIONS);
+  const op = clean(formData.get("op"), 14);
+  // The list comes back as it was: same week, same mission open.
+  const here = missionsPath(clean(formData.get("w"), 10), id);
+  if (op === "duplicate") {
+    const r = await duplicateToNextWeek(staff, id);
+    const copy = r.ok ? await getMission(staff, r.id) : null;
+    finish(r, copy ? missionsPath(weekStart(copy.starts_on), copy.id) : here, "다음 주로 복사했어요", here);
+  }
+  if (op === "deactivate") finish(await setMissionActive(staff, id, false), here, "이제 이 미션은 받지 않아요");
+  if (op === "activate") finish(await setMissionActive(staff, id, true), here, "미션을 다시 받아요");
+  if (op === "challenge_on") finish(await setMissionChallenge(staff, id, true), here, "도전 미션으로 정했어요");
+  if (op === "challenge_off") finish(await setMissionChallenge(staff, id, false), here, "도전 미션에서 뺐어요");
+  redirect(here);
+}
+
+/** "지난주 미션 복사": fills the week in `to` with copies of the missions of the week before it. */
+export async function missionCopyWeekAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const to = clean(formData.get("to"), 10);
+  const here = missionsPath(to, null);
+  const r = await copyWeek(staff, to);
+  finish(r, here, r.ok ? `미션 ${r.copied}개를 복사했어요${r.skipped > 0 ? `. 이미 있던 ${r.skipped}개는 그대로 두었어요` : ""}` : undefined);
 }
 
 /* ---------- teachers ---------- */
@@ -73,8 +105,29 @@ export async function missionOpAction(formData: FormData) {
 export async function staffCreateAction(formData: FormData) {
   const staff = await requireAdmin();
   const r = await createStaff(staff, clean(formData.get("name"), 20), clean(formData.get("role"), 10));
-  if (!r.ok) finish(r, "/staff/admin/staff");
+  // On a mistake the invite form stays open.
+  if (!r.ok) finish(r, "/staff/admin/staff?new=1");
   finish(r, `/staff/admin/staff/${r.id}`, "선생님을 추가했어요. 초대 링크를 보내 주세요");
+}
+
+const SWITCH_WORDS: Record<string, string> = {
+  can_attendance: "출석 체크를",
+  can_visits: "심방 기록을",
+  can_approve: "미션 확인을",
+  can_view_all: "모든 반 보기를",
+  can_read_pastor_worries: "전도사님 고민 읽기를",
+};
+
+/** One switch in the table of teachers. setStaffSwitch checks the key and the role again. */
+export async function staffSwitchAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const id = toInt(formData.get("id"));
+  if (id === null) redirect("/staff/admin/staff");
+  const key = clean(formData.get("key"), 30);
+  const turnOn = formData.get("value") === "on";
+  const r = await setStaffSwitch(staff, id, key, turnOn);
+  const name = r.ok ? ((await getStaffRow(staff, id))?.name ?? "") : "";
+  finish(r, "/staff/admin/staff", `${name} 선생님의 ${SWITCH_WORDS[key] ?? "권한을"} ${turnOn ? "켰어요" : "껐어요"}`);
 }
 
 export async function staffSaveAction(formData: FormData) {

@@ -1,41 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import { inputClass, labelClass, primaryButtonClass } from "@/components/ui";
 import { missionSaveAction } from "@/lib/staff/actions-admin";
 import type { MissionInput } from "@/lib/staff/admin-missions";
+import { addDays, weekLabel, weekStart } from "@/lib/time";
+import { ChoiceChips, FieldGroup, FieldPair, HintText, NumberStepper, SaveBar, SubmitButton, SwitchRow, TextArea, TextInput, errorFor, inputBoxClass } from "./form-kit";
 import { QuizEditor } from "./QuizEditor";
-import { Stepper } from "./widgets";
 
 type Option = { value: string; label: string };
 
-function Pick({ legend, name, options, value, onChange }: { legend: string; name: string; options: Option[]; value: string; onChange: (v: string) => void }) {
-  return (
-    <fieldset className="m-0 flex min-w-0 flex-col gap-0.5 border-0 p-0">
-      <legend className={`p-0 ${labelClass}`}>{legend}</legend>
-      <div className="flex flex-wrap gap-x-1.5">
-        {options.map((o) => (
-          <label key={o.value} className="flex h-11 cursor-pointer items-center">
-            <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="peer sr-only" />
-            <span className="flex h-[34px] items-center rounded-lg bg-fill px-3 text-[14px] font-semibold text-sub peer-checked:bg-navy peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
-              {o.label}
-            </span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
 const ICON_NAMES: Record<string, string> = { bible: "성경", stamp: "도장", house: "집", bubble: "말풍선", pray: "기도", drop: "물방울", can: "물뿌리개", persimmon: "감", badge: "배지", pouch: "주머니" };
 
-const hintClass = "m-0 text-[13px] leading-[19px] text-sub";
+const isDay = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(new Date(`${v}T00:00:00Z`).getTime());
+const dayOf = (v: string) => Number(v.slice(8));
+
+/** The gray box that holds what belongs to one way of checking (the verse, the quiz, the game, the QR notes). */
+const panelClass = "flex min-w-0 flex-col gap-3 rounded-[20px] bg-fill p-4 max-[339px]:p-3";
 
 /**
- * Create or edit a mission. Fields that belong to one kind show only for that kind:
- * verse text, quiz questions, the game picker, and the QR notes.
+ * Create or edit a mission, top to bottom as on the mock: 제목, how it is checked, drops and points,
+ * when, who, and the challenge switch, then one button. Fields that belong to one kind show only
+ * for that kind: verse text, quiz questions, the game picker and the QR notes.
+ * `error` is the message the server sent back; it is shown again under the field it is about.
  */
-export function MissionForm({ id, initial, kinds, icons, targets, games }: { id: number | null; initial: MissionInput; kinds: Option[]; icons: string[]; targets: Option[]; games: { id: string; title: string; description: string }[] }) {
+export function MissionForm({
+  id,
+  initial,
+  kinds,
+  icons,
+  targets,
+  games,
+  thisWeek,
+  error,
+}: {
+  id: number | null;
+  initial: MissionInput;
+  kinds: Option[];
+  icons: string[];
+  targets: Option[];
+  games: { id: string; title: string; description: string }[];
+  /** The Sunday of the current week in Korea, for the week buttons. */
+  thisWeek: string;
+  error?: string;
+}) {
   const [gameId, setGameId] = useState(initial.game_id ?? games[0]?.id ?? "");
   const [qrSelf, setQrSelf] = useState(initial.qr_self);
   const [kind, setKind] = useState(initial.kind);
@@ -44,105 +51,104 @@ export function MissionForm({ id, initial, kinds, icons, targets, games }: { id:
   const [points, setPoints] = useState(initial.points);
   const [drops, setDrops] = useState(initial.drops);
   const [target, setTarget] = useState(initial.target_class_id !== null ? `c${initial.target_class_id}` : initial.target_grade !== null ? `g${initial.target_grade}` : "all");
+  const [starts, setStarts] = useState(initial.starts_on);
+  const [ends, setEnds] = useState(initial.ends_on);
+
+  // Week buttons: this week and the two after it. They only fill the two date boxes below.
+  const weeks = [0, 1, 2].map((i) => {
+    const start = addDays(thisWeek, 7 * i);
+    return { start, end: addDays(start, 6), label: `${weekLabel(start)}${i === 0 ? " · 이번 주" : i === 1 ? " · 다음 주" : ""}` };
+  });
+  const whole = isDay(starts) && isDay(ends) && weekStart(starts) === starts && ends === addDays(starts, 6);
+  const sameMonth = starts.slice(0, 7) === ends.slice(0, 7);
+  const dateError = errorFor(error, /기간/);
+
   return (
-    <form action={missionSaveAction} className="flex grow flex-col gap-3 px-4 pt-1.5 pb-6">
+    <form action={missionSaveAction} className="flex grow flex-col gap-3.5">
       {id !== null ? <input type="hidden" name="id" value={id} /> : null}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="m-title" className={labelClass}>
-          미션 이름
-        </label>
-        <input id="m-title" name="title" required maxLength={40} defaultValue={initial.title} placeholder="예: 이번 주 말씀 쓰기" className={inputClass} />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="m-desc" className={labelClass}>
-          한 줄 설명
-        </label>
-        <input id="m-desc" name="description" maxLength={80} defaultValue={initial.description} placeholder="예: 시편 23편 1절 따라 쓰기" className={inputClass} />
-      </div>
-      <Pick legend="어떻게 확인하나요" name="kind" options={kinds} value={kind} onChange={setKind} />
+      <TextInput label="제목" name="title" id="m-title" required maxLength={40} defaultValue={initial.title} placeholder="예: 가정예배 드리기" error={errorFor(error, /제목/)} />
+      <TextInput label="한 줄 설명" name="description" id="m-desc" maxLength={80} defaultValue={initial.description} placeholder="예: 예배 사진 한 장 올리기" hint="아이 미션 목록에서 제목 아래에 보여요." />
+
+      <ChoiceChips legend="어떻게 확인할까요?" name="kind" options={kinds} value={kind} onChange={setKind} error={errorFor(error, /확인 방법/)} />
       {kind === "verse" ? (
-        <div className="flex flex-col gap-2 rounded-xl bg-fill p-3">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="m-verse" className={labelClass}>
-              따라 쓸 말씀
-            </label>
-            <textarea id="m-verse" name="verse_text" required maxLength={300} defaultValue={initial.verse_text ?? ""} className="min-h-[76px] w-full rounded-xl border-[1.5px] border-[#D1D6DB] bg-white px-3.5 py-2.5 text-[16px] leading-6 text-ink outline-none focus:border-navy" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="m-ref" className={labelClass}>
-              말씀 주소
-            </label>
-            <input id="m-ref" name="verse_ref" maxLength={40} defaultValue={initial.verse_ref ?? ""} placeholder="예: 시편 23편 1절" className={inputClass} />
-          </div>
+        <div className={panelClass}>
+          <TextArea label="따라 쓸 말씀" name="verse_text" id="m-verse" required maxLength={300} defaultValue={initial.verse_text ?? ""} error={errorFor(error, /말씀/)} />
+          <TextInput label="말씀 주소" name="verse_ref" id="m-ref" maxLength={40} defaultValue={initial.verse_ref ?? ""} placeholder="예: 시편 23편 1절" />
         </div>
       ) : null}
-      {kind === "quiz" ? <QuizEditor initial={initial.quiz} initialPass={initial.quiz_pass} /> : null}
+      {kind === "quiz" ? <QuizEditor initial={initial.quiz} initialPass={initial.quiz_pass} error={errorFor(error, /문제|통과 기준/)} /> : null}
       {kind === "game" ? (
-        <fieldset className="m-0 flex min-w-0 flex-col gap-2 rounded-xl border-0 bg-fill p-3">
-          <legend className="sr-only">어떤 게임인가요</legend>
-          <span aria-hidden="true" className={labelClass}>
-            어떤 게임인가요
-          </span>
-          {games.map((g) => (
-            <label key={g.id} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-transparent bg-white px-3.5 py-2 has-checked:border-navy has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-navy">
-              <input type="radio" name="game_id" value={g.id} checked={gameId === g.id} onChange={() => setGameId(g.id)} className="h-5 w-5 shrink-0 accent-navy" />
-              <span className="flex min-w-0 flex-col">
-                <span className="text-[15px] font-bold text-ink2">{g.title}</span>
-                <span className="text-[13px] leading-[18px] text-sub">{g.description}</span>
-              </span>
-            </label>
-          ))}
-          <p className={hintClass}>아이가 게임을 끝까지 하면 미션이 완료돼요. 시간을 재거나 순위를 매기지 않아요.</p>
-        </fieldset>
+        <div className={panelClass}>
+          <FieldGroup legend="어떤 게임인가요?" error={errorFor(error, /게임/)} hint="아이가 게임을 끝까지 하면 미션이 완료돼요. 시간을 재거나 순위를 매기지 않아요.">
+            <div className="flex flex-col gap-2">
+              {games.map((g) => (
+                <label key={g.id} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border-2 border-transparent bg-white px-3.5 py-2 has-checked:border-navy has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-navy">
+                  <input type="radio" name="game_id" value={g.id} checked={gameId === g.id} onChange={() => setGameId(g.id)} className="h-5 w-5 shrink-0 accent-navy" />
+                  <span className="flex min-w-0 flex-col">
+                    <b className="text-[15px] tracking-[-0.02em]">{g.title}</b>
+                    <span className="text-[13px] text-mute">{g.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </FieldGroup>
+        </div>
       ) : null}
       {kind === "qr" ? (
-        <div className="flex flex-col gap-1 rounded-xl bg-fill p-3">
-          <p className="m-0 text-[14px] font-bold text-ink2">QR을 인쇄해서 교회에 붙여 주세요</p>
-          <p className={hintClass}>{id === null ? "미션을 올리면 QR이 만들어져요. 미션 목록의 ‘QR 인쇄’에서 A4로 뽑을 수 있어요." : "이 화면 위쪽의 ‘QR 인쇄하기’에서 A4로 뽑을 수 있어요."} 아이가 휴대폰 카메라로 찍으면 바로 완료돼요.</p>
+        <div className={panelClass}>
+          <div className="flex flex-col gap-1">
+            <b className="text-[15px] tracking-[-0.02em]">QR을 인쇄해서 교회에 붙여 주세요</b>
+            <span className="text-[13px] leading-[19px] text-mute">
+              {id === null ? "미션을 올리면 QR이 만들어져요. 미션 목록에서 미션을 누르고 ‘QR 인쇄’로 A4에 뽑을 수 있어요." : "이 화면 위쪽의 ‘QR 인쇄’에서 A4로 뽑을 수 있어요."} 아이가 휴대폰 카메라로 찍으면 바로 완료돼요.
+            </span>
+          </div>
         </div>
       ) : null}
       {kind === "attendance" ? (
-        <div className="flex flex-col gap-2 rounded-xl bg-fill p-3">
-          <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3">
-            <span className="flex flex-col">
-              <span className="text-[15px] font-semibold text-ink2">QR로 스스로 출석</span>
-              <span className="text-[12px] leading-[17px] text-mute">아이가 교회에 붙은 QR을 찍으면 출석으로 기록돼요</span>
-            </span>
-            <input type="checkbox" role="switch" name="qr_self" checked={qrSelf} onChange={(e) => setQrSelf(e.target.checked)} className="peer sr-only" />
-            <span className="flex h-[30px] w-[52px] shrink-0 items-center rounded-full bg-faint px-[3px] peer-checked:justify-end peer-checked:bg-navy peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
-              <span className="h-6 w-6 rounded-full bg-white" />
-            </span>
-          </label>
+        <div className={panelClass}>
+          <SwitchRow onGray name="qr_self" checked={qrSelf} onChange={setQrSelf} label="QR로 스스로 출석" hint="아이가 교회에 붙은 QR을 찍으면 출석으로 기록돼요" />
           {qrSelf ? (
-            <p className={hintClass}>
-              기간 안의 어느 날이든 QR을 찍으면 그날 출석으로 기록돼요. 기간을 주일 하루로 정하고, 예배가 끝나면 QR을 떼어 주세요. QR 주소를 전달받은 아이도 찍을 수 있으니 출석부에서 한 번 더 확인해 주세요.
-            </p>
+            <HintText>기간 안의 어느 날이든 QR을 찍으면 그날 출석으로 기록돼요. 기간을 주일 하루로 정하고, 예배가 끝나면 QR을 떼어 주세요. QR 주소를 전달받은 아이도 찍을 수 있으니 출석부에서 한 번 더 확인해 주세요.</HintText>
           ) : null}
         </div>
       ) : null}
-      <fieldset className="m-0 flex min-w-0 flex-col gap-1 border-0 p-0">
-        <legend className={`p-0 ${labelClass}`}>아이콘</legend>
-        <div className="grid grid-cols-5 gap-1.5 pt-1">
-          {icons.map((name) => (
-            <label key={name} className="cursor-pointer">
-              <input type="radio" name="icon" value={name} checked={icon === name} onChange={() => setIcon(name)} className="peer sr-only" />
-              <span className="flex h-[52px] items-center justify-center rounded-xl border-2 border-transparent bg-fill peer-checked:border-navy peer-checked:bg-navy-tint peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt={ICON_NAMES[name] ?? name} src={`/img/icon-${name}.webp`} width={36} height={36} className="h-9 w-9" />
-              </span>
-            </label>
-          ))}
+
+      <FieldPair>
+        <NumberStepper label="물방울" name="drops" id="m-drops" value={drops} onChange={setDrops} step={1} min={0} max={5} unit="개" error={errorFor(error, /물방울/)} />
+        <NumberStepper label="포인트" name="points" id="m-points" value={points} onChange={setPoints} step={5} min={0} max={100} unit="P" error={errorFor(error, /포인트/)} />
+      </FieldPair>
+
+      <FieldGroup legend="언제" error={dateError} hint={whole ? `${weekLabel(starts)} (${sameMonth ? "" : `${Number(starts.slice(5, 7))}월 `}${dayOf(starts)}일 ~ ${sameMonth ? "" : `${Number(ends.slice(5, 7))}월 `}${dayOf(ends)}일) 주일부터 토요일까지예요.` : "주를 누르면 그 주 주일부터 토요일까지로 맞춰져요. 날짜를 직접 고쳐도 돼요."}>
+        <div className="-my-[5px] flex flex-wrap gap-x-[7px]" role="group" aria-label="주로 고르기">
+          {weeks.map((w) => {
+            const on = starts === w.start && ends === w.end;
+            return (
+              <button
+                key={w.start}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  setStarts(w.start);
+                  setEnds(w.end);
+                }}
+                className="group flex h-11 cursor-pointer items-center border-0 bg-transparent p-0 outline-none"
+              >
+                <span className={`rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy ${on ? "bg-navy text-white" : "bg-fill text-sub"}`}>{w.label}</span>
+              </button>
+            );
+          })}
         </div>
-      </fieldset>
-      <div className="flex flex-col gap-1.5">
-        <span className={labelClass}>보상</span>
-        <div className="flex gap-2">
-          <Stepper name="points" label="포인트" icon="pouch" value={points} onChange={setPoints} step={5} min={0} max={100} unit="P" />
-          <Stepper name="drops" label="물방울" icon="drop" value={drops} onChange={setDrops} step={1} min={0} max={5} unit="개" />
+        <div className="flex items-center gap-2 max-[339px]:flex-col max-[339px]:items-stretch max-[339px]:gap-1.5">
+          <input aria-label="시작하는 날" name="starts_on" type="date" required value={starts} onChange={(e) => setStarts(e.target.value)} aria-invalid={dateError ? true : undefined} className={inputBoxClass(Boolean(dateError), true)} />
+          <span aria-hidden="true" className="text-mute max-[339px]:hidden">
+            ~
+          </span>
+          <input aria-label="끝나는 날" name="ends_on" type="date" required value={ends} min={isDay(starts) ? starts : undefined} onChange={(e) => setEnds(e.target.value)} aria-invalid={dateError ? true : undefined} className={inputBoxClass(Boolean(dateError), true)} />
         </div>
-      </div>
-      <Pick
-        legend="몇 번 할 수 있나요"
+      </FieldGroup>
+
+      <ChoiceChips
+        legend="몇 번 할 수 있나요?"
         name="repeat"
         options={[
           { value: "once", label: "한 번" },
@@ -151,42 +157,45 @@ export function MissionForm({ id, initial, kinds, icons, targets, games }: { id:
         ]}
         value={repeat}
         onChange={setRepeat}
+        error={errorFor(error, /반복/)}
       />
       {repeat === "daily" ? (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="m-limit" className={labelClass}>
-            한 주에 몇 번까지
-          </label>
-          <input id="m-limit" name="weekly_limit" type="number" inputMode="numeric" min={1} max={7} defaultValue={initial.weekly_limit ?? ""} placeholder="비우면 7번" className={inputClass} />
-          <p className="m-0 text-[12px] leading-[18px] text-mute">
-            한 주에 최대 물방울 {drops * 7}개까지 받을 수 있어요. 횟수를 정하면 그만큼만 받아요.
-          </p>
-        </div>
+        <TextInput
+          label="한 주에 몇 번까지"
+          name="weekly_limit"
+          id="m-limit"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={7}
+          defaultValue={initial.weekly_limit ?? ""}
+          placeholder="비우면 7번"
+          hint={`한 주에 최대 물방울 ${drops * 7}개까지 받을 수 있어요. 횟수를 정하면 그만큼만 받아요.`}
+          error={errorFor(error, /횟수/)}
+        />
       ) : null}
-      <Pick legend="누구에게 보이나요" name="target" options={targets} value={target} onChange={setTarget} />
-      <fieldset className="m-0 flex min-w-0 flex-col gap-1.5 border-0 p-0">
-        <legend className={`p-0 ${labelClass}`}>기간</legend>
-        <div className="flex items-center gap-2 pt-1.5">
-          <input aria-label="시작하는 날" name="starts_on" type="date" required defaultValue={initial.starts_on} className={`${inputClass} min-w-0 px-2.5`} />
-          <span aria-hidden="true" className="text-mute">
-            -
-          </span>
-          <input aria-label="끝나는 날" name="ends_on" type="date" required defaultValue={initial.ends_on} className={`${inputClass} min-w-0 px-2.5`} />
+
+      <ChoiceChips legend="누구에게" name="target" options={targets} value={target} onChange={setTarget} />
+
+      <FieldGroup legend="그림">
+        <div className="grid grid-cols-5 gap-1.5 min-[480px]:grid-cols-10">
+          {icons.map((name) => (
+            <label key={name} className="relative cursor-pointer">
+              <input type="radio" name="icon" value={name} aria-label={ICON_NAMES[name] ?? name} checked={icon === name} onChange={() => setIcon(name)} className="peer sr-only" />
+              <span className="grid h-[52px] place-items-center rounded-2xl border-2 border-transparent bg-fill peer-checked:border-navy peer-checked:bg-navy-tint peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img alt="" src={`/img/icon-${name}.webp`} width={36} height={36} className="h-9 w-9 object-contain" />
+              </span>
+            </label>
+          ))}
         </div>
-      </fieldset>
-      <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl bg-fill px-3.5">
-        <span className="flex flex-col">
-          <span className="text-[15px] font-semibold text-ink2">도전 미션</span>
-          <span className="text-[12px] text-mute">미션 목록 맨 위에 따로 보여요</span>
-        </span>
-        <input type="checkbox" role="switch" name="is_challenge" defaultChecked={initial.is_challenge} className="peer sr-only" />
-        <span className="flex h-[30px] w-[52px] shrink-0 items-center rounded-full bg-faint px-[3px] peer-checked:justify-end peer-checked:bg-navy peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
-          <span className="h-6 w-6 rounded-full bg-white" />
-        </span>
-      </label>
-      <button type="submit" className={`${primaryButtonClass} mt-2 shrink-0 cursor-pointer`}>
-        {id === null ? "미션 올리기" : "미션 저장하기"}
-      </button>
+      </FieldGroup>
+
+      <SwitchRow name="is_challenge" defaultChecked={initial.is_challenge} label="이번 주 도전 미션" hint="아이 미션 목록 맨 위에 보여요" />
+
+      <SaveBar>
+        <SubmitButton>{id === null ? "미션 올리기" : "고친 내용 저장"}</SubmitButton>
+      </SaveBar>
     </form>
   );
 }

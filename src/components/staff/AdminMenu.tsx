@@ -20,11 +20,12 @@ export function AdminGrid() {
 
 /**
  * 숲 소식, 예배 순서 and 공지 share one menu item ("소식·예배"); this switch at the top of each of
- * the three pages moves between them.
+ * the three pages moves between them. The pages are laid out with the kit's <Page>, which gives
+ * the paddings; on wide screens the switch keeps a readable width at the left.
  */
 export function ContentTabs({ active }: { active: "posts" | "worship" | "notices" }) {
   return (
-    <div className="px-4 pt-2 print:hidden">
+    <div className="lg:max-w-[420px] print:hidden">
       <Segmented
         label="소식·예배"
         items={[

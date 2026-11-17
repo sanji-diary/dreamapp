@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { primaryButtonClass } from "@/components/ui";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { festivalChildAction, festivalPayAction, festivalScanAction, festivalUndoAction } from "@/lib/staff/actions-festival";
 import type { FestivalChild, FestivalKid } from "@/lib/staff/festival";
 import { MAX_TALENT_AMOUNT, UNDO_MINUTES } from "@/lib/talent-math";
-import { Face } from "./ui";
+import { inputBoxClass } from "./form-kit";
+import { Chevron, EmptyNote, LineIcon, Notice, Page, RoundLink, Tag, TreeAvatar, ctaClass, pillClass, type LineIconName } from "./kit";
 
 /* ---------- QR card scanning (only where the browser can do it by itself) ---------- */
 
@@ -80,20 +80,106 @@ function CardScanner({ onRead, onClose }: { onRead: (text: string) => void; onCl
   }, [onRead]);
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-ink p-3">
+    <div className="flex flex-col gap-2.5 rounded-[20px] bg-ink p-3">
       {error ? (
         <p role="alert" className="m-0 px-1 py-6 text-center text-[14px] leading-[21px] font-semibold text-white">
           {error}
         </p>
       ) : (
         <>
-          <video ref={video} playsInline muted aria-label="카메라 화면" className="aspect-square w-full rounded-xl bg-black object-cover" />
+          <video ref={video} playsInline muted aria-label="카메라 화면" className="aspect-square w-full rounded-[14px] bg-black object-cover" />
           <p className="m-0 text-center text-[13px] text-white">아이의 QR 카드를 화면 가운데에 맞춰 주세요</p>
         </>
       )}
-      <button type="button" onClick={onClose} className="h-11 w-full cursor-pointer rounded-[10px] border-0 bg-white text-[15px] font-bold text-ink2">
+      <button type="button" onClick={onClose} className="h-11 w-full cursor-pointer rounded-xl border-0 bg-white text-[15px] font-bold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
         카메라 닫기
       </button>
+    </div>
+  );
+}
+
+/* ---------- the stall this phone is paying at ---------- */
+
+// The name of the stall ("떡볶이 코너") is kept on this phone, so a teacher types it once for the day.
+// It goes with every payment as its note, exactly as the optional note did before.
+const STALL_KEY = "dream-festival-stall";
+const STALL_EVENT = "dream-festival-stall";
+let stallMemory: string | null = null;
+
+function stallSubscribe(cb: () => void) {
+  window.addEventListener("storage", cb);
+  window.addEventListener(STALL_EVENT, cb);
+  return () => {
+    window.removeEventListener("storage", cb);
+    window.removeEventListener(STALL_EVENT, cb);
+  };
+}
+function stallRead(): string {
+  if (stallMemory !== null) return stallMemory;
+  try {
+    return window.localStorage.getItem(STALL_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+function stallWrite(name: string) {
+  stallMemory = name;
+  try {
+    window.localStorage.setItem(STALL_KEY, name);
+  } catch {
+    // Private mode: the name is kept for this visit only.
+  }
+  window.dispatchEvent(new Event(STALL_EVENT));
+}
+
+function StallLine({ stall }: { stall: string }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  if (editing) {
+    return (
+      <form
+        className="flex items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          stallWrite(text.trim().slice(0, 40));
+          setEditing(false);
+        }}
+      >
+        <div className="flex min-w-0 grow flex-col gap-1.5">
+          <label htmlFor="fp-stall" className="text-[13px] leading-[1.4] font-semibold text-ink2">
+            코너 이름 (비워 둬도 돼요)
+          </label>
+          <input id="fp-stall" value={text} onChange={(e) => setText(e.currentTarget.value)} maxLength={40} placeholder="예: 떡볶이 코너" enterKeyHint="done" autoFocus className={inputBoxClass()} />
+        </div>
+        <button type="submit" className="group flex h-[46px] shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 outline-none">
+          <span className={`${pillClass("navy")} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy`}>정하기</span>
+        </button>
+      </form>
+    );
+  }
+  const change = (
+    <button
+      type="button"
+      onClick={() => {
+        setText(stall);
+        setEditing(true);
+      }}
+      className="-my-2 flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent px-1 text-[13px] font-bold text-navy underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-navy"
+    >
+      {stall ? "바꾸기" : "코너 이름 정하기"}
+    </button>
+  );
+  return (
+    <div className="flex min-h-7 flex-wrap items-center gap-x-2">
+      {stall ? (
+        <>
+          <Tag tone="navy">{stall}</Tag>
+          <span className="text-[13px] text-mute">에서 받는 중이에요</span>
+        </>
+      ) : (
+        <span className="text-[13px] text-mute">어느 코너에서 받는지 적어 둘 수 있어요</span>
+      )}
+      {change}
     </div>
   );
 }
@@ -105,27 +191,52 @@ type Last = { childName: string; amount: number; secondsLeft: number };
 type Message = { text: string; error: boolean };
 
 const OFFLINE = "연결이 불안정해요. 잠시 뒤에 다시 해 주세요";
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"] as const;
-const QUICK = [1, 2, 5, 10];
-const keyClass =
-  "flex h-[52px] cursor-pointer items-center justify-center rounded-xl border-0 bg-fill text-[22px] font-bold text-ink2 active:bg-[#E0E5EC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
+/** The amount tiles of the mock; anything else goes through "직접 입력". */
+const AMOUNTS = [1, 2, 3, 5, 10];
+
+const roundButton = "grid h-10 w-10 place-items-center rounded-full bg-fill text-ink2 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy";
+
+function RoundButton({ label, icon, onClick, pressed }: { label: string; icon: LineIconName; onClick: () => void; pressed?: boolean }) {
+  return (
+    <button type="button" aria-label={label} aria-pressed={pressed} onClick={onClick} className="group grid h-11 w-11 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-0 outline-none">
+      <span className={roundButton}>
+        <LineIcon name={icon} />
+      </span>
+    </button>
+  );
+}
+
+/** Sub-screen header, as the kit's PageHeader with `back`, but the heading can take the focus when the step changes. */
+function Header({ left, right, heading }: { left: ReactNode; right?: ReactNode; heading?: RefObject<HTMLHeadingElement | null> }) {
+  return (
+    <header className="-mx-0.5 -mt-0.5 flex items-center gap-2">
+      {left}
+      <h1 ref={heading} tabIndex={-1} className="m-0 min-w-0 grow text-center text-[17px] font-bold tracking-[-0.025em] outline-none lg:text-left lg:text-[22px] lg:tracking-[-0.035em]">
+        달란트 결제
+      </h1>
+      {right ?? <span className="w-11 shrink-0 lg:hidden" />}
+    </header>
+  );
+}
 
 /**
- * Stall payment: find the child (search, class, or QR card), enter the amount, pay.
+ * Stall payment: find the child (search, class, or QR card), choose the amount, take it.
  * This screen only shows what the server sent; balances are re-read and re-checked on the
  * server for every payment, so a stale number here can never overdraw.
+ * `levels` holds the tree level of the children this teacher may see in detail; the others get a leaf.
  */
-export function FestivalPay({ eventName, kids, classes, last: initialLast }: { eventName: string; kids: FestivalKid[]; classes: { id: number; name: string }[]; last: Last | null }) {
+export function FestivalPay({ eventName, kids, classes, levels, last: initialLast }: { eventName: string; kids: FestivalKid[]; classes: { id: number; name: string }[]; levels: Record<number, number>; last: Last | null }) {
   const [step, setStep] = useState<Step>({ name: "find" });
   const [q, setQ] = useState("");
   const [classId, setClassId] = useState<number | null>(null);
   const [amount, setAmount] = useState(0);
-  const [note, setNote] = useState("");
+  const [custom, setCustom] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const [last, setLast] = useState<Last | null>(initialLast);
   const [scanning, setScanning] = useState(false);
   const scanOk = useSyncExternalStore(noSubscribe, canScan, () => false);
+  const stall = useSyncExternalStore(stallSubscribe, stallRead, () => "");
   const heading = useRef<HTMLHeadingElement>(null);
   const first = useRef(true);
 
@@ -152,6 +263,7 @@ export function FestivalPay({ eventName, kids, classes, last: initialLast }: { e
       const r = await load();
       if (r.ok) {
         setAmount(0);
+        setCustom(false);
         setStep({ name: "pay", child: r.child });
       } else setMessage({ text: r.error, error: true });
     } catch {
@@ -174,7 +286,7 @@ export function FestivalPay({ eventName, kids, classes, last: initialLast }: { e
     setBusy(true);
     setMessage(null);
     try {
-      const r = await festivalPayAction(child.id, amount, note);
+      const r = await festivalPayAction(child.id, amount, stall);
       if (r.ok) {
         setLast({ childName: r.childName, amount: r.amount, secondsLeft: UNDO_MINUTES * 60 });
         setStep({ name: "done", childName: r.childName, amount: r.amount, balance: r.balance });
@@ -206,224 +318,217 @@ export function FestivalPay({ eventName, kids, classes, last: initialLast }: { e
     }
   }
 
-  function press(key: (typeof KEYS)[number]) {
-    setMessage(null);
-    if (key === "clear") setAmount(0);
-    else if (key === "back") setAmount((a) => Math.floor(a / 10));
-    else setAmount((a) => (a * 10 + Number(key) > MAX_TALENT_AMOUNT ? a : a * 10 + Number(key)));
-  }
-
   const flash = message ? (
-    <p role={message.error ? "alert" : "status"} className={`m-0 rounded-[10px] px-3 py-[11px] text-[14px] leading-5 font-bold ${message.error ? "bg-danger-tint text-[#8E2A22]" : "bg-navy-tint text-navy"}`}>
+    <Notice tone={message.error ? "danger" : "navy"} role={message.error ? "alert" : "status"}>
       {message.text}
-    </p>
+    </Notice>
   ) : null;
 
-  const undoButton = last ? (
-    <button
-      type="button"
-      onClick={undo}
-      disabled={busy}
-      className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-3 rounded-xl border-[1.5px] border-danger bg-white px-4 text-left text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
-    >
-      <span className="text-[15px] font-bold">방금 결제 취소</span>
-      <span className="min-w-0 truncate text-[13px] font-semibold">
-        {last.childName} · {last.amount}달란트
+  // The mock's last line: "방금 결제: 이서윤 2달란트 · 취소".
+  const lastLine = last ? (
+    <p className="m-0 flex flex-wrap items-center justify-center gap-x-1 text-center text-[13px] text-mute">
+      <span>
+        방금 결제: {last.childName} {last.amount}달란트 ·
       </span>
-    </button>
+      <button type="button" onClick={undo} disabled={busy} className="-my-1.5 h-11 cursor-pointer border-0 bg-transparent px-1.5 text-[13px] font-bold text-danger underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-navy disabled:cursor-default disabled:opacity-50">
+        취소
+      </button>
+    </p>
   ) : null;
 
   if (step.name === "pay") {
     const { child } = step;
     const short = amount > child.balance;
     return (
-      <div className="flex grow flex-col gap-3 px-4 pt-3 pb-4">
-        <div className="-ml-2 flex items-center">
-          <button type="button" onClick={() => setStep({ name: "find" })} aria-label="다른 아이 찾기" className="flex h-11 w-11 cursor-pointer items-center justify-center border-0 bg-transparent text-ink">
-            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 5l-7 7 7 7" />
-            </svg>
-          </button>
-          <h1 ref={heading} tabIndex={-1} className="m-0 text-[19px] font-bold tracking-[-0.4px] outline-none">
-            달란트 결제
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-3.5 rounded-2xl bg-fill p-4">
-          <Face name={child.name} id={child.id} photo={child.photo_url} size={64} />
+      <Page narrow>
+        <Header heading={heading} left={<RoundButton label="다른 아이 찾기" icon="back" onClick={() => setStep({ name: "find" })} />} />
+        <StallLine stall={stall} />
+        <div className="flex items-center gap-3 rounded-[20px] bg-fill px-4 py-3.5">
+          <TreeAvatar level={levels[child.id] ?? null} photo={child.photo_url} size="m" onWhite className="max-[339px]:h-10 max-[339px]:w-10" />
           <div className="flex min-w-0 grow flex-col">
-            <span className="truncate text-[22px] leading-7 font-bold tracking-[-0.5px]">{child.name}</span>
-            <span className="truncate text-[14px] text-sub">{child.class_name ?? "반 없음"}</span>
+            <b className="text-[16px] tracking-[-0.02em]">{child.name}</b>
+            <span className="text-[13px] text-mute">{child.class_name ?? "반 없음"}</span>
           </div>
           <div className="flex shrink-0 flex-col items-end">
-            <span className="text-[13px] text-sub">남은 달란트</span>
-            <span className="text-[34px] leading-10 font-bold tracking-[-0.8px]">{child.balance}개</span>
+            <b className="text-[24px] leading-[1.25] tracking-[-0.03em] text-blue">{child.balance}</b>
+            <span className="text-[13px] text-mute">남은 달란트</span>
           </div>
         </div>
 
-        <div className="flex items-end justify-between px-1" aria-live="polite">
-          <div className="flex flex-col">
-            <span className="text-[13px] text-sub">결제할 달란트</span>
-            <span className={`text-[40px] leading-[46px] font-bold tracking-[-1px] ${short ? "text-danger" : amount === 0 ? "text-faint" : "text-ink"}`}>{amount}개</span>
+        <h2 className="m-0 mt-0.5 text-[17px] font-bold tracking-[-0.025em]">몇 달란트를 받을까요?</h2>
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="금액 고르기">
+          {AMOUNTS.map((n) => {
+            const on = !custom && amount === n;
+            return (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={on}
+                aria-label={`${n}달란트`}
+                onClick={() => {
+                  setMessage(null);
+                  setCustom(false);
+                  setAmount(n);
+                }}
+                className={`cursor-pointer rounded-2xl border-0 px-1.5 py-3 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${on ? "bg-navy text-white" : "bg-fill text-ink"}`}
+              >
+                <b className="block text-[17px] tracking-[-0.02em]">{n}</b>
+                <span className={`text-[11.5px] ${on ? "text-[#cfd6f6]" : "text-mute"}`}>달란트</span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            aria-pressed={custom}
+            aria-label="직접 입력"
+            onClick={() => {
+              setMessage(null);
+              setCustom(true);
+              setAmount(0);
+            }}
+            className={`cursor-pointer rounded-2xl border-0 px-1.5 py-3 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${custom ? "bg-navy text-white" : "bg-fill text-ink"}`}
+          >
+            <b className="block text-[17px] tracking-[-0.02em]">직접</b>
+            <span className={`text-[11.5px] ${custom ? "text-[#cfd6f6]" : "text-mute"}`}>입력</span>
+          </button>
+        </div>
+        {custom ? (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="fp-amount" className="text-[13px] leading-[1.4] font-semibold text-ink2">
+              받을 달란트
+            </label>
+            <input
+              id="fp-amount"
+              inputMode="numeric"
+              autoComplete="off"
+              autoFocus
+              enterKeyHint="done"
+              placeholder={`1에서 ${MAX_TALENT_AMOUNT}까지`}
+              value={amount === 0 ? "" : String(amount)}
+              onChange={(e) => {
+                setMessage(null);
+                const n = Number(e.currentTarget.value.replace(/[^0-9]/g, "").slice(0, 4));
+                setAmount(Math.min(MAX_TALENT_AMOUNT, n));
+              }}
+              aria-invalid={short ? true : undefined}
+              className={inputBoxClass(short)}
+            />
           </div>
-          <span className={`pb-1.5 text-[14px] font-semibold ${short ? "text-danger" : "text-sub"}`}>{short ? "달란트가 모자라요" : amount > 0 ? `결제하면 ${child.balance - amount}개 남아요` : "얼마를 결제할까요?"}</span>
+        ) : null}
+        <div className="flex items-center justify-between gap-2.5 px-0.5 py-1 text-[14px]" aria-live="polite">
+          <span className="text-mute">결제 후 남는 달란트</span>
+          {short ? <b className="text-right text-danger">달란트가 모자라요</b> : <b className="text-[16px]">{amount > 0 ? child.balance - amount : "–"}</b>}
         </div>
         {flash}
-
-        <div className="grid grid-cols-4 gap-2" role="group" aria-label="빠른 금액">
-          {QUICK.map((n) => (
-            <button
-              key={n}
-              type="button"
-              aria-label={`${n}달란트 더하기`}
-              onClick={() => {
-                setMessage(null);
-                setAmount((a) => Math.min(MAX_TALENT_AMOUNT, a + n));
-              }}
-              className="flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-navy-tint text-[16px] font-bold text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
-            >
-              +{n}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2" role="group" aria-label="숫자판">
-          {KEYS.map((k) => (
-            <button key={k} type="button" onClick={() => press(k)} aria-label={k === "clear" ? "모두 지우기" : k === "back" ? "한 글자 지우기" : undefined} className={`${keyClass} ${k === "clear" || k === "back" ? "text-[15px]" : ""}`}>
-              {k === "clear" ? "지우기" : k === "back" ? "←" : k}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="fp-note" className="text-[14px] font-semibold text-ink2">
-            코너나 물건 (선택)
-          </label>
-          <input
-            id="fp-note"
-            value={note}
-            onChange={(e) => setNote(e.currentTarget.value)}
-            maxLength={40}
-            placeholder="예: 떡볶이 코너"
-            enterKeyHint="done"
-            className="h-12 w-full rounded-xl border-[1.5px] border-[#D1D6DB] bg-white px-3.5 text-[16px] text-ink outline-none focus:border-navy"
-          />
-        </div>
-        <button type="button" onClick={() => pay(child)} disabled={busy || amount < 1 || short} className={`${primaryButtonClass} shrink-0 cursor-pointer disabled:cursor-default`}>
-          {busy ? "결제하는 중…" : amount > 0 ? `${amount}달란트 결제` : "결제"}
+        <span className="min-h-0 grow" />
+        <button type="button" onClick={() => pay(child)} disabled={busy || amount < 1 || short} className={`${ctaClass("navy")} shrink-0 disabled:cursor-default disabled:bg-fill disabled:text-faint`}>
+          {busy ? "받는 중…" : amount > 0 ? `${amount}달란트 받기` : "달란트 받기"}
         </button>
-      </div>
+        {lastLine}
+      </Page>
     );
   }
 
   if (step.name === "done") {
     return (
-      <div className="flex grow flex-col px-4 pt-10 pb-4">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-full bg-navy text-white">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12.5l4.5 4.5L19 7.5" />
-            </svg>
-          </div>
-          <h1 ref={heading} tabIndex={-1} className="m-0 mt-2 text-[22px] leading-[30px] font-bold tracking-[-0.5px] outline-none">
-            {step.amount}달란트 결제했어요
-          </h1>
-          <p className="m-0 text-[15px] text-sub">{step.childName}</p>
+      <Page narrow>
+        <Header left={<RoundLink href="/staff" label="홈으로 돌아가기" icon="back" />} />
+        <div className="flex flex-col items-center gap-1.5 pt-4 text-center">
+          <span aria-hidden="true" className="grid h-14 w-14 place-items-center rounded-full bg-navy text-white">
+            <LineIcon name="check" size={30} stroke={2.6} />
+          </span>
+          {/* The result takes the focus, so a screen reader says it first. */}
+          <h2 ref={heading} tabIndex={-1} className="m-0 mt-2 text-[22px] leading-[1.35] font-bold tracking-[-0.035em] outline-none">
+            {step.amount}달란트 받았어요
+          </h2>
+          <p className="m-0 text-[14px] text-mute">
+            {step.childName}
+            {stall ? ` · ${stall}` : ""}
+          </p>
         </div>
-        <div className="mt-6 flex flex-col items-center gap-1 rounded-2xl bg-fill py-6">
-          <span className="text-[14px] text-sub">남은 달란트</span>
-          <span className="text-[44px] leading-[52px] font-bold tracking-[-1px]">{step.balance}개</span>
+        <div className="flex flex-col items-center gap-0.5 rounded-[20px] bg-fill py-5">
+          <b className="text-[36px] leading-[1.2] tracking-[-0.035em] text-blue">{step.balance}</b>
+          <span className="text-[13px] text-mute">남은 달란트</span>
         </div>
-        <div className="mt-6 flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setMessage(null);
-              setQ("");
-              setStep({ name: "find" });
-            }}
-            className={`${primaryButtonClass} cursor-pointer`}
-          >
-            다음 아이
-          </button>
-          {undoButton}
-          {last ? <p className="m-0 text-center text-[12px] leading-[18px] text-mute">잘못 결제했다면 {UNDO_MINUTES}분 안에 취소할 수 있어요.</p> : null}
-        </div>
-      </div>
+        <span className="min-h-0 grow" />
+        <button
+          type="button"
+          onClick={() => {
+            setMessage(null);
+            setQ("");
+            setStep({ name: "find" });
+          }}
+          className={`${ctaClass("navy")} shrink-0`}
+        >
+          다음 아이
+        </button>
+        {lastLine}
+        {last ? <p className="m-0 -mt-2 text-center text-[12.5px] leading-[18px] text-mute">잘못 받았다면 {UNDO_MINUTES}분 안에 취소할 수 있어요.</p> : null}
+      </Page>
     );
   }
 
   const word = q.trim();
   const shown = kids.filter((k) => (classId === null || k.class_id === classId) && (word === "" || k.name.includes(word)));
-  const chip = (on: boolean) => `flex h-[34px] items-center rounded-lg px-3 text-[14px] font-semibold whitespace-nowrap ${on ? "bg-navy text-white" : "bg-fill text-sub"}`;
+  const chip = (on: boolean) => `rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy ${on ? "bg-navy text-white" : "bg-fill text-sub"}`;
+  const chipButton = "group flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 outline-none lg:h-10";
 
   return (
-    <div className="flex grow flex-col">
-      <header className="flex flex-col gap-1.5 px-4 pt-6">
-        <h1 ref={heading} tabIndex={-1} className="m-0 text-[22px] leading-[30px] font-bold tracking-[-0.5px] outline-none">
-          달란트 결제
-        </h1>
-        <p className="m-0 text-[14px] leading-5 text-mute">{eventName} · 아이를 찾아 주세요</p>
-      </header>
-
-      <div className="flex flex-col gap-2 px-4 pt-3">
-        {flash}
-        {undoButton}
-        <label htmlFor="fp-q" className="sr-only">
-          이름으로 찾기
-        </label>
-        <input
-          id="fp-q"
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.currentTarget.value)}
-          placeholder="이름으로 찾기"
-          autoComplete="off"
-          enterKeyHint="search"
-          className="h-14 w-full rounded-2xl border-[1.5px] border-[#D1D6DB] bg-white px-4 text-[20px] font-semibold text-ink outline-none focus:border-navy"
-        />
-        {scanOk && !scanning ? (
-          <button type="button" onClick={() => setScanning(true)} className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-navy-tint text-[15px] font-bold text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 13h3v3" />
-            </svg>
-            QR 카드 찍기
-          </button>
-        ) : null}
-        {scanning ? <CardScanner onRead={onRead} onClose={() => setScanning(false)} /> : null}
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4" role="group" aria-label="반 고르기">
-          <button type="button" aria-pressed={classId === null} onClick={() => setClassId(null)} className="flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0">
+    <Page narrow>
+      <Header
+        heading={heading}
+        left={<RoundLink href="/staff" label="홈으로 돌아가기" icon="back" />}
+        right={scanOk ? <RoundButton label={scanning ? "카메라 닫기" : "QR 카드 찍기"} icon={scanning ? "close" : "qr"} pressed={scanning} onClick={() => setScanning((s) => !s)} /> : undefined}
+      />
+      <StallLine stall={stall} />
+      {flash}
+      {scanning ? <CardScanner onRead={onRead} onClose={() => setScanning(false)} /> : null}
+      <div className="flex flex-col gap-1">
+        <p className="m-0 text-[13px] text-mute">
+          {eventName} · 아이를 찾아 주세요{scanOk ? " (오른쪽 위 버튼으로 QR 카드를 찍을 수 있어요)" : ""}
+        </p>
+        <div className="flex h-12 items-center gap-2 rounded-full bg-fill px-4 text-faint focus-within:outline-2 focus-within:outline-navy">
+          <LineIcon name="search" size={18} />
+          <label htmlFor="fp-q" className="sr-only">
+            이름으로 찾기
+          </label>
+          <input id="fp-q" type="search" value={q} onChange={(e) => setQ(e.currentTarget.value)} placeholder="이름으로 찾기" autoComplete="off" enterKeyHint="search" className="h-full min-w-0 grow border-0 bg-transparent p-0 text-[16px] text-ink outline-none placeholder:text-faint" />
+        </div>
+        <div className="flex flex-wrap gap-x-[7px]" role="group" aria-label="반 고르기">
+          <button type="button" aria-pressed={classId === null} onClick={() => setClassId(null)} className={chipButton}>
             <span className={chip(classId === null)}>전체</span>
           </button>
           {classes.map((c) => (
-            <button key={c.id} type="button" aria-pressed={classId === c.id} onClick={() => setClassId(c.id)} className="flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0">
+            <button key={c.id} type="button" aria-pressed={classId === c.id} onClick={() => setClassId(c.id)} className={chipButton}>
               <span className={chip(classId === c.id)}>{c.name}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <ul className="m-0 flex list-none flex-col px-4 py-0" aria-label="아이 목록">
-        {shown.map((k, i) => (
-          <li key={k.id} className={i === shown.length - 1 ? "" : "border-b border-line"}>
+      <ul className="m-0 flex list-none flex-col p-0" aria-label="아이 목록">
+        {shown.map((k) => (
+          <li key={k.id} className="border-b border-line last:border-b-0">
             <button
               type="button"
               disabled={busy}
               onClick={() => openChild(() => festivalChildAction(k.id))}
-              className="flex min-h-[64px] w-full cursor-pointer items-center gap-[13px] border-0 bg-transparent px-0 py-2 text-left focus-visible:outline-2 focus-visible:outline-navy"
+              className="flex w-full cursor-pointer items-center gap-3 border-0 bg-transparent px-0 py-[11px] text-left text-inherit focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy disabled:cursor-default"
             >
-              <Face name={k.name} id={k.id} photo={k.photo_url} />
-              <span className="flex min-w-0 grow flex-col">
-                <span className="truncate text-[17px] leading-[23px] font-bold tracking-[-0.4px] text-ink2">{k.name}</span>
-                <span className="truncate text-[13px] leading-[18px] text-sub">{k.class_name ?? "반 없음"}</span>
+              <span className="flex shrink-0 max-[319px]:hidden">
+                <TreeAvatar level={levels[k.id] ?? null} photo={k.photo_url} size="m" />
               </span>
-              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#8B95A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <path d="M8 5l5 5-5 5" />
-              </svg>
+              <span className="flex min-w-0 grow flex-col">
+                <b className="text-[16px] tracking-[-0.02em]">{k.name}</b>
+                <span className="text-[13px] text-mute">{k.class_name ?? "반 없음"}</span>
+              </span>
+              <Chevron />
             </button>
           </li>
         ))}
       </ul>
-      {shown.length === 0 ? <p className="m-0 py-8 text-center text-[14px] leading-[21px] text-mute">찾는 아이가 없어요.</p> : null}
-    </div>
+      {shown.length === 0 ? <EmptyNote>찾는 아이가 없어요.</EmptyNote> : null}
+      {lastLine ? <div className="sticky bottom-[76px] z-10 -mx-[18px] mt-auto bg-white px-[18px] py-1.5 lg:static lg:mx-0 lg:p-0">{lastLine}</div> : null}
+    </Page>
   );
 }
