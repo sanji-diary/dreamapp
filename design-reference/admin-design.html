@@ -1,0 +1,705 @@
+<title>꿈의숲 관리 화면 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: a review sheet. Phone screens sit in a wrapping row; desktop screens sit below, each in its own sideways-scrolling frame.
+   The screens themselves use the children's app look: its font, navy, cool grays, sky scene and clay pictures. */
+@font-face{font-family:"Pretendard";src:url("fonts/PretendardVariable.woff2") format("woff2");font-weight:45 920;font-display:swap}
+:root{
+  /* page chrome (follows the viewer's theme) */
+  --page:#eef1f5; --pink:#191f28; --pmute:#5d6875; --pline:#d5dbe2; --pnote:#ffffff;
+  /* the app's own tokens (always light: this is what the screens will look like) */
+  --ink:#191f28; --ink2:#333d4b; --sub:#4e5968; --mute:#6b7684; --faint:#8b95a1; --line:#eef0f2; --fill:#f0f3f7;
+  --navy:#0b1fa6; --navy-tint:#eef1fb; --blue:#1b64da; --blue-tint:#e8f1fd; --bar:#3182f6; --track:#e5e8eb;
+  --danger:#b3261e; --danger-tint:#fbe9e7; --warn:#7a4a00; --warn-tint:#fbf0dc; --count:#e5343b;
+  --sky:#dcedfb; --sky2:#e8f4fc; --skyc:#e6f1fb; --ground:#eeeaa6; --ground2:#e3e394; --hill:#d3e6cd;
+  --font:"Pretendard","Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page:#14181d; --pink:#e8ecf1; --pmute:#98a2ae; --pline:#2b323b; --pnote:#1b2027; color-scheme:dark } }
+:root[data-theme="dark"]{ --page:#14181d; --pink:#e8ecf1; --pmute:#98a2ae; --pline:#2b323b; --pnote:#1b2027; color-scheme:dark }
+
+body{background:var(--page);color:var(--pink);font-family:var(--font);font-size:15px;line-height:1.55;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+header h1{font-size:26px;font-weight:700;margin:0 0 6px;letter-spacing:-.03em;text-wrap:balance}
+header p{margin:0;color:var(--pmute);max-width:64ch}
+h2{font-size:20px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em}
+.lead{color:var(--pmute);margin:0 0 20px;max-width:66ch}
+.phones{display:flex;flex-wrap:wrap;gap:30px 26px}
+.shot{display:flex;flex-direction:column;gap:10px;width:350px;max-width:100%}
+.shot.wide{width:auto}
+.cap b{display:block;font-size:15px}
+.cap span{color:var(--pmute);font-size:13.5px}
+.note{background:var(--pnote);border:1px solid var(--pline);border-radius:16px;padding:16px 18px;font-size:14px}
+.note ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.spec{overflow-x:auto}
+.spec table{font-size:14px;min-width:720px;border-collapse:collapse;width:100%}
+.spec th{color:var(--pmute);border-bottom:1px solid var(--pline);font-size:12.5px;text-align:left;font-weight:500;padding:8px 10px}
+.spec td{border-bottom:1px solid var(--pline);vertical-align:top;padding:9px 10px}
+.spec td:first-child{font-weight:700;white-space:nowrap}
+
+/* ================= the app look (fixed light) ================= */
+.phone,.desk{color:var(--ink);font-size:14px;line-height:1.4;letter-spacing:-.015em;font-variant-numeric:tabular-nums;font-family:var(--font)}
+.phone{background:#fff;border-radius:40px;border:7px solid #191f28;height:760px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.phone img,.desk img{display:block}
+.scr{flex:1;min-height:0;overflow:hidden;padding:20px 18px 0;display:flex;flex-direction:column;gap:14px}
+.scr.flush{padding:0;gap:0}
+.row{display:flex;align-items:center;gap:12px}
+.sp{flex:1;min-width:0}
+.ico{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.t1{font-size:22px;font-weight:700;letter-spacing:-.035em;line-height:1.35}
+.t2{font-size:17px;font-weight:700;letter-spacing:-.025em}
+.sub{font-size:13px;color:var(--mute);display:block}
+.rb{width:40px;height:40px;border-radius:50%;background:var(--fill);display:grid;place-items:center;flex:none;position:relative;color:var(--ink2)}
+.rb.w{background:#fff;box-shadow:0 2px 10px rgba(25,31,40,.1)}
+.cnt{font-style:normal;position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;border-radius:9px;background:var(--count);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px;border:2px solid #fff;box-sizing:content-box}
+/* clay picture in a soft sky circle, as on the mission list */
+.ic{width:52px;height:52px;border-radius:50%;background:var(--skyc);display:grid;place-items:center;flex:none}
+.ic img{width:40px;height:40px;object-fit:contain}
+.ic.s{width:44px;height:44px}.ic.s img{width:33px;height:33px}
+/* a child's tree as their picture */
+.tv{border-radius:50%;background:var(--skyc);display:grid;place-items:center;flex:none;overflow:hidden;position:relative}
+.tv img{width:76%;height:76%;object-fit:contain}
+.tv.s{width:38px;height:38px}.tv.m{width:48px;height:48px}.tv.l{width:72px;height:72px}
+.av{border-radius:50%;background:var(--navy-tint);color:var(--navy);display:grid;place-items:center;font-weight:700;flex:none}
+.av.s{width:36px;height:36px;font-size:14px}.av.m{width:48px;height:48px;font-size:18px}
+.tag{border-radius:6px;padding:3px 7px;font-size:11.5px;font-weight:700;white-space:nowrap;display:inline-block;line-height:1.3}
+.g-navy{background:var(--navy-tint);color:var(--navy)}.g-blue{background:var(--blue-tint);color:var(--blue)}.g-warn{background:var(--warn-tint);color:var(--warn)}.g-bad{background:var(--danger-tint);color:var(--danger)}.g-gray{background:var(--fill);color:var(--mute)}
+.bar{height:10px;border-radius:5px;background:var(--track);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--bar);border-radius:5px}
+.tile{background:var(--fill);border-radius:20px;padding:16px}
+.tile b{font-size:16px;letter-spacing:-.02em;display:block}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{background:var(--fill);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--sub);white-space:nowrap}
+.chip.on{background:var(--navy);color:#fff}
+.pb{background:var(--navy);color:#fff;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.pb.g{background:var(--fill);color:var(--sub)}
+.cta{background:var(--navy);color:#fff;border-radius:14px;height:52px;display:grid;place-items:center;font-weight:700;font-size:16px;flex:none}
+.cta.g{background:var(--fill);color:var(--ink2)}
+/* rows in the style of the mission list */
+.list{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item b{font-size:16px;letter-spacing:-.02em;display:block}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--fill);border-radius:12px;padding:3px;font-size:13px;text-align:center;font-weight:600}
+.seg span{padding:7px 0;border-radius:9px;color:var(--mute)}
+.seg .on{background:#fff;color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(25,31,40,.1)}
+.field{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+.field:last-child{border-bottom:0}
+.field span{color:var(--mute)}
+.field b{font-weight:600;text-align:right}
+.sw{width:44px;height:26px;border-radius:99px;background:#cfd5dc;display:inline-block;position:relative;vertical-align:middle;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.sw.on{background:var(--navy)}.sw.on::after{left:21px}
+.inp{display:flex;flex-direction:column;gap:6px}
+.inp small{font-size:13px;font-weight:600;color:var(--ink2)}
+.inp div{height:46px;border-radius:12px;border:1.5px solid #d1d6db;padding:0 13px;display:flex;align-items:center;font-size:15px}
+/* tab bar: same as the children's app, plus the round quick-action button */
+.tab{height:70px;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);align-items:start;justify-items:center;padding-top:9px;flex:none;color:var(--mute)}
+.tab div{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:500}
+.tab .ico{width:23px;height:23px}
+.tab .on{color:var(--ink);font-weight:700}
+.tab .plus{width:50px;height:50px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;margin-top:-22px;box-shadow:0 6px 16px rgba(11,31,166,.32)}
+.tab .plus .ico{width:24px;height:24px;stroke-width:2.2}
+
+/* home: the class forest */
+.scene{position:relative;height:320px;flex:none;overflow:hidden;background:linear-gradient(var(--sky),var(--sky2))}
+.scene .bg{position:absolute;left:0;top:-221px;width:100%;max-width:none}
+.scene .hd{position:absolute;left:20px;right:18px;top:22px;display:flex;gap:10px;align-items:flex-start}
+.scene small{font-size:13px;font-weight:600;color:var(--sub);display:block;margin-bottom:6px}
+.scene .gt{position:absolute;bottom:0}
+.panel{margin:-80px 14px 0;background:#fff;border-radius:24px;padding:18px;box-shadow:0 2px 18px rgba(25,31,40,.08);position:relative;display:flex;flex-direction:column;gap:10px;flex:none}
+.panel .tile{padding:14px;border-radius:18px;position:relative;min-height:88px}
+.panel .tile b,.panel .tile .sub{white-space:nowrap}
+.panel .tile img{position:absolute;right:10px;bottom:10px;width:42px;height:42px;object-fit:contain}
+.pct{font-size:17px;font-weight:700;color:var(--blue)}
+.sec{padding:18px 20px 0;display:flex;flex-direction:column}
+.wk{width:32px;height:32px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--sub)}
+.wk .ico{width:16px;height:16px}
+
+/* class cards */
+.kid{background:var(--fill);border-radius:20px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:12px}
+.kid .row{gap:10px;position:relative}
+.kid .tv{background:#fff}
+.kid .nm{font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1.2;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.kid .tag{background:#fff}
+.duo{display:grid;grid-template-columns:1fr 1fr}
+.duo div{display:flex;flex-direction:column;gap:2px}
+.duo div+div{border-left:1px solid #dde2e8;padding-left:12px}
+.duo span{font-size:11.5px;color:var(--mute)}
+.duo b{font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.duo b i{font-style:normal;font-size:12.5px;font-weight:500;color:var(--faint);margin-left:1px}
+.duo .bad b{color:var(--danger)}
+.see{background:#fff;color:var(--ink2);border-radius:12px;height:36px;display:grid;place-items:center;font-size:13px;font-weight:700}
+.flag{position:absolute;left:36px;top:-1px;width:12px;height:12px;border-radius:50%;border:2px solid var(--fill)}
+
+/* attendance */
+.wks{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.wks div{background:var(--fill);border-radius:14px;padding:8px 0 7px;text-align:center;color:var(--sub)}
+.wks small{display:block;font-size:11px;color:var(--mute)}
+.wks b{font-size:14px}
+.wks .on{background:var(--navy);color:#fff}.wks .on small{color:#cfd6f6}
+.arow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.arow:last-child{border-bottom:0}
+.arow b{font-size:15px}
+.att{display:flex;gap:5px}
+.att span{width:50px;height:34px;border-radius:9px;background:var(--fill);color:var(--faint);display:grid;place-items:center;font-size:13px;font-weight:600}
+.att .y{background:var(--navy);color:#fff;font-weight:700}.att .n{background:var(--danger-tint);color:var(--danger);font-weight:700}
+
+/* small pieces */
+.stat{background:var(--fill);border-radius:16px;padding:12px 6px;text-align:center}
+.stat b{display:block;font-size:17px;letter-spacing:-.02em}
+.stat span{font-size:11.5px;color:var(--mute)}
+.menu{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 4px}
+.menu div{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px;font-weight:500;color:var(--ink2);text-align:center}
+.menu i{width:48px;height:48px;border-radius:50%;background:var(--navy-tint);color:var(--navy);display:grid;place-items:center}
+.ph{border-radius:14px;background:linear-gradient(var(--sky),var(--sky2));display:grid;place-items:center;height:128px}
+.ph img{width:64px;height:64px;object-fit:contain}
+.quote{background:#fff;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.5}
+.two{display:grid;grid-template-columns:1fr 1.3fr;gap:8px}
+.two span{border-radius:11px;height:42px;display:grid;place-items:center;font-weight:700;font-size:14px}
+.two .no{background:#fff;color:var(--ink2)}.two .ok{background:var(--navy);color:#fff}
+.bub{border-radius:18px;padding:11px 14px;font-size:14.5px;line-height:1.5;max-width:84%}
+.bub.k{background:var(--fill);align-self:flex-start}
+.bub.t{background:var(--navy);color:#fff;align-self:flex-end}
+.dim{position:absolute;inset:0;background:rgba(25,31,40,.48)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:26px 26px 0 0;padding:10px 20px 26px;display:flex;flex-direction:column}
+.sheet>i{width:38px;height:4px;border-radius:9px;background:#d5dae0;align-self:center;margin-bottom:14px}
+
+/* ================= desktop ================= */
+.scroll{overflow-x:auto;border-radius:18px;border:1px solid var(--pline)}
+.desk{width:1180px;height:720px;background:#fff;display:grid;grid-template-columns:216px 1fr;overflow:hidden;font-size:13.5px}
+.side{padding:18px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.brand{font-weight:700;font-size:16px;padding:2px 8px 16px;display:flex;align-items:center;gap:8px;letter-spacing:-.03em}
+.brand img{width:30px;height:30px;object-fit:contain}
+.grp{font-size:11.5px;color:var(--faint);padding:14px 10px 4px;font-weight:600}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;color:var(--sub);font-weight:500}
+.nav .ico{width:18px;height:18px}
+.nav.on{background:var(--navy-tint);color:var(--navy);font-weight:700}
+.nav em{margin-left:auto;font-style:normal;font-size:11px;font-weight:700;background:var(--count);color:#fff;border-radius:99px;padding:0 6px;line-height:17px}
+.main{padding:22px 28px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.top{display:flex;align-items:center;gap:10px}
+.top h3{margin:0;font-size:22px;letter-spacing:-.035em}
+.top h3 small{font-weight:500;font-size:14px;color:var(--mute);margin-left:4px}
+.find{width:240px;background:var(--fill);border-radius:999px;display:flex;gap:8px;align-items:center;padding:9px 14px;color:var(--faint)}
+.find .ico{width:17px;height:17px}
+.ghost{background:var(--fill);color:var(--ink2);border-radius:10px;padding:9px 13px;font-weight:600;white-space:nowrap}
+.solid{background:var(--navy);color:#fff;border-radius:10px;padding:9px 13px;font-weight:700;white-space:nowrap}
+.card{border:1px solid var(--line);border-radius:20px;padding:6px 10px;display:flex;flex-direction:column;min-height:0}
+.box{background:var(--fill);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.cols{display:grid;grid-template-columns:1.45fr 1fr;gap:14px;flex:1;min-height:0}
+.split{display:grid;grid-template-columns:1fr 304px;gap:14px;flex:1;min-height:0}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--fill);border-radius:18px;padding:14px 16px}
+.kpi span{color:var(--mute);font-size:12.5px}
+.kpi b{display:block;font-size:24px;letter-spacing:-.035em;margin:2px 0 1px}
+.kpi small{font-size:12px;color:var(--mute)}
+.up{color:var(--blue)!important}.dn{color:var(--danger)!important}
+.banner{position:relative;height:170px;border-radius:24px;overflow:hidden;background:linear-gradient(var(--sky),var(--sky2));flex:none}
+.hill{position:absolute;border-radius:50%}
+.hill.b{bottom:22px;width:40%;height:120px;background:var(--hill)}
+.hill.f{left:-12%;right:-12%;bottom:-166px;height:240px;background:linear-gradient(var(--ground),var(--ground2))}
+.btxt{position:absolute;left:28px;top:26px}
+.btxt small{font-size:13px;font-weight:600;color:var(--sub);display:block;margin-bottom:6px}
+.btxt b{font-size:22px;letter-spacing:-.035em;line-height:1.35;display:block}
+.ct{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;width:84px}
+.ct span{background:#fff;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;color:var(--ink2);box-shadow:0 1px 4px rgba(25,31,40,.1);white-space:nowrap}
+.cls{display:grid;grid-template-columns:78px 1fr 40px 1fr 30px;gap:10px;align-items:center;font-size:13px}
+.cls .bar{height:8px}
+.cls .b2 i{background:#8fb8f8}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+.t th{text-align:left;font-weight:500;color:var(--mute);padding:9px 10px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
+.t td{padding:10px;border-bottom:1px solid var(--line)}
+.t tr:last-child td{border-bottom:0}
+.t tr.sel td{background:var(--navy-tint)}
+.t .c{text-align:center}
+.ck{width:15px;height:15px;border-radius:4px;border:1.5px solid #c2c9d1;display:inline-block;vertical-align:middle}
+.ck.on{background:var(--navy);border-color:var(--navy)}
+.o{color:var(--blue);font-weight:700}.x{color:var(--danger);font-weight:700}.z{color:#c9cfd6}
+.dots{letter-spacing:2px;color:var(--bar)}.dots i{font-style:normal;color:#cfd5dc}
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.cards3 .box{padding:14px;gap:10px}
+.sw.sm{width:36px;height:22px}.sw.sm::after{width:16px;height:16px}.sw.sm.on::after{left:17px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 7H4c0-1 2-2 2-7M10 20h4"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-kids" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2.100.800 3.500 2.900 3.500 5.700"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M8 16l8-8M9 8h7v7"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.500l4.500 4.500L19 7.500"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4M6 5h11l-2 4 2 4H6"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.600 5.600l2.100 2.100M16.300 16.300l2.100 2.100M5.600 18.400l2.100-2.100M16.300 7.700l2.100-2.100"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2M20 14v6h-4M14 20h0"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M9.500 9.500h5M12 9.500V16"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M5 19l1-4L16 5l3 3L9 18z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+</svg>
+
+<div class="wrap">
+<header>
+  <h1>꿈의숲 관리 화면 시안</h1>
+  <p>선생님과 전도사님이 쓰는 화면을 아이들 메인 화면과 같은 컨셉으로 다시 그렸습니다. 휴대폰 화면 10장과 컴퓨터 화면 6장이며, 이름과 숫자는 모두 예시입니다.</p>
+</header>
+
+<section>
+  <h2>휴대폰 앱</h2>
+  <p class="lead">아이들 앱과 같은 글꼴, 남색, 하늘과 언덕, 점토 느낌 그림을 씁니다. 아래 탭으로 오가고, 가운데 남색 버튼은 자주 하는 일을 바로 엽니다.</p>
+  <div class="phones">
+
+    <!-- 1. Home -->
+    <div class="shot">
+      <div class="phone"><div class="scr flush">
+        <div class="scene">
+          <img class="bg" src="img/bg.webp" alt="">
+          <img class="gt" src="img/tree-seed.webp" alt="" style="left:20px;bottom:90px;height:30px">
+          <img class="gt" src="img/tree-sprout.webp" alt="" style="left:58px;bottom:94px;height:40px">
+          <img class="gt" src="img/tree-sap.webp" alt="" style="left:94px;bottom:98px;height:64px">
+          <img class="gt" src="img/tree-big.webp" alt="" style="left:132px;bottom:100px;height:78px">
+          <img class="gt" src="img/tree-flower.webp" alt="" style="left:194px;bottom:98px;height:78px">
+          <img class="gt" src="img/tree-sap.webp" alt="" style="left:262px;bottom:94px;height:60px">
+          <div class="hd"><div class="sp"><small>5학년 2반 · 박지현 선생님</small><span class="t1">우리 반 나무 6그루가<br>자라고 있어요</span></div><div class="rb w"><svg class="ico"><use href="#i-bell"/></svg><i class="cnt">2</i></div></div>
+        </div>
+        <div class="panel">
+          <div class="row"><span class="t2 sp">우리 반 물방울</span><span class="pct">22 / 30</span></div>
+          <div class="bar"><i style="width:73%"></i></div>
+          <span class="sub">이번 주 목표까지 8개 남았어요</span>
+          <div class="g2" style="margin-top:4px">
+            <div class="tile"><div class="sp"><b>출석 체크</b><span class="sub">6명 중 5명</span></div><img src="img/icon-stamp.webp" alt=""></div>
+            <div class="tile"><div class="sp"><b>미션 확인</b><span class="sub">3건 기다려요</span></div><img src="img/icon-bible.webp" alt=""></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="row" style="margin-bottom:2px"><span class="t2 sp">11월 3주차 할 일</span><span class="wk"><svg class="ico"><use href="#i-back"/></svg></span><span class="wk"><svg class="ico"><use href="#i-next"/></svg></span></div>
+          <div class="list">
+            <div class="item"><div class="ic s"><img src="img/icon-bubble.webp" alt=""></div><div class="sp"><b>새 고민 1건</b><span class="sub">박도윤 · 선생님에게 보냄</span></div><span class="pb">읽기</span></div>
+            <div class="item"><div class="ic s"><img src="img/icon-house.webp" alt=""></div><div class="sp"><b>정시우 2주 결석</b><span class="sub">연락하고 심방 기록 남기기</span></div><span class="pb">기록</span></div>
+          </div>
+        </div>
+      </div><div class="tab" data-tab="0"></div></div>
+      <div class="cap"><b>홈</b><span>아이들 홈처럼 하늘과 언덕이 나오고, 우리 반 아이들의 나무가 함께 서 있습니다. 그 아래에 반 물방울과 이번 주 할 일이 이어집니다. 화살표로 지난 주차를 봅니다.</span></div>
+    </div>
+
+    <!-- 2. Class -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="row"><span class="t1 sp">우리 반</span><div class="rb"><svg class="ico"><use href="#i-search"/></svg></div></div>
+        <div class="chips"><span class="chip on">전체 6</span><span class="chip">결석 1</span><span class="chip">가입 전 1</span></div>
+        <div class="g2" id="kids"></div>
+      </div><div class="tab" data-tab="1"></div></div>
+      <div class="cap"><b>우리 반</b><span>사진 자리에는 그 아이의 나무가 들어갑니다(프로필 사진을 올린 아이는 사진). 그 옆에 이름과 나무 단계, 아래에 최근 4주 출석과 이번 주 물방울이 나란히 보입니다. 모서리의 점은 살펴볼 일 표시입니다(빨강 결석, 파랑 고민).</span></div>
+    </div>
+
+    <!-- 3. Attendance -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="row"><div class="rb"><svg class="ico"><use href="#i-back"/></svg></div><span class="t2 sp" style="text-align:center">출석 체크</span><div class="rb"><svg class="ico"><use href="#i-qr"/></svg></div></div>
+        <div class="wks"><div><small>1주차</small><b>11/1</b></div><div><small>2주차</small><b>11/8</b></div><div class="on"><small>3주차</small><b>11/15</b></div><div><small>4주차</small><b>11/22</b></div><div><small>5주차</small><b>11/29</b></div></div>
+        <div class="row"><span class="t2 sp">5학년 2반</span><span class="tag g-navy">6명 중 5명 출석</span></div>
+        <div id="att" style="display:flex;flex-direction:column"></div>
+        <span class="sp"></span>
+        <div class="cta" style="margin-bottom:16px">저장하기</div>
+      </div><div class="tab" data-tab="-1"></div></div>
+      <div class="cap"><b>출석 체크</b><span>위에서 주차를 고르고, 아이마다 한 번만 누르면 됩니다. 결석 사유는 이름 아래에 적힙니다.</span></div>
+    </div>
+
+    <!-- 4. More (admin) -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="row"><span class="t1 sp">더보기</span><div class="rb"><svg class="ico"><use href="#i-gear"/></svg></div></div>
+        <div class="row tile" style="padding:14px 16px"><div class="av m" style="background:#fff">김</div><div class="sp"><b>김인성 전도사</b><span class="sub">관리자 · 모든 반</span></div><svg class="ico" style="color:var(--faint)"><use href="#i-next"/></svg></div>
+        <span class="t2" style="margin-top:4px">부서 현황</span>
+        <div class="g3">
+          <div class="stat"><b style="color:var(--blue)">84%</b><span>지난 주일 출석</span></div>
+          <div class="stat"><b>7건</b><span>확인할 미션</span></div>
+          <div class="stat"><b style="color:var(--danger)">3명</b><span>장기 결석</span></div>
+        </div>
+        <span class="t2" style="margin-top:4px">운영 <span class="sub" style="display:inline;font-weight:500">관리자·부장만 보여요</span></span>
+        <div class="menu">
+          <div><i><svg class="ico"><use href="#i-flag"/></svg></i>미션</div>
+          <div><i><svg class="ico"><use href="#i-kids"/></svg></i>교사·권한</div>
+          <div><i><svg class="ico"><use href="#i-grid"/></svg></i>반 편성</div>
+          <div><i><svg class="ico"><use href="#i-qr"/></svg></i>QR 카드</div>
+          <div><i><svg class="ico"><use href="#i-pen"/></svg></i>소식·예배</div>
+          <div><i><svg class="ico"><use href="#i-coin"/></svg></i>달란트</div>
+          <div><i><svg class="ico"><use href="#i-list"/></svg></i>교적부</div>
+          <div><i><svg class="ico"><use href="#i-gear"/></svg></i>설정</div>
+        </div>
+        <div class="list" style="margin-top:2px">
+          <div class="item"><div class="ic s"><img src="img/icon-bird.webp" alt=""></div><div class="sp"><b>새로 가입한 아이 2명</b><span class="sub">반 배정과 동의서 확인하기</span></div><span class="pb">보기</span></div>
+        </div>
+      </div><div class="tab" data-tab="4"></div></div>
+      <div class="cap"><b>더보기 (총괄)</b><span>전도사님과 부장 선생님에게는 부서 현황과 운영 메뉴가 추가로 보입니다. 담임 선생님에게는 이 부분이 없습니다.</span></div>
+    </div>
+
+    <!-- 5. Child -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="row"><div class="rb"><svg class="ico"><use href="#i-back"/></svg></div><span class="sp"></span><div class="rb"><svg class="ico"><use href="#i-pen"/></svg></div></div>
+        <div class="row" style="gap:14px"><div class="tv l"><img src="img/tree-flower.webp" alt=""></div><div class="sp"><span class="t1">박도윤</span><span class="sub">5학년 2반 · 2015년생 · 하늘초</span></div></div>
+        <div class="chips"><span class="tag g-blue">고민 1</span><span class="tag g-warn">동의서 확인 필요</span></div>
+        <div class="g3"><div class="stat"><b>3 / 4</b><span>최근 4주 출석</span></div><div class="stat"><b>꽃나무</b><span>나무 단계</span></div><div class="stat"><b>410P</b><span>포인트</span></div></div>
+        <div class="seg"><span class="on">정보</span><span>심방 2</span><span>활동</span></div>
+        <div>
+          <div class="field"><span>성별</span><b>남</b></div>
+          <div class="field"><span>학교</span><b>하늘초 5학년 2반</b></div>
+          <div class="field"><span>연락처</span><b>보호자 010-····-5678</b></div>
+          <div class="field"><span>가장 친한 친구</span><b>김하준</b></div>
+          <div class="field"><span>휴대폰</span><b>있음 · 가입 완료</b></div>
+        </div>
+        <span class="sp"></span>
+        <div class="g2" style="margin-bottom:16px;grid-template-columns:1fr 1.3fr"><div class="cta g">미션 대신 입력</div><div class="cta">심방 기록 쓰기</div></div>
+      </div><div class="tab" data-tab="1"></div></div>
+      <div class="cap"><b>아이 정보</b><span>우리 반에서 "정보 보기"를 누르면 열립니다. 정보·심방·활동을 탭으로 나누고, 자주 하는 두 가지 일은 아래 버튼으로 둡니다.</span></div>
+    </div>
+
+    <!-- 6. To-do -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="row"><span class="t1 sp">할 일</span><span class="sub">11월 3주차</span></div>
+        <div class="seg"><span class="on">미션 3</span><span>고민 1</span><span>댓글 0</span></div>
+        <div class="tile" style="display:flex;flex-direction:column;gap:12px;padding:14px">
+          <div class="row" style="gap:10px"><div class="tv s" style="background:#fff"><img src="img/tree-sap.webp" alt=""></div><div class="sp"><b style="font-size:15px">이서윤</b><span class="sub">가정예배 드리기 · 물방울 3개</span></div><span class="sub">2시간 전</span></div>
+          <div class="ph"><img src="img/icon-house.webp" alt=""></div>
+          <div class="two"><span class="no">다시 해 주세요</span><span class="ok">확인했어요</span></div>
+        </div>
+        <div class="tile" style="display:flex;flex-direction:column;gap:12px;padding:14px">
+          <div class="row" style="gap:10px"><div class="tv s" style="background:#fff"><img src="img/tree-big.webp" alt=""></div><div class="sp"><b style="font-size:15px">김하준</b><span class="sub">감사한 일 쓰기 · 물방울 1개</span></div><span class="sub">어제</span></div>
+          <div class="quote">동생이랑 싸웠는데 먼저 사과했어요. 그래서 감사해요.</div>
+          <div class="two"><span class="no">다시 해 주세요</span><span class="ok">확인했어요</span></div>
+        </div>
+      </div><div class="tab" data-tab="3"></div></div>
+      <div class="cap"><b>할 일</b><span>아이들이 올린 사진과 글을 한 장씩 보고 버튼 하나로 끝냅니다. 확인하면 물방울이 바로 들어갑니다. 사진 자리는 예시 그림입니다.</span></div>
+    </div>
+
+    <!-- 7. Worry -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="row"><div class="rb"><svg class="ico"><use href="#i-back"/></svg></div><span class="t2 sp" style="text-align:center">박도윤의 고민</span><span style="width:40px"></span></div>
+        <div class="row" style="background:var(--navy-tint);border-radius:14px;padding:12px 14px;gap:10px"><div class="ic s" style="background:#fff"><img src="img/icon-bubble.webp" alt=""></div><div class="sp" style="font-size:13px;line-height:1.45;color:var(--ink2)"><b style="color:var(--navy)">선생님에게만</b> 보낸 고민이에요. 다른 선생님과 전도사님에게는 보이지 않아요.</div></div>
+        <span class="sub" style="text-align:center">11월 16일 월요일</span>
+        <div class="bub k">요즘 친구랑 사이가 안 좋아요. 학교 가기가 싫어요.</div>
+        <div class="bub t">도윤아, 이야기해 줘서 고마워. 주일에 예배 끝나고 잠깐 이야기할까?</div>
+        <div class="bub k">네 좋아요</div>
+        <span class="sp"></span>
+        <div class="row" style="padding-bottom:18px;gap:8px"><div class="sp" style="background:var(--fill);border-radius:999px;padding:13px 16px;color:var(--faint)">답장 쓰기</div><div class="rb" style="background:var(--navy);color:#fff;width:46px;height:46px"><svg class="ico"><use href="#i-send"/></svg></div></div>
+      </div></div>
+      <div class="cap"><b>고민 읽고 답하기</b><span>누구에게 보낸 고민인지 맨 위에 항상 보입니다. 대화처럼 주고받습니다.</span></div>
+    </div>
+
+    <!-- 8. Quick actions -->
+    <div class="shot">
+      <div class="phone"><div class="scr flush">
+        <div class="scene">
+          <img class="bg" src="img/bg.webp" alt="">
+          <img class="gt" src="img/tree-sap.webp" alt="" style="left:94px;bottom:98px;height:64px">
+          <img class="gt" src="img/tree-big.webp" alt="" style="left:132px;bottom:100px;height:78px">
+          <img class="gt" src="img/tree-flower.webp" alt="" style="left:194px;bottom:98px;height:78px">
+          <div class="hd"><div class="sp"><small>5학년 2반 · 박지현 선생님</small><span class="t1">우리 반 나무 6그루가<br>자라고 있어요</span></div></div>
+        </div>
+      </div><div class="tab" data-tab="0"></div>
+      <div class="dim"></div>
+      <div class="sheet"><i></i>
+        <span class="t2" style="margin-bottom:4px">바로 하기</span>
+        <div class="list">
+          <div class="item"><div class="ic"><img src="img/icon-stamp.webp" alt=""></div><div class="sp"><b>출석 체크</b><span class="sub">이번 주일 우리 반</span></div><svg class="ico" style="color:var(--faint)"><use href="#i-next"/></svg></div>
+          <div class="item"><div class="ic"><img src="img/icon-house.webp" alt=""></div><div class="sp"><b>심방 기록 쓰기</b><span class="sub">전화, 만남, 문자 내용 남기기</span></div><svg class="ico" style="color:var(--faint)"><use href="#i-next"/></svg></div>
+          <div class="item"><div class="ic"><img src="img/icon-can.webp" alt=""></div><div class="sp"><b>미션 대신 입력</b><span class="sub">휴대폰 없는 아이가 한 미션</span></div><svg class="ico" style="color:var(--faint)"><use href="#i-next"/></svg></div>
+          <div class="item"><div class="ic"><img src="img/icon-pouch.webp" alt=""></div><div class="sp"><b>달란트 결제</b><span class="sub">잔치 날에만 보여요</span></div><svg class="ico" style="color:var(--faint)"><use href="#i-next"/></svg></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>가운데 버튼</b><span>어느 화면에서든 남색 버튼을 누르면 자주 하는 일이 아래에서 올라옵니다. 권한이 없는 일은 나오지 않습니다.</span></div>
+    </div>
+
+    <!-- 9. New mission -->
+    <div class="shot">
+      <div class="phone"><div class="scr" style="gap:13px">
+        <div class="row"><div class="rb"><svg class="ico"><use href="#i-back"/></svg></div><span class="t2 sp" style="text-align:center">미션 만들기</span><span style="width:40px"></span></div>
+        <div class="inp"><small>제목</small><div>가정예배 드리기</div></div>
+        <div class="inp"><small>어떻게 확인할까요?</small><span class="chips"><span class="chip">스스로 체크</span><span class="chip on">사진 올리기</span><span class="chip">글 쓰기</span><span class="chip">말씀 쓰기</span><span class="chip">퀴즈</span><span class="chip">QR 찍기</span><span class="chip">게임</span></span></div>
+        <div class="g2"><div class="inp"><small>물방울</small><div>3개</div></div><div class="inp"><small>포인트</small><div>30P</div></div></div>
+        <div class="inp"><small>언제</small><div>11월 4주차 (22일 ~ 28일)</div></div>
+        <div class="row tile" style="padding:13px 16px"><div class="sp"><b style="font-size:15px">이번 주 도전 미션</b><span class="sub">아이 미션 목록 맨 위에 보여요</span></div><i class="sw on"></i></div>
+        <span class="sp"></span>
+        <div class="cta" style="margin-bottom:18px">미션 올리기</div>
+      </div></div>
+      <div class="cap"><b>미션 만들기 (운영)</b><span>한 화면에서 위에서 아래로 채우면 끝납니다. 기간은 날짜 대신 주차로 고릅니다.</span></div>
+    </div>
+
+    <!-- 10. Festival pay -->
+    <div class="shot">
+      <div class="phone"><div class="scr">
+        <div class="row"><div class="rb"><svg class="ico"><use href="#i-back"/></svg></div><span class="t2 sp" style="text-align:center">달란트 결제</span><div class="rb"><svg class="ico"><use href="#i-qr"/></svg></div></div>
+        <div class="row" style="gap:8px"><span class="tag g-navy">떡볶이 코너</span><span class="sub">에서 받는 중이에요</span></div>
+        <div class="row tile" style="padding:14px 16px"><div class="tv m" style="background:#fff"><img src="img/tree-big.webp" alt=""></div><div class="sp"><b>김하준</b><span class="sub">5학년 2반</span></div><div style="text-align:right"><b style="font-size:24px;color:var(--blue);letter-spacing:-.03em">12</b><span class="sub">남은 달란트</span></div></div>
+        <span class="t2" style="margin-top:2px">몇 달란트를 받을까요?</span>
+        <div class="g3"><div class="stat"><b>1</b><span>달란트</span></div><div class="stat"><b>2</b><span>달란트</span></div><div class="stat" style="background:var(--navy);color:#fff"><b>3</b><span style="color:#cfd6f6">달란트</span></div></div>
+        <div class="g3"><div class="stat"><b>5</b><span>달란트</span></div><div class="stat"><b>10</b><span>달란트</span></div><div class="stat"><b>직접</b><span>입력</span></div></div>
+        <div class="field" style="border:0;padding:4px 2px"><span>결제 후 남는 달란트</span><b style="font-size:16px">9</b></div>
+        <span class="sp"></span>
+        <div class="cta">3달란트 받기</div>
+        <span class="sub" style="text-align:center;margin-bottom:16px">방금 결제: 이서윤 2달란트 · <u>취소</u></span>
+      </div></div>
+      <div class="cap"><b>달란트 결제 (잔치 날)</b><span>아이 카드를 찍거나 이름으로 찾고, 금액을 누르면 끝납니다. 잘못 받은 결제는 바로 취소합니다.</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>컴퓨터 웹</h2>
+  <p class="lead">평일에 준비하고 정리하는 화면입니다. 같은 색과 글꼴을 쓰고, 왼쪽 메뉴로 모든 관리를 합니다. 좁은 화면에서는 옆으로 밀어서 보세요.</p>
+  <div style="display:flex;flex-direction:column;gap:28px">
+
+    <!-- D1 dashboard -->
+    <div class="shot wide">
+      <div class="scroll"><div class="desk"><div class="side" data-side="대시보드"></div>
+        <div class="main">
+          <div class="top"><h3 class="sp">대시보드</h3><div class="find"><svg class="ico"><use href="#i-search"/></svg>아이 이름 찾기</div><span class="solid">+ 미션 만들기</span></div>
+          <div class="banner">
+            <div class="hill b" style="right:-8%"></div><div class="hill f"></div>
+            <div class="btxt"><small>11월 3주차</small><b>소년부 숲이<br>자라고 있어요</b></div>
+            <div class="ct" style="left:330px;bottom:14px"><img src="img/tree-big.webp" alt="" style="height:76px"><span>4-1 · 18</span></div>
+            <div class="ct" style="left:420px;bottom:16px"><img src="img/tree-sap.webp" alt="" style="height:62px"><span>4-2 · 14</span></div>
+            <div class="ct" style="left:510px;bottom:14px"><img src="img/tree-flower.webp" alt="" style="height:78px"><span>5-1 · 27</span></div>
+            <div class="ct" style="left:600px;bottom:10px"><img src="img/tree-big.webp" alt="" style="height:76px"><span>5-2 · 22</span></div>
+            <div class="ct" style="left:690px;bottom:4px"><img src="img/tree-fruit.webp" alt="" style="height:80px"><span>6-1 · 30</span></div>
+            <div class="ct" style="left:780px;bottom:0"><img src="img/tree-sap.webp" alt="" style="height:62px"><span>6-2 · 16</span></div>
+          </div>
+          <div class="kpis">
+            <div class="kpi"><span>지난 주일 출석</span><b>38 / 45</b><small class="up">84% · 지난주보다 3명 많음</small></div>
+            <div class="kpi"><span>이번 주 미션 참여</span><b>31명</b><small>가입한 36명 중</small></div>
+            <div class="kpi"><span>확인 기다리는 일</span><b>9건</b><small>미션 7 · 고민 2</small></div>
+            <div class="kpi"><span>장기 결석</span><b>3명</b><small class="dn">2주 이상 연속</small></div>
+          </div>
+          <div class="cols">
+            <div class="box">
+              <div class="row"><span class="t2 sp">반별 현황</span><span class="sub">출석 · 물방울 목표 30개</span></div>
+              <div class="cls"><b>4학년 1반</b><div class="bar"><i style="width:88%"></i></div><span>7/8</span><div class="bar b2"><i style="width:60%"></i></div><span>18</span></div>
+              <div class="cls"><b>4학년 2반</b><div class="bar"><i style="width:75%"></i></div><span>6/8</span><div class="bar b2"><i style="width:47%"></i></div><span>14</span></div>
+              <div class="cls"><b>5학년 1반</b><div class="bar"><i style="width:100%"></i></div><span>7/7</span><div class="bar b2"><i style="width:90%"></i></div><span>27</span></div>
+              <div class="cls"><b>5학년 2반</b><div class="bar"><i style="width:83%"></i></div><span>5/6</span><div class="bar b2"><i style="width:73%"></i></div><span>22</span></div>
+              <div class="cls"><b>6학년 1반</b><div class="bar"><i style="width:78%"></i></div><span>7/9</span><div class="bar b2"><i style="width:100%"></i></div><span>30</span></div>
+              <div class="cls"><b>6학년 2반</b><div class="bar"><i style="width:86%"></i></div><span>6/7</span><div class="bar b2"><i style="width:53%"></i></div><span>16</span></div>
+            </div>
+            <div class="box" style="gap:0">
+              <span class="t2" style="margin-bottom:6px">처리할 일</span>
+              <div class="item" style="padding:9px 0"><div class="ic s" style="background:#fff;width:38px;height:38px"><img src="img/icon-bible.webp" alt="" style="width:28px;height:28px"></div><div class="sp"><b style="font-size:14px">미션 확인 7건</b><span class="sub">가정예배 사진 5 · 글 2</span></div><span class="pb">확인</span></div>
+              <div class="item" style="padding:9px 0"><div class="ic s" style="background:#fff;width:38px;height:38px"><img src="img/icon-bubble.webp" alt="" style="width:28px;height:28px"></div><div class="sp"><b style="font-size:14px">새 고민 2건</b><span class="sub">전도사님에게 온 고민</span></div><span class="pb">읽기</span></div>
+              <div class="item" style="padding:9px 0"><div class="ic s" style="background:#fff;width:38px;height:38px"><img src="img/icon-house.webp" alt="" style="width:28px;height:28px"></div><div class="sp"><b style="font-size:14px">장기 결석 3명</b><span class="sub">정시우 · 한지호 외 1명</span></div><span class="pb">보기</span></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>대시보드 (총괄)</b><span>위쪽 그림에는 반마다 나무 한 그루가 서 있고, 물방울을 많이 모은 반일수록 나무가 큽니다. 담임 선생님이 열면 같은 틀에 자기 반 숫자만 나오고 운영 메뉴는 보이지 않습니다.</span></div>
+    </div>
+
+    <!-- D2 roster -->
+    <div class="shot wide">
+      <div class="scroll"><div class="desk"><div class="side" data-side="교적부"></div>
+        <div class="main">
+          <div class="top"><h3 class="sp">교적부<small>45명</small></h3><div class="find"><svg class="ico"><use href="#i-search"/></svg>이름, 학교로 찾기</div><span class="ghost">QR 카드 인쇄</span><span class="solid">+ 아이 추가</span></div>
+          <div class="row"><div class="chips"><span class="chip on">전체 45</span><span class="chip">4학년 16</span><span class="chip">5학년 13</span><span class="chip">6학년 16</span><span class="chip">새로 가입 2</span><span class="chip">장기 결석 3</span></div></div>
+          <div class="split">
+            <div class="card">
+              <table class="t">
+                <tr><th><i class="ck"></i></th><th>이름</th><th>반</th><th>학교</th><th>최근 4주</th><th>나무</th><th>포인트</th><th>상태</th></tr>
+                <tr><td><i class="ck"></i></td><td><b>김하준</b></td><td>5-2</td><td>숲속초 5-3</td><td class="dots">●●●●</td><td>큰나무</td><td>320</td><td><span class="tag g-navy">활동 중</span></td></tr>
+                <tr class="sel"><td><i class="ck on"></i></td><td><b>정시우</b></td><td>5-2</td><td>미입력</td><td class="dots">●●<i>●●</i></td><td>씨앗</td><td>40</td><td><span class="tag g-bad">2주 결석</span></td></tr>
+                <tr><td><i class="ck"></i></td><td><b>이서윤</b></td><td>5-2</td><td>숲속초 5-1</td><td class="dots">●●●●</td><td>어린나무</td><td>285</td><td><span class="tag g-navy">활동 중</span></td></tr>
+                <tr><td><i class="ck"></i></td><td><b>박도윤</b></td><td>5-2</td><td>하늘초 5-2</td><td class="dots">●<i>●</i>●●</td><td>꽃나무</td><td>410</td><td><span class="tag g-blue">고민 1</span></td></tr>
+                <tr><td><i class="ck"></i></td><td><b>윤예준</b></td><td>5-1</td><td>숲속초 5-4</td><td class="dots">●●●●</td><td>열매나무</td><td>505</td><td><span class="tag g-navy">활동 중</span></td></tr>
+                <tr><td><i class="ck"></i></td><td><b>한지호</b></td><td>4-1</td><td>하늘초 4-1</td><td class="dots">●<i>●●●</i></td><td>새싹</td><td>75</td><td><span class="tag g-bad">3주 결석</span></td></tr>
+                <tr><td><i class="ck"></i></td><td><b>오유나</b></td><td>4-1</td><td>숲속초 4-2</td><td class="dots">●●●<i>●</i></td><td>어린나무</td><td>190</td><td><span class="tag g-navy">활동 중</span></td></tr>
+                <tr><td><i class="ck"></i></td><td><b>서준우</b></td><td>6-1</td><td>하늘초 6-3</td><td class="dots">●●●●</td><td>꽃나무</td><td>365</td><td><span class="tag g-navy">활동 중</span></td></tr>
+                <tr><td><i class="ck"></i></td><td><b>신채원</b></td><td>반 미정</td><td>숲속초</td><td class="dots"><i>●●●●</i></td><td>씨앗</td><td>0</td><td><span class="tag g-warn">새로 가입</span></td></tr>
+              </table>
+            </div>
+            <div class="box">
+              <div class="row"><div class="tv l" style="background:#fff;width:60px;height:60px"><img src="img/tree-seed.webp" alt=""></div><div class="sp"><b style="font-size:18px">정시우</b><span class="sub">5학년 2반 · 담임 박지현</span></div></div>
+              <div class="seg" style="background:#e4e8ee"><span class="on">정보</span><span>심방 2</span><span>활동</span></div>
+              <div>
+                <div class="field" style="border-color:#e1e5ea"><span>태어난 해</span><b>2015년</b></div>
+                <div class="field" style="border-color:#e1e5ea"><span>연락처</span><b>보호자 010-····-1234</b></div>
+                <div class="field" style="border-color:#e1e5ea"><span>가장 친한 친구</span><b>김하준</b></div>
+                <div class="field" style="border-color:#e1e5ea"><span>휴대폰</span><b>없음 · 선생님이 대신 입력</b></div>
+              </div>
+              <div class="quote" style="font-size:13px"><b>최근 심방 · 11월 14일 전화</b><br><span style="color:var(--mute)">어머니와 통화. 지난주 결석 사유 확인.</span></div>
+              <div class="row" style="margin-top:auto;gap:8px"><span class="ghost sp" style="text-align:center;background:#fff">정보 고치기</span><span class="solid sp" style="text-align:center">심방 기록 쓰기</span></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>교적부</b><span>표에서 아이를 누르면 페이지를 옮기지 않고 오른쪽에 정보가 열립니다. 여러 명을 골라 반을 옮기거나 QR 카드를 한꺼번에 인쇄할 수 있습니다.</span></div>
+    </div>
+
+    <!-- D3 attendance -->
+    <div class="shot wide">
+      <div class="scroll"><div class="desk"><div class="side" data-side="출석"></div>
+        <div class="main">
+          <div class="top"><h3 class="sp">출석<small>11월</small></h3><span class="ghost">‹ 10월</span><span class="ghost">12월 ›</span><span class="ghost">엑셀로 내려받기</span></div>
+          <div class="chips"><span class="chip">전체</span><span class="chip">4학년 1반</span><span class="chip">4학년 2반</span><span class="chip">5학년 1반</span><span class="chip on">5학년 2반</span><span class="chip">6학년 1반</span><span class="chip">6학년 2반</span></div>
+          <div class="split">
+            <div class="card">
+              <table class="t">
+                <tr><th>이름</th><th class="c">1주차<br>11/1</th><th class="c">2주차<br>11/8</th><th class="c">3주차<br>11/15</th><th class="c">4주차<br>11/22</th><th class="c">5주차<br>11/29</th><th class="c">이번 달</th><th>메모</th></tr>
+                <tr><td><b>김하준</b></td><td class="c o">출석</td><td class="c o">출석</td><td class="c o">출석</td><td class="c z">·</td><td class="c z">·</td><td class="c">3 / 3</td><td></td></tr>
+                <tr><td><b>이서윤</b></td><td class="c o">출석</td><td class="c o">출석</td><td class="c o">출석</td><td class="c z">·</td><td class="c z">·</td><td class="c">3 / 3</td><td></td></tr>
+                <tr><td><b>박도윤</b></td><td class="c o">출석</td><td class="c x">결석</td><td class="c o">출석</td><td class="c z">·</td><td class="c z">·</td><td class="c">2 / 3</td><td style="color:var(--mute)">11/8 감기</td></tr>
+                <tr><td><b>최지우</b></td><td class="c o">출석</td><td class="c o">출석</td><td class="c o">출석</td><td class="c z">·</td><td class="c z">·</td><td class="c">3 / 3</td><td></td></tr>
+                <tr class="sel"><td><b>정시우</b></td><td class="c o">출석</td><td class="c x">결석</td><td class="c x">결석</td><td class="c z">·</td><td class="c z">·</td><td class="c">1 / 3</td><td style="color:var(--mute)">11/15 가족 여행</td></tr>
+                <tr><td><b>강하은</b></td><td class="c o">출석</td><td class="c o">출석</td><td class="c o">출석</td><td class="c z">·</td><td class="c z">·</td><td class="c">3 / 3</td><td></td></tr>
+                <tr><td style="color:var(--mute)">출석 인원</td><td class="c"><b>6</b></td><td class="c"><b>4</b></td><td class="c"><b>5</b></td><td class="c z">·</td><td class="c z">·</td><td class="c"><b>83%</b></td><td></td></tr>
+              </table>
+              <span class="sub" style="padding:8px 10px">칸을 누르면 출석과 결석이 바뀝니다. 아직 오지 않은 주일은 비어 있습니다.</span>
+            </div>
+            <div class="box">
+              <span class="t2">3주차 반별 출석</span>
+              <div>
+                <div class="field" style="border-color:#e1e5ea"><span>4학년 1반</span><b>7 / 8</b></div><div class="field" style="border-color:#e1e5ea"><span>4학년 2반</span><b>6 / 8</b></div><div class="field" style="border-color:#e1e5ea"><span>5학년 1반</span><b>7 / 7</b></div><div class="field" style="border-color:#e1e5ea"><span>5학년 2반</span><b>5 / 6</b></div><div class="field" style="border-color:#e1e5ea"><span>6학년 1반</span><b>7 / 9</b></div><div class="field" style="border-color:#e1e5ea"><span>6학년 2반</span><b>6 / 7</b></div>
+                <div class="field"><span>소년부 전체</span><b style="color:var(--blue)">38 / 45</b></div>
+              </div>
+              <div class="quote" style="font-size:13px"><b>아직 입력 안 한 반</b><br><span style="color:var(--mute)">없음. 3주차는 모든 반이 입력했습니다.</span></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>출석</b><span>한 달을 주차별 표로 봅니다. 연속 결석이 한눈에 보이고, 잘못 입력한 칸은 눌러서 고칩니다.</span></div>
+    </div>
+
+    <!-- D4 approvals -->
+    <div class="shot wide">
+      <div class="scroll"><div class="desk"><div class="side" data-side="미션 확인"></div>
+        <div class="main">
+          <div class="top"><h3 class="sp">미션 확인<small>기다리는 것 7건</small></h3><span class="solid">고른 3건 한꺼번에 확인</span></div>
+          <div class="chips"><span class="chip on">전체 7</span><span class="chip">사진 5</span><span class="chip">글 2</span><span class="chip">우리 반만</span></div>
+          <div class="cards3" id="appr"></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>미션 확인</b><span>큰 화면에서는 여러 장을 한꺼번에 보고, 골라서 한 번에 확인할 수 있습니다. 사진 자리는 예시 그림입니다.</span></div>
+    </div>
+
+    <!-- D5 missions -->
+    <div class="shot wide">
+      <div class="scroll"><div class="desk"><div class="side" data-side="미션"></div>
+        <div class="main">
+          <div class="top"><h3 class="sp">미션</h3><span class="ghost">지난주 미션 복사</span><span class="solid">+ 미션 만들기</span></div>
+          <div class="chips"><span class="chip">11월 2주차</span><span class="chip on">11월 3주차 · 이번 주</span><span class="chip">11월 4주차 · 준비 중</span></div>
+          <div class="split">
+            <div class="card" id="mis"></div>
+            <div class="box">
+              <div class="row"><div class="ic" style="background:#fff"><img src="img/icon-house.webp" alt=""></div><div class="sp"><b style="font-size:17px">가정예배 드리기</b><span class="tag g-warn" style="margin-top:4px">이번 주 도전</span></div></div>
+              <div>
+                <div class="field" style="border-color:#e1e5ea"><span>확인 방법</span><b>사진 올리기</b></div>
+                <div class="field" style="border-color:#e1e5ea"><span>물방울 · 포인트</span><b>3개 · 30P</b></div>
+                <div class="field" style="border-color:#e1e5ea"><span>기간</span><b>11월 3주차</b></div>
+                <div class="field" style="border-color:#e1e5ea"><span>대상</span><b>소년부 전체</b></div>
+                <div class="field" style="border-color:#e1e5ea"><span>도전 미션</span><i class="sw sm on"></i></div>
+                <div class="field"><span>확인 기다리는 것</span><b>5건</b></div>
+              </div>
+              <div class="row" style="margin-top:auto;gap:8px"><span class="ghost sp" style="text-align:center;background:#fff">그만 받기</span><span class="solid sp" style="text-align:center">고치기</span></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>미션 (운영)</b><span>아이들 미션 목록과 같은 그림으로 봅니다. 주차별로 관리하고, 지난주 미션을 복사해 다음 주를 빠르게 준비합니다. 한 주 물방울 합계가 12개인지 바로 보입니다.</span></div>
+    </div>
+
+    <!-- D6 staff -->
+    <div class="shot wide">
+      <div class="scroll"><div class="desk"><div class="side" data-side="교사·권한"></div>
+        <div class="main">
+          <div class="top"><h3 class="sp">교사·권한<small>12명</small></h3><span class="solid">+ 교사 초대하기</span></div>
+          <div class="card" style="flex:1">
+            <table class="t">
+              <tr><th>이름</th><th>역할</th><th>담당 반</th><th class="c">출석 체크</th><th class="c">심방 기록</th><th class="c">미션 확인</th><th class="c">모든 반 보기</th><th class="c">전도사님 고민 읽기</th><th>상태</th></tr>
+              <tr><td><div class="row" style="gap:8px"><div class="av s">김</div><b>김인성</b></div></td><td><span class="tag g-navy">관리자</span></td><td>전체</td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td>카카오 연결됨</td></tr>
+              <tr><td><div class="row" style="gap:8px"><div class="av s">이</div><b>이부장</b></div></td><td><span class="tag g-blue">부장</span></td><td>전체</td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm"></i></td><td>카카오 연결됨</td></tr>
+              <tr class="sel"><td><div class="row" style="gap:8px"><div class="av s" style="background:#fff">박</div><b>박지현</b></div></td><td><span class="tag g-gray" style="background:#fff">담임</span></td><td>5학년 2반</td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm"></i></td><td class="c"><i class="sw sm"></i></td><td>카카오 연결됨</td></tr>
+              <tr><td><div class="row" style="gap:8px"><div class="av s">정</div><b>정다은</b></div></td><td><span class="tag g-gray">담임</span></td><td>4학년 1반</td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm on"></i></td><td class="c"><i class="sw sm"></i></td><td class="c"><i class="sw sm"></i></td><td><span class="tag g-warn">초대 보냄 · 링크 복사</span></td></tr>
+              <tr><td><div class="row" style="gap:8px"><div class="av s">최</div><b>최기본</b></div></td><td><span class="tag g-gray">교사 기본</span></td><td>없음</td><td class="c"><i class="sw sm"></i></td><td class="c"><i class="sw sm"></i></td><td class="c"><i class="sw sm"></i></td><td class="c"><i class="sw sm"></i></td><td class="c"><i class="sw sm"></i></td><td>카카오 연결됨</td></tr>
+            </table>
+            <span class="sub" style="padding:10px">역할을 고르면 스위치가 기본값으로 맞춰지고, 필요하면 사람마다 따로 켜고 끌 수 있습니다.</span>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap"><b>교사·권한 (운영)</b><span>누가 무엇을 할 수 있는지 한 표에서 보고 바로 바꿉니다. 초대 링크를 받은 교사는 카카오로 로그인하면 연결됩니다.</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>화면별로 담기는 내용</h2>
+  <p class="lead">화면마다 한 가지 일만 하도록 나눴습니다. 휴대폰과 컴퓨터 모두 같은 내용이고 배치만 다릅니다.</p>
+  <div class="note spec"><table>
+    <tr><th>화면</th><th>보이는 것</th><th>할 수 있는 일</th><th>누가</th></tr>
+    <tr><td>홈</td><td>우리 반 나무, 반 물방울, 이번 주차 할 일(출석·미션 확인·새 고민·연속 결석)</td><td>할 일을 눌러 바로 처리, 다른 주차 보기</td><td>모든 교사 (담임은 자기 반, 부장·관리자는 전체)</td></tr>
+    <tr><td>우리 반</td><td>아이 카드: 나무(또는 사진), 이름, 나무 단계, 최근 4주 출석, 이번 주 물방울</td><td>아이 찾기, 정보 보기</td><td>담임은 자기 반, 부장·관리자는 반을 골라서</td></tr>
+    <tr><td>아이 정보</td><td>기본 정보(반, 태어난 해, 학교, 연락처, 친한 친구), 최근 출석, 나무·포인트, 심방 기록</td><td>정보 고치기, 심방 기록 쓰기, 휴대폰 없는 아이 미션 대신 입력</td><td>담임(자기 반), 부장, 관리자</td></tr>
+    <tr><td>출석 체크</td><td>주차, 반 아이 명단, 출석·결석, 결석 사유</td><td>아이마다 한 번 눌러 표시, 지난 주일 고치기</td><td>출석 권한이 있는 교사</td></tr>
+    <tr><td>할 일</td><td>확인 기다리는 미션(사진·글), 새 고민, 신고된 댓글</td><td>미션 확인·돌려보내기, 고민 읽고 답하기, 댓글 지우기</td><td>확인 권한이 있는 교사. 고민은 아이가 고른 사람만</td></tr>
+    <tr><td>더보기</td><td>내 정보, 예배 순서, 소식, 로그아웃</td><td>예배 순서·소식 보기</td><td>모든 교사</td></tr>
+    <tr><td>대시보드</td><td>반별 나무, 지난 주일 출석, 미션 참여 인원, 처리할 일, 장기 결석, 반별 출석과 물방울</td><td>숫자를 눌러 해당 목록으로 이동</td><td>부장, 관리자</td></tr>
+    <tr><td>교적부</td><td>전체 아이 표: 이름, 반, 학교, 최근 4주 출석, 나무, 포인트, 상태</td><td>찾기, 아이 추가, 새로 가입한 아이 반 배정, QR 카드 인쇄</td><td>부장, 관리자</td></tr>
+    <tr><td>운영</td><td>미션, 소식·예배, 반 편성, 교사·권한, QR 카드, 달란트, 설정</td><td>미션 만들기, 교사 초대와 권한 조절, 달란트 전환과 잔치 결제</td><td>관리자 (일부는 부장)</td></tr>
+  </table></div>
+</section>
+
+<section class="note">
+  <b>아이들 메인 화면에서 가져온 것</b>
+  <ul>
+    <li>글꼴(Pretendard), 남색 버튼, 회색 바탕 칸, 파란 진행 막대를 그대로 씁니다. 초록 포인트 색은 뺐습니다.</li>
+    <li>홈과 대시보드 맨 위에 하늘과 언덕이 나오고, 아이(반)의 나무가 그 위에 서 있습니다.</li>
+    <li>할 일과 바로 하기에는 미션 목록과 같은 점토 느낌 그림을 씁니다. 메뉴와 탭은 아이들 앱처럼 선 아이콘입니다.</li>
+    <li>빨강·주황·파랑은 꾸밈이 아니라 상태 표시에만 씁니다(결석, 확인 필요, 고민).</li>
+  </ul>
+</section>
+</div>
+
+<script>
+(function(){
+  var ic=function(n){return '<svg class="ico"><use href="#i-'+n+'"/></svg>'};
+  var tabs=[['home','홈'],['kids','우리 반'],null,['list','할 일'],['grid','더보기']];
+  document.querySelectorAll('[data-tab]').forEach(function(el){
+    var on=+el.getAttribute('data-tab');
+    el.innerHTML=tabs.map(function(t,i){return t?'<div'+(i===on?' class="on"':'')+'>'+ic(t[0])+t[1]+'</div>':'<div class="plus">'+ic('plus')+'</div>'}).join('');
+  });
+  var nav=[['home','대시보드'],['check','출석'],['kids','교적부'],['list','미션 확인',7],['chat','고민',2],0,['flag','미션'],['pen','소식·예배'],['grid','반 편성'],['kids','교사·권한'],['qr','QR 카드'],['coin','달란트'],['gear','설정']];
+  document.querySelectorAll('[data-side]').forEach(function(el){
+    var on=el.getAttribute('data-side');
+    el.innerHTML='<div class="brand"><img src="img/tree-big.webp" alt="">꿈의숲키우기</div>'+nav.map(function(n){return n?'<div class="nav'+(n[1]===on?' on':'')+'">'+ic(n[0])+n[1]+(n[2]?'<em>'+n[2]+'</em>':'')+'</div>':'<div class="grp">운영</div>'}).join('')+'<span class="sp"></span><div class="row" style="padding:8px 6px;gap:10px"><div class="av s">김</div><div><b>김인성</b><span class="sub" style="font-size:12px">관리자</span></div></div>';
+  });
+  /* the example class: name, tree picture, level, weeks attended of 4, drops of 12, what needs a look */
+  var KIDS=[['김하준','big','큰나무',4,8,''],['이서윤','sap','어린나무',4,11,''],['박도윤','flower','꽃나무',3,5,'worry'],['최지우','sprout','새싹',4,7,''],['정시우','seed','가입 전',2,0,'absent'],['강하은','sap','어린나무',4,9,'']];
+  var kids=document.getElementById('kids');
+  if(kids) kids.innerHTML=KIDS.map(function(k){
+    var flag=k[5]?'<i class="flag" style="background:'+(k[5]==='absent'?'var(--count)':'var(--bar)')+'"></i>':'';
+    return '<div class="kid"><div class="row"><div class="tv m"><img src="img/tree-'+k[1]+'.webp" alt=""></div><div class="sp"><span class="nm">'+k[0]+'</span><span class="tag '+(k[2]==='가입 전'?'g-gray':'g-navy')+'">'+k[2]+'</span></div>'+flag+'</div>'+
+      '<div class="duo"><div'+(k[3]<3?' class="bad"':'')+'><span>4주 출석</span><b>'+k[3]+'<i>/4</i></b></div><div><span>물방울</span><b>'+k[4]+'<i>/12</i></b></div></div><span class="see">정보 보기</span></div>';
+  }).join('');
+  var att=document.getElementById('att');
+  if(att) att.innerHTML=KIDS.map(function(k){
+    var out=k[0]==='정시우';
+    return '<div class="arow"><div class="tv s"><img src="img/tree-'+k[1]+'.webp" alt=""></div><div class="sp"><b>'+k[0]+'</b>'+(out?'<span class="sub">가족 여행</span>':'')+'</div><div class="att"><span'+(out?'':' class="y"')+'>출석</span><span'+(out?' class="n"':'')+'>결석</span></div></div>';
+  }).join('');
+  var APPR=[['이서윤','sap','5-2','가정예배 드리기',1,''],['윤예준','fruit','5-1','가정예배 드리기',1,''],['서준우','flower','6-1','가정예배 드리기',1,''],['김하준','big','5-2','감사한 일 쓰기',0,'동생이랑 싸웠는데 먼저 사과했어요. 그래서 감사해요.'],['오유나','sap','4-1','가정예배 드리기',0,''],['신채원','seed','6-1','감사한 일 쓰기',0,'새 친구가 생겨서 감사해요.']];
+  var appr=document.getElementById('appr');
+  if(appr) appr.innerHTML=APPR.map(function(a){
+    return '<div class="box"><div class="row" style="gap:10px"><i class="ck'+(a[4]?' on':'')+'"></i><div class="tv s" style="background:#fff"><img src="img/tree-'+a[1]+'.webp" alt=""></div><div class="sp"><b>'+a[0]+' <span style="font-weight:500;color:var(--mute)">'+a[2]+'</span></b><span class="sub">'+a[3]+'</span></div></div>'+
+      (a[5]?'<div class="quote" style="height:128px">'+a[5]+'</div>':'<div class="ph" style="background:#fff"><img src="img/icon-house.webp" alt=""></div>')+
+      '<div class="two"><span class="no">다시 해 주세요</span><span class="ok">확인했어요</span></div></div>';
+  }).join('');
+  var MIS=[['stamp','주일 예배 출석','선생님 출석 체크',2,20,'38명',0],['bible','이번 주 말씀 쓰기','말씀 쓰기',2,15,'24명',0],['house','가정예배 드리기','사진 올리기',3,30,'11명',1],['badge','성경 퀴즈','퀴즈 5문제',1,10,'19명',0],['bubble','숲 소식에 댓글 달기','댓글',1,5,'16명',0],['pray','가족을 위해 기도하기','스스로 체크 · 주 3번','1 × 3',5,'27명',0]];
+  var mis=document.getElementById('mis');
+  if(mis) mis.innerHTML='<table class="t"><tr><th>미션</th><th>확인 방법</th><th class="c">물방울</th><th class="c">포인트</th><th class="c">완료</th></tr>'+MIS.map(function(m){
+    return '<tr'+(m[6]?' class="sel"':'')+'><td><div class="row" style="gap:10px"><div class="ic s" style="width:36px;height:36px'+(m[6]?';background:#fff':'')+'"><img src="img/icon-'+m[0]+'.webp" alt="" style="width:27px;height:27px"></div><b>'+m[1]+'</b></div></td><td>'+m[2]+'</td><td class="c">'+m[3]+'</td><td class="c" style="color:var(--blue);font-weight:700">'+m[4]+'P</td><td class="c">'+m[5]+'</td></tr>';
+  }).join('')+'<tr><td style="color:var(--mute)">한 주에 모을 수 있는 물방울</td><td></td><td class="c"><b>12</b></td><td></td><td></td></tr></table>';
+})();
+</script>
