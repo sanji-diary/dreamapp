@@ -1,21 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { inputClass, labelClass, primaryButtonClass } from "@/components/ui";
 import { talentEventAction } from "@/lib/staff/actions-festival";
 import type { PreviewRow } from "@/lib/staff/festival";
 import { MAX_RATE, MIN_RATE, summarize, talentsFor } from "@/lib/talent-math";
+import { rowClass, tableClass, tdClass, thClass } from "./admin-kit";
+import { Field, HintText, SaveBar, SubmitButton, TextInput, errorFor, inputBoxClass } from "./form-kit";
+import { Card, EmptyNote, StatTile } from "./kit";
 
 const TRY = [5, 10, 20, 50, 100];
-
-function Tile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[12px] text-sub">{label}</span>
-      <span className="text-[17px] font-bold tracking-[-0.3px]">{value}</span>
-    </div>
-  );
-}
 
 const num = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
 
@@ -23,13 +16,14 @@ const num = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 1 
  * A draft event: the pastor tries rates and sees what every child would get. The numbers on
  * this screen are only a preview; the server computes the real grants again when the event opens.
  */
-export function TalentDraft({ id, name, rate: savedRate, rows }: { id: number; name: string; rate: number; rows: PreviewRow[] }) {
+export function TalentDraft({ id, name, rate: savedRate, rows, error }: { id: number; name: string; rate: number; rows: PreviewRow[]; error?: string }) {
   const [text, setText] = useState(String(savedRate));
   const rate = /^\d{1,5}$/.test(text) ? Number(text) : 0;
   const valid = rate >= MIN_RATE && rate <= MAX_RATE;
   const talents = rows.map((r) => talentsFor(r.points, rate));
   const sum = summarize(talents);
   const totalPoints = rows.reduce((a, r) => a + Math.max(0, r.points), 0);
+  const rateError = valid ? errorFor(error, /필요한 포인트/) : `${MIN_RATE}에서 ${MAX_RATE.toLocaleString("ko-KR")} 사이 숫자를 넣어 주세요.`;
   const confirmText = [
     `${rate}P = 1달란트로 잔치를 시작할까요?`,
     "",
@@ -40,19 +34,11 @@ export function TalentDraft({ id, name, rate: savedRate, rows }: { id: number; n
   ].join("\n");
 
   return (
-    <form action={talentEventAction} className="flex flex-col px-4 pb-6">
+    <form action={talentEventAction} className="flex grow flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
       <input type="hidden" name="id" value={id} />
-      <div className="flex flex-col gap-3 pt-2">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="td-name" className={labelClass}>
-            잔치 이름
-          </label>
-          <input id="td-name" name="name" defaultValue={name} required maxLength={30} className={inputClass} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="td-rate" className={labelClass}>
-            달란트 1개에 필요한 포인트
-          </label>
+      <div className="flex min-w-0 flex-col gap-3.5">
+        <TextInput label="잔치 이름" name="name" id="td-name" defaultValue={name} required maxLength={30} error={errorFor(error, /이름/)} />
+        <Field label="달란트 1개에 필요한 포인트" htmlFor="td-rate" error={rateError} hint="숫자를 바꾸면 미리 보기가 바로 바뀌어요. 아직 아이들에게는 아무것도 바뀌지 않아요.">
           <div className="flex items-center gap-2">
             <input
               id="td-rate"
@@ -64,105 +50,86 @@ export function TalentDraft({ id, name, rate: savedRate, rows }: { id: number; n
               required
               value={text}
               onChange={(e) => setText(e.currentTarget.value)}
-              aria-describedby="td-rate-help"
-              className={`${inputClass} min-w-0 grow`}
+              aria-invalid={rateError ? true : undefined}
+              aria-describedby={`${rateError ? "td-rate-error " : ""}td-rate-hint`}
+              className={inputBoxClass(Boolean(rateError))}
             />
             <span className="shrink-0 text-[15px] font-semibold text-ink2">P = 1달란트</span>
           </div>
-          <div className="flex flex-wrap gap-x-1.5" role="group" aria-label="비율 넣어 보기">
+          <div className="-my-[5px] flex flex-wrap gap-x-[7px]" role="group" aria-label="비율 넣어 보기">
             {TRY.map((n) => (
-              <button key={n} type="button" aria-pressed={rate === n} onClick={() => setText(String(n))} className="flex h-11 cursor-pointer items-center border-0 bg-transparent p-0">
-                <span className={`flex h-[34px] items-center rounded-lg px-3 text-[14px] font-semibold ${rate === n ? "bg-navy text-white" : "bg-fill text-sub"}`}>{n}P</span>
+              <button key={n} type="button" aria-pressed={rate === n} onClick={() => setText(String(n))} className="group flex h-11 cursor-pointer items-center border-0 bg-transparent p-0 outline-none">
+                <span className={`rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy ${rate === n ? "bg-navy text-white" : "bg-fill text-sub"}`}>{n}P</span>
               </button>
             ))}
           </div>
-          <p id="td-rate-help" className="m-0 text-[12px] leading-[18px] text-mute">
-            숫자를 바꾸면 아래 미리 보기가 바로 바뀌어요. 아직 아이들에게는 아무것도 바뀌지 않아요.
-          </p>
+        </Field>
+
+        <div aria-live="polite" className="flex flex-col gap-3 rounded-[20px] bg-fill p-4">
+          {valid ? (
+            <>
+              <div className="flex flex-wrap items-end justify-between gap-x-3">
+                <div className="flex flex-col">
+                  <span className="text-[13px] text-mute">나눠 줄 달란트 (아이 {sum.count}명)</span>
+                  <b className="text-[26px] leading-[1.3] tracking-[-0.035em] text-blue">{num(sum.total)}개</b>
+                </div>
+                <span className="pb-1 text-[13px] text-mute">포인트 합계 {num(totalPoints)}P</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 [&>div]:bg-white">
+                <StatTile value={`${num(sum.min)}개`} label="가장 적은 아이" />
+                <StatTile value={`${num(sum.median)}개`} label="가운데 아이" />
+                <StatTile value={`${num(sum.max)}개`} label="가장 많은 아이" />
+              </div>
+            </>
+          ) : (
+            <p className="m-0 py-2 text-center text-[14px] text-mute">비율을 넣으면 여기에 미리 보기가 보여요.</p>
+          )}
         </div>
       </div>
 
-      <div aria-live="polite" className="mt-4 flex flex-col gap-3 rounded-2xl bg-fill p-4">
-        {valid ? (
-          <>
-            <div className="flex items-end justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[13px] text-sub">나눠 줄 달란트 (아이 {sum.count}명)</span>
-                <span className="text-[28px] leading-[34px] font-bold tracking-[-0.6px]">{num(sum.total)}개</span>
-              </div>
-              <span className="pb-1 text-[13px] text-sub">포인트 합계 {num(totalPoints)}P</span>
-            </div>
-            <div className="grid grid-cols-3">
-              <Tile label="가장 적은 아이" value={`${num(sum.min)}개`} />
-              <Tile label="가운데 아이" value={`${num(sum.median)}개`} />
-              <Tile label="가장 많은 아이" value={`${num(sum.max)}개`} />
-            </div>
-          </>
-        ) : (
-          <p className="m-0 text-[14px] leading-[21px] font-semibold text-danger">
-            {MIN_RATE}에서 {MAX_RATE.toLocaleString("ko-KR")} 사이 숫자를 넣어 주세요.
-          </p>
-        )}
-      </div>
-
-      <table className="mt-3 w-full border-collapse text-[14px]">
-        <caption className="sr-only">아이별 미리 보기</caption>
-        <thead>
-          <tr className="border-b border-line text-left text-[13px] text-mute">
-            <th scope="col" className="h-9 font-semibold">
-              이름
-            </th>
-            <th scope="col" className="font-semibold">
-              반
-            </th>
-            <th scope="col" className="text-right font-semibold">
-              포인트
-            </th>
-            <th scope="col" className="w-[76px] text-right font-semibold">
-              달란트
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.id} className="border-b border-line">
-              <th scope="row" className="h-11 text-left font-bold text-ink2">
-                {r.name}
+      <Card className="lg:row-span-2">
+        <table className={tableClass}>
+          <caption className="sr-only">아이별 미리 보기</caption>
+          <thead>
+            <tr>
+              <th scope="col" className={thClass()}>
+                이름
               </th>
-              <td className="text-sub">{r.class_name ?? "-"}</td>
-              <td className="text-right text-sub">{r.points.toLocaleString("ko-KR")}P</td>
-              <td className="text-right font-bold text-ink2">{valid ? `${talents[i]}개` : "-"}</td>
+              <th scope="col" className={thClass()}>
+                반
+              </th>
+              <th scope="col" className={thClass({ center: true })}>
+                포인트
+              </th>
+              <th scope="col" className={thClass({ center: true })}>
+                달란트
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {rows.length === 0 ? <p className="m-0 py-6 text-center text-[14px] text-mute">아직 아이가 없어요.</p> : null}
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.id} className={rowClass}>
+                <th scope="row" className={`${tdClass()} text-left font-bold`}>
+                  {r.name}
+                </th>
+                <td className={`${tdClass()} text-mute`}>{r.class_name ?? "-"}</td>
+                <td className={tdClass({ center: true, nowrap: true })}>{r.points.toLocaleString("ko-KR")}P</td>
+                <td className={`${tdClass({ center: true, nowrap: true })} font-bold text-blue`}>{valid ? `${talents[i]}개` : "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 ? <EmptyNote>아직 아이가 없어요.</EmptyNote> : null}
+      </Card>
 
-      <div className="mt-5 flex flex-col gap-2">
-        <button type="submit" name="op" value="save" disabled={!valid} className="flex h-[52px] w-full cursor-pointer items-center justify-center rounded-xl border-0 bg-fill text-[16px] font-bold text-ink2 disabled:text-faint">
-          이 비율로 저장해 두기
-        </button>
-        <button
-          type="submit"
-          name="op"
-          value="open"
-          disabled={!valid}
-          className={`${primaryButtonClass} cursor-pointer`}
-          onClick={(e) => {
-            if (!window.confirm(confirmText)) e.preventDefault();
-          }}
-        >
-          잔치 시작
-        </button>
-        <p className="m-0 text-[12px] leading-[18px] text-mute">
-          잔치를 시작하면 지금 포인트를 기준으로 달란트가 정해지고, 그 뒤로는 비율을 바꿀 수 없어요. 포인트는 줄어들지 않아요. 잔치 날 아침에 시작하는 것이 좋아요.
-        </p>
+      <div className="flex flex-col gap-1">
+        <HintText>잔치를 시작하면 지금 포인트를 기준으로 달란트가 정해지고, 그 뒤로는 비율을 바꿀 수 없어요. 포인트는 줄어들지 않아요. 잔치 날 아침에 시작하는 것이 좋아요.</HintText>
         <button
           type="submit"
           name="op"
           value="delete"
           formNoValidate
-          className="mt-2 flex h-11 w-fit cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-bold text-danger"
+          className="flex h-11 w-fit cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-bold text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
           onClick={(e) => {
             if (!window.confirm("이 초안을 지울까요? 아이들에게는 아무것도 바뀌지 않아요.")) e.preventDefault();
           }}
@@ -170,6 +137,22 @@ export function TalentDraft({ id, name, rate: savedRate, rows }: { id: number; n
           초안 지우기
         </button>
       </div>
+
+      <SaveBar className="lg:col-start-1">
+        <SubmitButton tone="gray" name="op" value="save" disabled={!valid}>
+          저장해 두기
+        </SubmitButton>
+        <SubmitButton
+          name="op"
+          value="open"
+          disabled={!valid}
+          onClick={(e) => {
+            if (!window.confirm(confirmText)) e.preventDefault();
+          }}
+        >
+          잔치 시작
+        </SubmitButton>
+      </SaveBar>
     </form>
   );
 }

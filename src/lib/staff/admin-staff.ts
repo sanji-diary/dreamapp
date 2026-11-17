@@ -101,6 +101,22 @@ export async function updateStaff(staff: Staff, id: number, input: StaffUpdate):
   });
 }
 
+export const SWITCH_KEYS = ["can_attendance", "can_visits", "can_approve", "can_view_all", "can_read_pastor_worries"] as const;
+export type SwitchKey = (typeof SWITCH_KEYS)[number];
+
+/**
+ * One switch of one teacher, from the table on the teacher list. It goes through updateStaff with
+ * the teacher's role, classes and sign-in state exactly as they are, so the same checks and the
+ * same audit record apply and nothing else about the teacher changes.
+ */
+export async function setStaffSwitch(staff: Staff, id: number, key: string, on: boolean): Promise<Result> {
+  if (staff.role !== "admin") return deny;
+  if (!(SWITCH_KEYS as readonly string[]).includes(key)) return fail("바꿀 수 없는 항목이에요");
+  const cur = await getStaffRow(staff, id);
+  if (!cur) return fail("선생님을 찾을 수 없어요");
+  return updateStaff(staff, id, { role: cur.role, class_ids: cur.class_ids, active: cur.active, switches: { [key as SwitchKey]: on === true } });
+}
+
 /** A fresh invite link, for a teacher who lost theirs or changed Kakao accounts. The old Kakao link is removed. */
 export async function renewInvite(staff: Staff, id: number): Promise<Result> {
   if (staff.role !== "admin") return deny;

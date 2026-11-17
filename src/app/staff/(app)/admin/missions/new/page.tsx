@@ -1,8 +1,9 @@
 import { MissionForm } from "@/components/staff/MissionForm";
-import { Flash, SubHeader } from "@/components/staff/ui";
+import { FlashNote, Page, PageHeader } from "@/components/staff/kit";
 import { requireAdmin } from "@/lib/auth";
-import { missionFormOptions } from "@/lib/staff/mission-options";
 import { defaultMissionInput } from "@/lib/staff/admin-missions";
+import { missionFormOptions } from "@/lib/staff/mission-options";
+import { weekStart } from "@/lib/time";
 
 export const metadata = { title: "미션 만들기 · 꿈의숲키우기" };
 
@@ -10,11 +11,14 @@ export default async function NewMissionPage({ searchParams }: PageProps<"/staff
   await requireAdmin();
   const sp = await searchParams;
   const options = await missionFormOptions();
+  const error = typeof sp.error === "string" ? sp.error : undefined;
+  // "+ 미션 만들기" on another week's list starts the form on that week (?w=).
+  const week = typeof sp.w === "string" ? sp.w : undefined;
   return (
-    <>
-      <SubHeader back="/staff/admin/missions" backLabel="미션 목록으로 돌아가기" title="미션 만들기" />
-      <Flash error={sp.error} />
-      <MissionForm id={null} initial={defaultMissionInput()} {...options} />
-    </>
+    <Page narrow>
+      <PageHeader back="/staff/admin/missions" backLabel="미션 목록으로 돌아가기" title="미션 만들기" />
+      <FlashNote error={sp.error} />
+      <MissionForm id={null} initial={defaultMissionInput(week)} thisWeek={weekStart()} error={error} {...options} />
+    </Page>
   );
 }

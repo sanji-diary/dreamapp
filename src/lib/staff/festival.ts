@@ -1,4 +1,5 @@
 import "server-only";
+import { detailScope } from "@/lib/authz";
 import { db, one } from "@/lib/db";
 import { getEvent, openEvent, talentBalance, type TalentEvent } from "@/lib/talents";
 import type { Staff } from "@/lib/types";
@@ -153,6 +154,23 @@ export async function festivalKids(staff: Staff): Promise<FestivalKid[]> {
     `select c.id, c.name, c.class_id, k.name as class_name, c.photo_url
        from children c left join classes k on k.id = c.class_id where c.active order by k.sort nulls last, k.id, c.name, c.id`,
   );
+}
+
+/**
+ * Tree levels for the pictures on the payment screen, by child id. A tree is a detail of a child,
+ * so a teacher gets it only for the children they may open (the same rule as the class list);
+ * the others are shown with a plain leaf. Empty when no event is open.
+ */
+export async function festivalLevels(staff: Staff): Promise<Record<number, number>> {
+  if (!staff.active || !(await openEvent())) return {};
+  const scope = detailScope(staff);
+  if (scope !== null && scope.length === 0) return {};
+  const rows = await db.query<{ id: number; level: number }>(
+    `select c.id, coalesce((select t.level from trees t where t.child_id = c.id and t.harvested_at is null order by t.seq desc limit 1), 1)::int as level
+       from children c where c.active and ($1::int[] is null or c.class_id = any($1::int[]))`,
+    [scope],
+  );
+  return Object.fromEntries(rows.map((r) => [r.id, r.level]));
 }
 
 async function childWhere(staff: Staff, where: string, param: unknown): Promise<FestivalChild | null> {

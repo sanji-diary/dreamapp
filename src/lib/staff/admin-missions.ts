@@ -53,17 +53,19 @@ export async function getMission(staff: Staff, id: number): Promise<Mission | nu
   return one<Mission>(db, "select * from missions where id = $1", [id]);
 }
 
-export function defaultMissionInput(): MissionInput {
+/** A blank mission for this week, or for the week that contains `week` when the list was showing another one. */
+export function defaultMissionInput(week?: string): MissionInput {
+  const day = week !== undefined && isDate(week) ? week : undefined;
   return {
     title: "", description: "", kind: "self", icon: "stamp", points: 10, drops: 1, repeat: "weekly", weekly_limit: null,
-    verse_text: null, verse_ref: null, target_grade: null, target_class_id: null, starts_on: weekStart(), ends_on: weekEnd(), is_challenge: false,
+    verse_text: null, verse_ref: null, target_grade: null, target_class_id: null, starts_on: weekStart(day), ends_on: weekEnd(day), is_challenge: false,
     qr_self: false, quiz: null, quiz_pass: null, game_id: null,
   };
 }
 
 async function validate(input: MissionInput): Promise<Result<{ v: MissionInput }>> {
   const title = clean(input.title, 40);
-  if (!title) return fail("미션 이름을 적어 주세요");
+  if (!title) return fail("미션 제목을 적어 주세요");
   if (!(input.kind in KIND_NAMES)) return fail("확인 방법을 골라 주세요");
   if (!["once", "daily", "weekly"].includes(input.repeat)) return fail("반복을 골라 주세요");
   if (!Number.isInteger(input.points) || input.points < 0 || input.points > 1000) return fail("포인트는 0에서 1000 사이로 적어 주세요");
@@ -155,6 +157,61 @@ export async function setMissionActive(staff: Staff, id: number, active: boolean
   return { ok: true };
 }
 
+/** The 도전 미션 switch on the mission list: the same flag the form saves, changed on its own. */
+export async function setMissionChallenge(staff: Staff, id: number, on: boolean): Promise<Result> {
+  if (staff.role !== "admin") return deny;
+  const rows = await db.query("update missions set is_challenge = $2 where id = $1 returning id", [id, on === true]);
+  return rows.length > 0 ? { ok: true } : fail("미션을 찾을 수 없어요");
+}
+
+/** Every mission whose period touches the week that starts on `week` (a Sunday), taken-down ones included. Challenge missions first. */
+export async function weekMissions(staff: Staff, week: string): Promise<Mission[] | null> {
+  if (staff.role !== "admin") return null;
+  if (!isDate(week)) return [];
+  return db.query<Mission>("select * from missions where starts_on <= $2 and ends_on >= $1 order by is_challenge desc, active desc, starts_on, id", [week, addDays(week, 6)]);
+}
+
+/** The Sundays of the weeks that have a mission, from the week of `from` on (at most `limit` of them). For the week chips. */
+export async function missionWeeksFrom(staff: Staff, from: string, limit = 8): Promise<string[] | null> {
+  if (staff.role !== "admin") return null;
+  if (!isDate(from)) return [];
+  const first = weekStart(from);
+  const rows = await db.query<{ starts_on: string; ends_on: string }>("select starts_on, ends_on from missions where ends_on >= $1", [first]);
+  const weeks = new Set<string>();
+  for (const r of rows) {
+    // A long mission counts for every week it runs in, up to the limit.
+    let w = weekStart(r.starts_on < first ? first : r.starts_on);
+    for (let i = 0; w <= r.ends_on && i < limit; i++) {
+      weeks.add(w);
+      w = addDays(w, 7);
+    }
+  }
+  return [...weeks].sort().slice(0, limit);
+}
+
+export interface MissionStat {
+  /** Children whose completion was approved (in the given week, or ever when no week is given). */
+  done: number;
+  /** Submissions waiting for a teacher, whenever they were sent. */
+  pending: number;
+}
+
+/** How far each mission has got: the "완료" column and "확인 기다리는 것". Counts only, no names. */
+export async function missionStats(staff: Staff, ids: number[], week: string | null = null): Promise<Map<number, MissionStat> | null> {
+  if (staff.role !== "admin") return null;
+  const out = new Map<number, MissionStat>();
+  if (ids.length === 0) return out;
+  const rows = await db.query<{ mission_id: number; done: number; pending: number }>(
+    `select mission_id,
+            count(distinct child_id) filter (where status = 'approved' and ($2::date is null or week_start = $2))::int as done,
+            count(*) filter (where status = 'pending')::int as pending
+       from mission_completions where mission_id = any($1::int[]) group by mission_id`,
+    [ids, week !== null && isDate(week) ? week : null],
+  );
+  for (const r of rows) out.set(r.mission_id, { done: r.done, pending: r.pending });
+  return out;
+}
+
 /** Copies a mission to the following week (same weekday span, seven days later). */
 export async function duplicateToNextWeek(staff: Staff, id: number): Promise<Result<{ id: number }>> {
   if (staff.role !== "admin") return deny;
@@ -168,6 +225,43 @@ export async function duplicateToNextWeek(staff: Staff, id: number): Promise<Res
       m.quiz ? JSON.stringify(parseQuiz(m.quiz)) : null, m.quiz_pass, m.game_id, m.kind === "qr" || m.qr_code !== null ? newToken(9) : null, staff.id],
   );
   return { ok: true, id: rows[0].id };
+}
+
+const sameTarget = (a: Mission, b: Mission) => a.target_class_id === b.target_class_id && a.target_grade === b.target_grade;
+
+/**
+ * What "지난주 미션 복사" would copy into the week that starts on `toWeek`: the missions that are
+ * still up and ran only inside the week before it. A mission that already has a twin in `toWeek`
+ * (same title, kind, target, and dates seven days later) is listed under `already`, so pressing the
+ * button twice does not make a second set. Longer missions are left alone: they are still running.
+ */
+export async function weekCopyPlan(staff: Staff, toWeek: string): Promise<{ from: string; copy: Mission[]; already: Mission[] } | null> {
+  if (staff.role !== "admin") return null;
+  if (!isDate(toWeek) || weekStart(toWeek) !== toWeek) return null;
+  const from = addDays(toWeek, -7);
+  const source = await db.query<Mission>("select * from missions where active and starts_on >= $1 and ends_on <= $2 order by is_challenge desc, id", [from, addDays(from, 6)]);
+  const there = await db.query<Mission>("select * from missions where starts_on >= $1 and ends_on <= $2", [toWeek, addDays(toWeek, 6)]);
+  const twin = (m: Mission) => there.some((t) => t.title === m.title && t.kind === m.kind && sameTarget(t, m) && t.starts_on === addDays(m.starts_on, 7) && t.ends_on === addDays(m.ends_on, 7));
+  return { from, copy: source.filter((m) => !twin(m)), already: source.filter(twin) };
+}
+
+/**
+ * Copies the missions of the week before `toWeek` into it with duplicateToNextWeek, one by one
+ * (each copy gets its own QR code). Only this week and later weeks can be filled: a past week is history.
+ */
+export async function copyWeek(staff: Staff, toWeek: string, today: string = todayKst()): Promise<Result<{ copied: number; skipped: number }>> {
+  if (staff.role !== "admin") return deny;
+  const plan = await weekCopyPlan(staff, toWeek);
+  if (!plan) return fail("주를 다시 골라 주세요");
+  if (toWeek < weekStart(today)) return fail("지난 주에는 복사할 수 없어요");
+  if (plan.copy.length === 0) return fail(plan.already.length > 0 ? "이미 모두 복사되어 있어요" : "복사할 미션이 없어요");
+  let copied = 0;
+  for (const m of plan.copy) {
+    const r = await duplicateToNextWeek(staff, m.id);
+    if (!r.ok) return r;
+    copied++;
+  }
+  return { ok: true, copied, skipped: plan.already.length };
 }
 
 /** The most drops one child could earn from a mission in a week. */
