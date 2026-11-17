@@ -3,7 +3,7 @@ import { db, one } from "@/lib/db";
 import { getSettings } from "@/lib/game";
 import { findGame } from "@/games/registry";
 import { newToken } from "@/lib/pin";
-import { isOpenOn, rotationFor, weekMissions } from "@/lib/plan";
+import { isOpenOn, rotationFor, weekMissions as missionsOpenInWeek } from "@/lib/plan";
 import { parseQuiz, validateQuiz } from "@/lib/quiz";
 import { addDays, todayKst, weekEnd, weekStart } from "@/lib/time";
 import type { Mission, MissionMode, QuizQuestion, Staff, Verse } from "@/lib/types";
@@ -342,7 +342,7 @@ export interface DropCheck {
 export async function weeklyDropCheck(staff: Staff, week: string = weekStart()): Promise<DropCheck | null> {
   if (staff.role !== "admin") return null;
   const cap = (await getSettings(db)).weeklyDropCap;
-  const missions = await weekMissions(db, weekStart(week));
+  const missions = await missionsOpenInWeek(db, weekStart(week));
   const classes = await listClasses(db);
   const totals = classes.map((c) => ({
     name: c.name,
