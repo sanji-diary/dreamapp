@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InstallEntry } from "@/components/kid/InstallGuide";
 import { Chevron, Icon, KidTabBar } from "@/components/ui";
 import { requireKid } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -163,6 +164,14 @@ export default async function MePage() {
             ) : null}
             <Chevron />
           </Link>
+          <Link href="/me/card" className="flex h-[54px] items-center gap-2 border-b border-line no-underline">
+            <span className="grow text-[16px] font-semibold text-ink2">내 카드 보기</span>
+            <Chevron />
+          </Link>
+          <InstallEntry href={`/join/${encodeURIComponent(kid.qr_token)}/install`}>
+            <span className="grow text-[16px] font-semibold text-ink2">홈 화면에 추가하기</span>
+            <Chevron />
+          </InstallEntry>
           <form action={signOutAction}>
             <button type="submit" className="flex h-[54px] w-full cursor-pointer items-center border-0 bg-transparent p-0 text-left text-[16px] font-semibold text-sub">
               로그아웃

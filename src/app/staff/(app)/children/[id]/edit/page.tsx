@@ -21,7 +21,7 @@ export default async function EditChildPage({ params, searchParams }: PageProps<
     <>
       <SubHeader back={`/staff/children/${c.id}`} backLabel="프로필로 돌아가기" title={`${c.name} 프로필 수정`} />
       <Flash error={sp.error} />
-      <ChildForm today={todayKst()} canChangeClass={staff.role === "admin"} classes={classes} friends={all.filter((f) => f.id !== c.id)} values={c} />
+      <ChildForm today={todayKst()} canChangeClass={c.can.assignClass} classes={classes} friends={all.filter((f) => f.id !== c.id)} values={c} />
     </>
   );
 }

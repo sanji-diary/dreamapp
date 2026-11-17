@@ -1,52 +1,53 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { inputClass, primaryButtonClass } from "@/components/ui";
-import { completeOnboardingAction, newPinAction } from "@/lib/kid/actions";
-import { callName, formatPhone, phoneDigits } from "@/lib/kid/korean";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { primaryButtonClass } from "@/components/ui";
+import { completeOnboardingAction, newPinAction, selfJoinAction } from "@/lib/kid/actions";
 import type { OnboardingErrors, OnboardingField } from "@/lib/kid/onboarding";
 import { PinDots, PinKeys } from "./PinPad";
 
 /**
- * First-time setup, one question per screen. Nothing is saved until the last step,
- * so going back and changing an answer is always safe.
+ * Sign-up, one question at a time: name, gender, birth year, school, church class, then the PIN twice.
+ * The newest question is at the top; earlier answers stay underneath and can be tapped to change them.
+ * Nothing is saved until the PIN is repeated, so going back is always safe.
+ *
+ * The same wizard serves both ways in: the shared QR (a new child) and a personal card
+ * (a child the teacher registered, with the teacher's answers already filled in).
  */
 
-type StepKey = "name" | "birth" | "gender" | "school" | "schoolClass" | "phone" | "guardianPhone" | "address" | "friend" | "pin" | "pin2";
-const ALL_STEPS: StepKey[] = ["name", "birth", "gender", "school", "schoolClass", "phone", "guardianPhone", "address", "friend", "pin", "pin2"];
+type AskKey = "name" | "gender" | "birth" | "school" | "classId";
+type StepKey = AskKey | "pin" | "pin2";
+const ASK_STEPS: AskKey[] = ["name", "gender", "birth", "school", "classId"];
+const ALL_STEPS: StepKey[] = [...ASK_STEPS, "pin", "pin2"];
 const PIN_STEPS: StepKey[] = ["pin", "pin2"];
 
 export interface JoinPrefill {
-  birthYear: number | null;
+  name: string;
   gender: "" | "M" | "F";
+  birthYear: number | null;
   school: string;
-  schoolClass: string;
-  hasPhone: boolean;
-  phone: string;
-  guardianPhone: string;
-  address: string;
-  friendId: number | null;
-  friendName: string;
+  classId: number | null;
 }
 
 interface Props {
-  token: string;
-  name: string;
+  /** Shared QR: `code`. Personal card: `token`. */
+  entry: { kind: "self"; code: string } | { kind: "card"; token: string };
   today: string;
+  classes: { id: number; name: string }[];
   prefill: JoinPrefill;
-  friends: { id: number; name: string }[];
   /** The child joined before and only needs a new PIN. */
   pinOnly?: boolean;
 }
 
-/** Keeps the screen exactly as tall as the visible area so the bottom button sits above the keyboard. */
-function useVisibleHeight(): number | null {
-  const [h, setH] = useState<number | null>(null);
+/** Keeps the screen exactly as tall as the visible area so the confirm button sits right above the keyboard. */
+function useVisibleArea(): { height: number | null; keyboard: boolean } {
+  const [area, setArea] = useState<{ height: number | null; keyboard: boolean }>({ height: null, keyboard: false });
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
     const update = () => {
-      setH(Math.round(vv.height));
+      const height = Math.round(vv.height);
+      setArea({ height, keyboard: height < window.innerHeight - 120 });
       if (vv.offsetTop > 0) window.scrollTo(0, 0);
     };
     update();
@@ -57,33 +58,43 @@ function useVisibleHeight(): number | null {
       vv.removeEventListener("scroll", update);
     };
   }, []);
-  return h;
+  return area;
 }
 
-const questionClass = "m-0 text-[25px] leading-[34px] font-bold tracking-[-0.6px] whitespace-pre-line";
-const hintClass = "m-0 mt-2 text-[15px] leading-[22px] text-sub";
-const bigInput = `${inputClass} h-14 text-[20px] font-semibold tracking-[-0.3px]`;
-const skipClass = "h-11 w-full cursor-pointer border-0 bg-transparent text-[15px] font-semibold text-sub underline underline-offset-2";
-const choiceClass = "flex min-h-[60px] w-full cursor-pointer items-center rounded-[14px] border-[1.5px] px-4 text-left text-[17px] font-bold";
+const LABEL: Record<AskKey, string> = { name: "이름", gender: "성별", birth: "태어난 해", school: "학교", classId: "반" };
+const QUESTION: Record<AskKey, string> = {
+  name: "이름을 알려 주세요",
+  gender: "성별을 골라 주세요",
+  birth: "태어난 해를 골라 주세요",
+  school: "다니는 학교를 알려 주세요",
+  classId: "교회에서 몇 반이에요?",
+};
 
-export function JoinWizard({ token, name, today, prefill, friends, pinOnly = false }: Props) {
+const lineInput =
+  "w-full rounded-none border-0 border-b-2 border-solid border-navy bg-transparent px-0 pt-1 pb-2 text-[24px] leading-8 font-bold tracking-[-0.5px] text-ink outline-none placeholder:font-semibold placeholder:text-[#C4C9D0]";
+const optionBase = "flex cursor-pointer items-center justify-center rounded-2xl border-[1.5px] border-solid text-[19px] font-bold tracking-[-0.3px]";
+const optionOn = "border-navy bg-navy-tint text-navy";
+const optionOff = "border-[#D9DEE3] bg-white text-ink";
+
+function BackArrow() {
+  return (
+    <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 5l-7 7 7 7" />
+    </svg>
+  );
+}
+
+export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: Props) {
   const steps = pinOnly ? PIN_STEPS : ALL_STEPS;
+  const pinIndex = steps.indexOf("pin");
   const [index, setIndex] = useState(0);
-  const [childName, setChildName] = useState(name);
-  const [birthYear, setBirthYear] = useState<number | null>(prefill.birthYear);
+  /** The furthest question reached so far: answers before it are shown in the stack. */
+  const [reached, setReached] = useState(0);
+  const [name, setName] = useState(prefill.name);
   const [gender, setGender] = useState<"" | "M" | "F">(prefill.gender);
+  const [birthYear, setBirthYear] = useState<number | null>(prefill.birthYear);
   const [school, setSchool] = useState(prefill.school);
-  const classMatch = /^(\d)학년\s*(\d{1,2})반$/.exec(prefill.schoolClass.trim());
-  const freeClass = prefill.schoolClass.trim() !== "" && !classMatch;
-  const [grade, setGrade] = useState(classMatch ? classMatch[1] : "");
-  const [ban, setBan] = useState(classMatch ? classMatch[2] : "");
-  const [classText, setClassText] = useState(freeClass ? prefill.schoolClass : "");
-  const [hasPhone, setHasPhone] = useState(prefill.hasPhone);
-  const [phone, setPhone] = useState(formatPhone(prefill.phone));
-  const [guardian, setGuardian] = useState(formatPhone(prefill.guardianPhone));
-  const [address, setAddress] = useState(prefill.address);
-  const [friendId, setFriendId] = useState<number | null>(prefill.friendId);
-  const [friendText, setFriendText] = useState(prefill.friendId ? (friends.find((f) => f.id === prefill.friendId)?.name ?? "") : prefill.friendName);
+  const [classId, setClassId] = useState<number | null>(prefill.classId);
   const [pin, setPin] = useState("");
   const [pin2, setPin2] = useState("");
   const [pinNote, setPinNote] = useState("");
@@ -91,43 +102,44 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
   const [errors, setErrors] = useState<OnboardingErrors>({});
   const [fatal, setFatal] = useState("");
   const [saving, setSaving] = useState(false);
-  const height = useVisibleHeight();
-  const step = steps[index];
   const savingRef = useRef(false);
+  const { height, keyboard } = useVisibleArea();
+  const step = steps[index];
 
-  const schoolClass = freeClass ? classText.trim() : grade && ban ? `${grade}학년 ${Number(ban)}반` : "";
   const thisYear = Number(today.slice(0, 4));
   const yearChoices = [14, 13, 12, 11, 10, 9].map((n) => thisYear - n);
 
-  const go = useCallback(
-    (delta: number) => {
-      setIndex((i) => Math.max(0, Math.min(steps.length - 1, i + delta)));
+  /** After an answer: on to the next question, or back to where the child was when they went to change an earlier one. */
+  const advance = useCallback(
+    (from: number) => {
+      const target = Math.min(steps.length - 1, from < reached ? reached : from + 1);
+      setReached((r) => Math.max(r, target));
+      setIndex(target);
     },
-    [steps.length],
+    [reached, steps.length],
   );
-  const next = useCallback(() => go(1), [go]);
+
+  const clearPins = () => {
+    setPin("");
+    setPin2("");
+  };
   const back = () => {
     // Leaving a PIN screen backwards starts the PIN over, so a half-typed one is never kept.
     if (step === "pin" || step === "pin2") {
-      setPin("");
-      setPin2("");
+      clearPins();
+      setReached(pinIndex);
     }
-    go(-1);
+    setIndex((i) => Math.max(0, i - 1));
   };
 
-  const valid: Record<StepKey, boolean> = {
-    name: childName.trim().length >= 2,
-    birth: birthYear !== null,
+  const valid: Record<AskKey, boolean> = {
+    name: name.trim().length >= 2,
     gender: gender !== "",
+    birth: birthYear !== null,
     school: school.trim().length >= 2,
-    schoolClass: schoolClass !== "",
-    phone: phoneDigits(phone) !== null,
-    guardianPhone: phoneDigits(guardian) !== null,
-    address: address.trim().length >= 2,
-    friend: friendId !== null || friendText.trim().length >= 2,
-    pin: pin.length === 4,
-    pin2: pin2.length === 4,
+    classId: true,
   };
+  const clearError = (k: OnboardingField) => setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
 
   const submit = useCallback(
     async (finalPin2: string) => {
@@ -136,43 +148,35 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
       setSaving(true);
       setFatal("");
       try {
-        const r = pinOnly
-          ? await newPinAction(token, pin, finalPin2)
-          : await completeOnboardingAction(token, {
-              name: childName,
-              birthYear: birthYear ?? 0,
-              gender,
-              school,
-              schoolClass,
-              hasPhone,
-              phone: hasPhone ? phone : "",
-              guardianPhone: guardian,
-              address,
-              friendId,
-              friendName: friendId ? "" : friendText,
-              pin,
-              pin2: finalPin2,
-            });
+        const input = { name, gender, birthYear: birthYear ?? 0, school, classId, pin, pin2: finalPin2 };
+        const r = pinOnly && entry.kind === "card" ? await newPinAction(entry.token, pin, finalPin2) : entry.kind === "card" ? await completeOnboardingAction(entry.token, input) : await selfJoinAction(entry.code, input);
         // Success redirects on the server; a returned value means something needs fixing.
         if (!r) return;
+        setPin2("");
         if (r.reason === "invalid" && r.errors) {
-          setErrors(r.errors);
-          const first = steps.findIndex((s) => (s === "friend" ? r.errors?.friend : r.errors?.[s as OnboardingField]));
-          setPin2("");
-          if (first >= 0) setIndex(first);
-          if (r.errors.pin || r.errors.pin2) setPin("");
-        } else if (r.reason === "already") setFatal("이미 등록을 마친 카드예요. 카드를 다시 찍어 주세요.");
-        else if (r.reason === "no_consent") setFatal("부모님 동의서가 먼저 필요해요. 선생님께 말해 주세요.");
+          const found = r.errors;
+          setErrors(found);
+          const first = steps.findIndex((s) => found[s]);
+          const target = first >= 0 ? first : pinIndex;
+          // Anything wrong before the repeat screen: the PIN is made again after fixing it.
+          if (target <= pinIndex) {
+            setPin("");
+            setReached(pinIndex);
+          }
+          setIndex(target);
+        } else if (r.reason === "already") setFatal("이미 가입을 마친 카드예요. 카드를 다시 찍어 주세요.");
+        else if (r.reason === "busy") setFatal("지금 가입하는 친구가 많아요. 잠시 후 다시 해 주세요.");
+        else if (r.reason === "closed") setFatal("지금은 가입할 수 없어요. 선생님께 말해 주세요.");
         else setFatal("카드를 찾을 수 없어요. 선생님께 말해 주세요.");
       } catch {
-        setFatal("연결이 잠시 끊겼어요. 다시 해 주세요.");
+        setFatal("연결이 잠시 끊겼어요. 다시 눌러 주세요.");
         setPin2("");
       } finally {
         savingRef.current = false;
         setSaving(false);
       }
     },
-    [pinOnly, token, pin, childName, birthYear, gender, school, schoolClass, hasPhone, phone, guardian, address, friendId, friendText, steps],
+    [entry, pinOnly, name, gender, birthYear, school, classId, pin, steps, pinIndex],
   );
 
   const onPinDigit = useCallback(
@@ -182,36 +186,77 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
         const v = pin + d;
         setPin(v);
         setPinNote("");
-        if (v.length === 4) setTimeout(() => go(1), 180);
+        clearError("pin");
+        if (v.length === 4) setTimeout(() => advance(pinIndex), 180);
       } else if (step === "pin2") {
         if (pin2.length >= 4 || savingRef.current) return;
         const v = pin2 + d;
         setPin2(v);
+        setFatal("");
         if (v.length < 4) return;
         if (v !== pin) {
           // Start over from the first PIN screen, gently.
           setTimeout(() => {
             setPin("");
             setPin2("");
-            setPinNote("두 번 누른 숫자가 달랐어요. 처음부터 다시 만들어 볼까요?");
+            setPinNote("두 번 누른 숫자가 달랐어요.\n처음부터 다시 만들어 볼까요?");
             setShake((n) => n + 1);
-            go(-1);
+            setIndex(pinIndex);
           }, 250);
         } else void submit(v);
       }
     },
-    [step, pin, pin2, go, submit],
+    [step, pin, pin2, advance, pinIndex, submit],
   );
   const onPinDelete = useCallback(() => {
     if (step === "pin") setPin((p) => p.slice(0, -1));
     else if (step === "pin2") setPin2((p) => p.slice(0, -1));
   }, [step]);
 
-  const filteredFriends = useMemo(() => {
-    const q = friendText.trim();
-    if (!q) return friends;
-    return friends.filter((f) => f.name.includes(q));
-  }, [friends, friendText]);
+  /* ---------- the dark PIN screens ---------- */
+
+  if (step === "pin" || step === "pin2") {
+    const first = step === "pin";
+    const note = first ? (errors.pin ?? pinNote) : saving ? "잠시만 기다려 주세요…" : (fatal || errors.pin2 || "");
+    return (
+      <main className="flex flex-col overflow-hidden bg-ink text-white" style={{ height: height ?? "100dvh" }}>
+        <div className="flex h-[52px] shrink-0 items-center pt-[env(safe-area-inset-top)] pl-2">
+          {index > 0 ? (
+            <button type="button" aria-label="이전으로" disabled={saving} onClick={back} className="flex h-11 w-11 cursor-pointer items-center justify-center border-0 bg-transparent text-white">
+              <BackArrow />
+            </button>
+          ) : null}
+        </div>
+        <div key={step} className="step-in flex min-h-0 grow flex-col items-center justify-center px-6 pb-4 text-center">
+          <h1 className="m-0 text-[24px] leading-8 font-bold tracking-[-0.5px]">{first ? (pinOnly ? "새 비밀번호를 만들어요" : "비밀번호를 만들어요") : "한 번 더 눌러 주세요"}</h1>
+          <p className="m-0 mt-2 text-[15px] leading-[22px] text-white/70">{first ? "나만 아는 숫자 4개를 눌러 주세요" : "방금 누른 숫자와 똑같이 눌러요"}</p>
+          <div className="mt-9">
+            <PinDots key={first ? shake : "again"} count={first ? pin.length : pin2.length} shake={first && shake > 0} dark />
+          </div>
+          <p role={saving ? "status" : "alert"} className={`m-0 mt-5 min-h-10 text-[14px] leading-5 font-semibold whitespace-pre-line ${saving ? "text-white/70" : "text-[#FFB4AB]"}`}>
+            {note}
+          </p>
+        </div>
+        <div className="shrink-0 pb-[max(20px,env(safe-area-inset-bottom))]">
+          <PinKeys onDigit={onPinDigit} onDelete={onPinDelete} disabled={saving} dark />
+        </div>
+      </main>
+    );
+  }
+
+  /* ---------- the white question screens ---------- */
+
+  const answer: Record<AskKey, string> = {
+    name: name.trim(),
+    gender: gender === "M" ? "남자" : gender === "F" ? "여자" : "",
+    birth: birthYear ? `${birthYear}년` : "",
+    school: school.trim(),
+    classId: classId === null ? "잘 모르겠어요" : (classes.find((c) => c.id === classId)?.name ?? "잘 모르겠어요"),
+  };
+  // Newest first, like the stack of a bank sign-up form.
+  const earlier = ASK_STEPS.map((k, i) => ({ k, i }))
+    .filter(({ i }) => i < reached && i !== index)
+    .reverse();
 
   const error = (k: OnboardingField) =>
     errors[k] ? (
@@ -219,452 +264,212 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
         {errors[k]}
       </p>
     ) : null;
-  const clearError = (k: OnboardingField) => setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
 
-  /** One text-like question: label + input, Enter moves on. */
-  const field = (k: StepKey, label: string, input: ReactNode) => (
+  const textStep = (k: "name" | "school", input: ReactNode, hint?: string) => (
     <form
       id="step-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid[k]) next();
+        if (valid[k]) advance(index);
       }}
-      className="mt-6 flex flex-col gap-2"
+      className="flex flex-col"
     >
-      <label htmlFor={`f-${k}`} className="text-[14px] font-semibold text-ink2">
-        {label}
+      <label htmlFor={`f-${k}`} className="text-[13px] leading-[18px] font-semibold text-navy">
+        {LABEL[k]}
       </label>
       {input}
+      {error(k)}
+      {hint && !errors[k] ? <p className="m-0 mt-2 text-[13px] leading-[19px] text-mute">{hint}</p> : null}
     </form>
   );
+  const pick = (set: () => void) => {
+    set();
+    setTimeout(() => advance(index), 160);
+  };
 
-  let question = "";
-  let hint: ReactNode = null;
   let body: ReactNode = null;
-  let skip: ReactNode = null;
-  let showNext = true;
-  const nextLabel = "다음";
-
   switch (step) {
     case "name":
-      question = "이름을 알려 주세요";
-      hint = "꿈의숲에 온 걸 환영해요. 몇 가지만 알려 주면 내 씨앗을 받을 수 있어요.";
-      body = (
-        <>
-          {field(
-            "name",
-            "이름",
-            <input
-              id="f-name"
-              autoFocus
-              autoComplete="name"
-              enterKeyHint="next"
-              maxLength={10}
-              placeholder="홍길동"
-              value={childName}
-              onChange={(e) => {
-                setChildName(e.target.value);
-                clearError("name");
-              }}
-              className={bigInput}
-            />,
-          )}
-          {error("name")}
-        </>
-      );
-      skip = <p className="m-0 pb-2 text-center text-[13px] leading-[19px] text-mute">선생님이 적어 둔 이름이에요. 틀렸으면 고쳐 주세요</p>;
-      break;
-    case "birth":
-      question = `${callName(childName.trim() || name)}, 반가워!\n몇 년에 태어났어요?`;
-      showNext = birthYear !== null;
-      body = (
-        <div role="group" aria-label="태어난 해" className="mt-6 grid grid-cols-2 gap-3">
-          {yearChoices.map((y) => (
-            <button
-              key={y}
-              type="button"
-              aria-pressed={birthYear === y}
-              onClick={() => {
-                setBirthYear(y);
-                clearError("birth");
-                setTimeout(next, 160);
-              }}
-              className={`h-[68px] cursor-pointer rounded-2xl border-[1.5px] text-[20px] font-bold ${birthYear === y ? "border-navy bg-navy-tint text-navy" : "border-[#D1D6DB] bg-white text-ink"}`}
-            >
-              {y}년
-            </button>
-          ))}
-          {error("birth")}
-        </div>
+      body = textStep(
+        "name",
+        <input
+          id="f-name"
+          autoFocus
+          autoComplete="name"
+          enterKeyHint="next"
+          maxLength={10}
+          placeholder="홍길동"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            clearError("name");
+          }}
+          className={lineInput}
+        />,
+        entry.kind === "card" && prefill.name ? "선생님이 적어 둔 이름이에요. 틀렸으면 고쳐 주세요" : undefined,
       );
       break;
     case "gender":
-      question = "남자예요, 여자예요?";
-      showNext = gender !== "";
-      body = (
-        <div role="group" aria-label="성별" className="mt-6 grid grid-cols-2 gap-3">
-          {(
-            [
-              ["M", "남자"],
-              ["F", "여자"],
-            ] as const
-          ).map(([v, label]) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={gender === v}
-              onClick={() => {
-                setGender(v);
-                clearError("gender");
-                setTimeout(next, 160);
-              }}
-              className={`h-[120px] cursor-pointer rounded-2xl border-[1.5px] text-[22px] font-bold ${gender === v ? "border-navy bg-navy-tint text-navy" : "border-[#D1D6DB] bg-white text-ink"}`}
-            >
-              {label}
-            </button>
-          ))}
-          {error("gender")}
-        </div>
-      );
-      break;
-    case "school":
-      question = "어느 학교에 다녀요?";
       body = (
         <>
-          {field(
-            "school",
-            "학교 이름",
-            <input
-              id="f-school"
-              autoFocus
-              autoComplete="off"
-              enterKeyHint="next"
-              maxLength={40}
-              placeholder="예) 꿈의숲초등학교"
-              value={school}
-              onChange={(e) => {
-                setSchool(e.target.value);
-                clearError("school");
-              }}
-              className={bigInput}
-            />,
-          )}
-          {error("school")}
-        </>
-      );
-      break;
-    case "schoolClass":
-      question = "학교에서 몇 학년 몇 반이에요?";
-      hint = "교회 반이 아니라 학교 반을 알려 주세요.";
-      body = freeClass ? (
-        <>
-          {field("schoolClass", "학년과 반", <input id="f-schoolClass" autoFocus autoComplete="off" enterKeyHint="next" maxLength={20} value={classText} onChange={(e) => setClassText(e.target.value)} className={bigInput} />)}
-          {error("schoolClass")}
-        </>
-      ) : (
-        <form
-          id="step-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (valid.schoolClass) next();
-          }}
-          className="mt-6 flex flex-col gap-5"
-        >
-          <div role="group" aria-label="학년" className="grid grid-cols-6 gap-2">
-            {["1", "2", "3", "4", "5", "6"].map((g) => (
+          <div role="group" aria-label="성별" className="grid grid-cols-2 gap-3">
+            {(
+              [
+                ["M", "남자"],
+                ["F", "여자"],
+              ] as const
+            ).map(([v, label]) => (
               <button
-                key={g}
+                key={v}
                 type="button"
-                aria-pressed={grade === g}
-                aria-label={`${g}학년`}
-                onClick={() => {
-                  setGrade(g);
-                  clearError("schoolClass");
-                  document.getElementById("f-schoolClass")?.focus();
-                }}
-                className={`h-14 cursor-pointer rounded-xl border-[1.5px] text-[18px] font-bold ${grade === g ? "border-navy bg-navy-tint text-navy" : "border-[#D1D6DB] bg-white text-ink"}`}
+                aria-pressed={gender === v}
+                onClick={() =>
+                  pick(() => {
+                    setGender(v);
+                    clearError("gender");
+                  })
+                }
+                className={`${optionBase} h-[96px] text-[21px] ${gender === v ? optionOn : optionOff}`}
               >
-                {g}
+                {label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3">
-            <span className="w-[84px] text-[20px] font-bold">{grade ? `${grade}학년` : "학년"}</span>
-            <label htmlFor="f-schoolClass" className="sr-only">
-              반
-            </label>
-            <input
-              id="f-schoolClass"
-              inputMode="numeric"
-              autoComplete="off"
-              enterKeyHint="next"
-              placeholder="3"
-              value={ban}
-              onChange={(e) => {
-                setBan(e.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 2));
-                clearError("schoolClass");
-              }}
-              className={`${bigInput.replace("w-full", "w-[88px]")} text-center`}
-            />
-            <span className="text-[20px] font-bold">반</span>
-          </div>
-          {error("schoolClass")}
-        </form>
-      );
-      break;
-    case "phone":
-      question = "내 휴대폰 번호를 알려 주세요";
-      hint = "선생님이 연락할 때만 써요.";
-      body = (
-        <>
-          {field(
-            "phone",
-            "휴대폰 번호",
-            <input
-              id="f-phone"
-              autoFocus
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel-national"
-              enterKeyHint="next"
-              placeholder="010-1234-5678"
-              value={phone}
-              onChange={(e) => {
-                setPhone(formatPhone(e.target.value));
-                setHasPhone(true);
-                clearError("phone");
-              }}
-              className={bigInput}
-            />,
-          )}
-          {error("phone")}
+          {error("gender")}
         </>
       );
-      skip = (
-        <button
-          type="button"
-          className={skipClass}
-          onClick={() => {
-            setHasPhone(false);
-            setPhone("");
-            clearError("phone");
-            next();
-          }}
-        >
-          휴대폰이 없어요
-        </button>
-      );
       break;
-    case "guardianPhone":
-      question = "보호자 연락처를 알려 주세요";
-      hint = "엄마, 아빠 또는 함께 사는 어른의 번호예요.";
+    case "birth":
       body = (
         <>
-          {field(
-            "guardianPhone",
-            "보호자 휴대폰 번호",
-            <input
-              id="f-guardianPhone"
-              autoFocus
-              type="tel"
-              inputMode="numeric"
-              autoComplete="off"
-              enterKeyHint="next"
-              placeholder="010-1234-5678"
-              value={guardian}
-              onChange={(e) => {
-                setGuardian(formatPhone(e.target.value));
-                clearError("guardianPhone");
-              }}
-              className={bigInput}
-            />,
-          )}
-          {error("guardianPhone")}
-        </>
-      );
-      skip = (
-        <button
-          type="button"
-          className={skipClass}
-          onClick={() => {
-            setGuardian("");
-            clearError("guardianPhone");
-            next();
-          }}
-        >
-          번호를 잘 모르겠어요
-        </button>
-      );
-      break;
-    case "address":
-      question = "어디에 살아요?";
-      hint = "동네와 아파트 이름 정도만 적어도 돼요.";
-      body = (
-        <>
-          {field(
-            "address",
-            "집 주소",
-            <input id="f-address" autoFocus autoComplete="street-address" enterKeyHint="next" maxLength={120} placeholder="예) 꿈동 숲아파트 101동" value={address} onChange={(e) => setAddress(e.target.value)} className={`${inputClass} h-14 text-[17px]`} />,
-          )}
-          {error("address")}
-        </>
-      );
-      skip = (
-        <button
-          type="button"
-          className={skipClass}
-          onClick={() => {
-            setAddress("");
-            next();
-          }}
-        >
-          나중에 할게요
-        </button>
-      );
-      break;
-    case "friend":
-      question = "교회에서 가장 친한 친구는\n누구예요?";
-      body = (
-        <>
-          {field(
-            "friend",
-            "친구 이름 찾기",
-            <input
-              id="f-friend"
-              autoComplete="off"
-              enterKeyHint="search"
-              maxLength={20}
-              placeholder="이름을 적어 보세요"
-              value={friendText}
-              onChange={(e) => {
-                setFriendText(e.target.value);
-                setFriendId(null);
-                clearError("friend");
-              }}
-              className={`${inputClass} h-[52px] text-[17px]`}
-            />,
-          )}
-          {errors.friend ? (
-            <p role="alert" className="m-0 mt-2 text-[14px] font-semibold text-danger">
-              {errors.friend}
-            </p>
-          ) : null}
-          <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
-            {filteredFriends.map((f) => (
-              <li key={f.id}>
-                <button
-                  type="button"
-                  aria-pressed={friendId === f.id}
-                  onClick={() => {
-                    setFriendId(f.id);
-                    setFriendText(f.name);
-                    clearError("friend");
-                    setTimeout(next, 160);
-                  }}
-                  className={`${choiceClass} ${friendId === f.id ? "border-navy bg-navy-tint text-navy" : "border-line bg-white text-ink2"}`}
-                >
-                  {f.name}
-                </button>
-              </li>
+          <div role="group" aria-label="태어난 해" className="grid grid-cols-3 gap-2.5">
+            {yearChoices.map((y) => (
+              <button
+                key={y}
+                type="button"
+                aria-pressed={birthYear === y}
+                onClick={() =>
+                  pick(() => {
+                    setBirthYear(y);
+                    clearError("birth");
+                  })
+                }
+                className={`${optionBase} h-[64px] ${birthYear === y ? optionOn : optionOff}`}
+              >
+                {y}년
+              </button>
             ))}
-            {friendId === null && friendText.trim().length >= 2 && !friends.some((f) => f.name === friendText.trim()) ? (
-              <li>
-                <button type="button" onClick={next} className={`${choiceClass} border-line bg-white text-ink2`}>
-                  <span className="font-medium text-sub">목록에 없어요.&nbsp;</span>‘{friendText.trim()}’ 그대로 적기
-                </button>
-              </li>
-            ) : null}
-          </ul>
+          </div>
+          {error("birth")}
         </>
       );
-      skip = (
-        <button
-          type="button"
-          className={skipClass}
-          onClick={() => {
-            setFriendId(null);
-            setFriendText("");
-            next();
+      break;
+    case "school":
+      body = textStep(
+        "school",
+        <input
+          id="f-school"
+          autoFocus
+          autoComplete="off"
+          enterKeyHint="next"
+          maxLength={40}
+          placeholder="꿈의숲초등학교"
+          value={school}
+          onChange={(e) => {
+            setSchool(e.target.value);
+            clearError("school");
           }}
-        >
-          아직 없어요
-        </button>
+          className={lineInput}
+        />,
       );
       break;
-    case "pin":
-      question = pinOnly ? "새 비밀번호를 만들어요" : "마지막이에요!\n비밀번호를 만들어요";
-      hint = "나만 아는 숫자 4개를 눌러 주세요. 다음에 들어올 때 필요해요.";
-      showNext = false;
+    case "classId":
       body = (
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <PinDots key={shake} count={pin.length} shake={shake > 0} />
-          <p role="status" className="m-0 min-h-10 text-center text-[14px] leading-5 font-semibold text-danger">
-            {errors.pin ?? pinNote}
-          </p>
-        </div>
-      );
-      break;
-    case "pin2":
-      question = "한 번 더 눌러 주세요";
-      hint = "방금 만든 비밀번호와 똑같이 눌러요.";
-      showNext = false;
-      body = (
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <PinDots count={pin2.length} />
-          <p role="status" className={`m-0 min-h-10 text-center text-[14px] leading-5 font-semibold ${fatal ? "text-danger" : "text-navy"}`}>
-            {saving ? "씨앗을 준비하고 있어요…" : (errors.pin2 ?? "")}
-          </p>
-        </div>
+        <>
+          <div role="group" aria-label="교회 반" className="grid grid-cols-2 gap-2.5">
+            {classes.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={classId === c.id}
+                onClick={() =>
+                  pick(() => {
+                    setClassId(c.id);
+                    clearError("classId");
+                  })
+                }
+                className={`${optionBase} min-h-[60px] px-2 py-2 text-center text-[17px] leading-[22px] ${classId === c.id ? optionOn : optionOff}`}
+              >
+                {c.name}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                pick(() => {
+                  setClassId(null);
+                  clearError("classId");
+                })
+              }
+              className={`${optionBase} col-span-2 min-h-[60px] flex-col text-[17px] ${optionOff} border-dashed`}
+            >
+              잘 모르겠어요
+              <span className="text-[13px] leading-[18px] font-medium text-mute">선생님이 나중에 알려 주실 거예요</span>
+            </button>
+          </div>
+          {error("classId")}
+        </>
       );
       break;
   }
 
-  const isPin = step === "pin" || step === "pin2";
-  const progress = Math.round(((index + 1) / steps.length) * 100);
+  const isText = step === "name" || step === "school";
 
   return (
     <main className="flex flex-col overflow-hidden bg-white" style={{ height: height ?? "100dvh" }}>
-      <div className="flex h-[52px] shrink-0 items-center gap-2 pt-[env(safe-area-inset-top)] pr-5 pl-2">
+      <div className="flex h-[52px] shrink-0 items-center pt-[env(safe-area-inset-top)] pl-2">
         {index > 0 ? (
-          <button type="button" aria-label="이전 질문으로" disabled={saving} onClick={back} className="flex h-11 w-11 cursor-pointer items-center justify-center border-0 bg-transparent text-ink">
-            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 5l-7 7 7 7" />
-            </svg>
+          <button type="button" aria-label="이전 질문으로" onClick={back} className="flex h-11 w-11 cursor-pointer items-center justify-center border-0 bg-transparent text-ink">
+            <BackArrow />
           </button>
-        ) : (
-          <div className="h-11 w-3" />
-        )}
-        <div role="progressbar" aria-label="진행 정도" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} className="h-1.5 grow overflow-hidden rounded-full bg-[#E5E8EB]">
-          <div className="h-1.5 rounded-full bg-bar transition-[width] duration-300" style={{ width: `${progress}%` }} />
-        </div>
-        <span aria-hidden="true" className="w-10 text-right text-[13px] font-semibold text-mute">
-          {index + 1}/{steps.length}
-        </span>
+        ) : null}
       </div>
-      <div key={step} className="step-in flex min-h-0 grow flex-col overflow-y-auto px-5 pt-4 pb-3">
-        <h1 className={questionClass}>{question}</h1>
-        {hint ? <p className={hintClass}>{hint}</p> : null}
-        {body}
+      <div className="flex min-h-0 grow flex-col overflow-y-auto px-6 pt-3 pb-4">
+        <div key={step} className="step-in flex flex-col">
+          <h1 className="m-0 mb-7 text-[26px] leading-[35px] font-bold tracking-[-0.6px] whitespace-pre-line">{QUESTION[step as AskKey]}</h1>
+          {body}
+        </div>
+        {earlier.length > 0 ? (
+          <ul aria-label="앞에서 답한 것" className="m-0 mt-5 flex list-none flex-col p-0">
+            {earlier.map(({ k, i }) => (
+              <li key={k}>
+                <button
+                  type="button"
+                  aria-label={`${LABEL[k]} ${answer[k]}, 눌러서 고치기`}
+                  onClick={() => setIndex(i)}
+                  className="flex w-full cursor-pointer flex-col items-start gap-0.5 border-0 border-b border-solid border-[#E5E8EB] bg-transparent px-0 pt-3.5 pb-2.5 text-left"
+                >
+                  <span className="text-[13px] leading-[18px] font-medium text-mute">{LABEL[k]}</span>
+                  <span className="w-full truncate text-[20px] leading-7 font-semibold tracking-[-0.4px] text-ink2">{answer[k]}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
       {fatal ? (
         <p role="alert" className="mx-5 mb-2 rounded-xl bg-danger-tint px-4 py-3 text-[14px] leading-5 font-semibold text-danger">
           {fatal}
         </p>
       ) : null}
-      {isPin ? (
-        <div className="shrink-0 pb-[max(20px,env(safe-area-inset-bottom))]">
-          <PinKeys onDigit={onPinDigit} onDelete={onPinDelete} disabled={saving} />
+      {isText ? (
+        // With the keyboard up the button is a full-width bar resting on it; otherwise a rounded button at the bottom.
+        <div className={`shrink-0 ${keyboard ? "" : "px-5 pb-[max(16px,env(safe-area-inset-bottom))]"}`}>
+          <button type="submit" form="step-form" disabled={!valid[step]} className={`${primaryButtonClass} h-14 cursor-pointer text-[17px] ${keyboard ? "rounded-none" : "rounded-2xl"}`}>
+            확인
+          </button>
         </div>
-      ) : (
-        <div className="flex shrink-0 flex-col gap-1 px-5 pt-2 pb-[max(16px,env(safe-area-inset-bottom))]">
-          {skip}
-          {showNext ? (
-            <button type={step === "birth" || step === "gender" ? "button" : "submit"} form="step-form" disabled={!valid[step]} onClick={step === "birth" || step === "gender" ? next : undefined} className={`${primaryButtonClass} h-14 cursor-pointer text-[17px]`}>
-              {nextLabel}
-            </button>
-          ) : null}
-        </div>
-      )}
+      ) : null}
     </main>
   );
 }

@@ -23,17 +23,44 @@ export interface ChildListItem {
   /** Only filled for children the teacher may see in detail. */
   noPhone: boolean;
   notOnboarded: boolean;
+  /** The paper consent form has not been recorded yet ("동의서 확인 필요"). */
+  needsConsent: boolean;
+  /** Registered themselves with the shared QR and has no class yet ("반 미정"). Class information, so every teacher sees it. */
+  classPending: boolean;
+  /** Registered themselves with the shared QR. */
+  selfJoined: boolean;
+}
+
+/**
+ * "새로 가입한 아이": children who registered themselves and still need a teacher's attention
+ * (no class or no consent yet), or who joined within the last two weeks. Condition over alias `c`.
+ */
+const NEW_JOINER_SQL = "(c.self_joined and (c.class_id is null or c.consent_on is null or c.onboarded_at > now() - interval '14 days'))";
+
+/** Teachers who see every class (부장, 교역자) look after children who have no class yet. */
+export function canSeeNewJoiners(staff: Staff): boolean {
+  return detailScope(staff) === null;
+}
+
+export async function newJoinerCount(staff: Staff): Promise<number> {
+  if (!canSeeNewJoiners(staff)) return 0;
+  const r = await one<{ n: number }>(db, `select count(*)::int as n from children c where c.active and ${NEW_JOINER_SQL}`);
+  return r?.n ?? 0;
 }
 
 /** Everyone sees names, photos and classes. Nothing else leaves this function for children outside the teacher's scope. */
-export async function listChildren(staff: Staff, opts: { q?: string; classId?: number | null; includeInactive?: boolean } = {}): Promise<ChildListItem[]> {
+export async function listChildren(staff: Staff, opts: { q?: string; classId?: number | null; includeInactive?: boolean; onlyNew?: boolean } = {}): Promise<ChildListItem[]> {
   const includeInactive = opts.includeInactive === true && staff.role === "admin";
-  const rows = await db.query<{ id: number; name: string; photo_url: string | null; class_id: number | null; class_name: string | null; active: boolean; has_phone: boolean; onboarded: boolean }>(
-    `select c.id, c.name, c.photo_url, c.class_id, k.name as class_name, c.active, c.has_phone, (c.onboarded_at is not null) as onboarded
+  // The "new joiners" filter is for teachers who see every class; for anyone else it is ignored.
+  const onlyNew = opts.onlyNew === true && canSeeNewJoiners(staff);
+  const rows = await db.query<{ id: number; name: string; photo_url: string | null; class_id: number | null; class_name: string | null; active: boolean; has_phone: boolean; onboarded: boolean; consent: boolean; self_joined: boolean }>(
+    `select c.id, c.name, c.photo_url, c.class_id, k.name as class_name, c.active, c.has_phone, (c.onboarded_at is not null) as onboarded,
+            (c.consent_on is not null) as consent, c.self_joined
        from children c left join classes k on k.id = c.class_id
       where ($1::boolean or c.active) and ($2 = '' or c.name ilike '%' || $2 || '%') and ($3::int is null or c.class_id = $3)
-      order by k.sort nulls last, k.id, c.name, c.id`,
-    [includeInactive, clean(opts.q, 30).replace(/[%_\\]/g, ""), opts.classId ?? null],
+        and (not $4::boolean or ${NEW_JOINER_SQL})
+      order by ${onlyNew ? "c.onboarded_at desc nulls last, c.id desc" : "k.sort nulls last, k.id, c.name, c.id"}`,
+    [includeInactive, clean(opts.q, 30).replace(/[%_\\]/g, ""), opts.classId ?? null, onlyNew],
   );
   return rows.map((r) => {
     const canOpen = canSeeChildDetail(staff, r.class_id);
@@ -47,6 +74,9 @@ export async function listChildren(staff: Staff, opts: { q?: string; classId?: n
       canOpen,
       noPhone: canOpen && !r.has_phone,
       notOnboarded: canOpen && !r.onboarded,
+      needsConsent: canOpen && !r.consent,
+      classPending: r.self_joined && r.class_id === null,
+      selfJoined: canOpen && r.self_joined,
     };
   });
 }
@@ -88,6 +118,7 @@ export interface ChildDetail {
   photo_consent: boolean;
   memo: string | null;
   active: boolean;
+  self_joined: boolean;
   attendance: { date: string; status: string | null }[];
   attended: number;
   streak: Streak;
@@ -97,11 +128,20 @@ export interface ChildDetail {
   completions: { id: number; title: string; status: string; done_on: string; by_staff: string | null }[];
   /** null when this teacher may not read visit notes. */
   visits: VisitRow[] | null;
-  can: { edit: boolean; writeVisits: boolean; proxy: boolean; resetPin: boolean; admin: boolean };
+  can: { edit: boolean; writeVisits: boolean; proxy: boolean; resetPin: boolean; admin: boolean; consent: boolean; assignClass: boolean };
 }
 
 function canEditChild(staff: Staff, classId: number | null): boolean {
   return canSeeChildDetail(staff, classId);
+}
+
+/**
+ * Admins move a child between classes. A teacher who sees every class (부장) may also give a class
+ * to a child who has none yet (children who registered themselves), but may not move a child out of a class.
+ */
+export function canAssignClass(staff: Staff, currentClassId: number | null): boolean {
+  if (staff.role === "admin") return true;
+  return currentClassId === null && detailScope(staff) === null;
 }
 
 /** Admins, and homeroom teachers for their own class. */
@@ -116,12 +156,12 @@ export async function getChildDetail(staff: Staff, id: number): Promise<ChildDet
     id: number; name: string; class_id: number | null; class_name: string | null; birth_date: string | null; birth_year: number | null; gender: "M" | "F" | null;
     school: string | null; school_class: string | null; address: string | null; phone: string | null; guardian_phone: string | null;
     photo_url: string | null; best_friend_id: number | null; best_friend_name: string | null; friend_name: string | null; friend_class: number | null;
-    has_phone: boolean; has_pin: boolean; onboarded_at: Date | null; consent_on: string | null; photo_consent: boolean; memo: string | null; active: boolean;
+    has_phone: boolean; has_pin: boolean; onboarded_at: Date | null; consent_on: string | null; photo_consent: boolean; memo: string | null; active: boolean; self_joined: boolean;
   }>(
     db,
     `select c.id, c.name, c.class_id, k.name as class_name, c.birth_date, c.birth_year, c.gender, c.school, c.school_class, c.address, c.phone, c.guardian_phone,
             c.photo_url, c.best_friend_id, c.best_friend_name, f.name as friend_name, f.class_id as friend_class,
-            c.has_phone, (c.pin_hash is not null) as has_pin, c.onboarded_at, c.consent_on, c.photo_consent, c.memo, c.active
+            c.has_phone, (c.pin_hash is not null) as has_pin, c.onboarded_at, c.consent_on, c.photo_consent, c.memo, c.active, c.self_joined
        from children c left join classes k on k.id = c.class_id left join children f on f.id = c.best_friend_id
       where c.id = $1`,
     [id],
@@ -186,6 +226,7 @@ export async function getChildDetail(staff: Staff, id: number): Promise<ChildDet
     photo_consent: c.photo_consent,
     memo: c.memo,
     active: c.active,
+    self_joined: c.self_joined,
     attendance,
     attended: attendance.filter((a) => a.status === "present" || a.status === "late").length,
     streak,
@@ -200,6 +241,8 @@ export async function getChildDetail(staff: Staff, id: number): Promise<ChildDet
       proxy: canApprove(staff, c.class_id),
       resetPin: canResetPin(staff, c.class_id),
       admin: staff.role === "admin",
+      consent: canEditChild(staff, c.class_id) && (c.active || staff.role === "admin"),
+      assignClass: canAssignClass(staff, c.class_id),
     },
   };
 }
@@ -276,14 +319,14 @@ export async function createChild(staff: Staff, input: ChildInput): Promise<Resu
   });
 }
 
-/** Teachers with detail access edit the profile. Only admins move a child to another class. */
+/** Teachers with detail access edit the profile. Who may set the class: see canAssignClass. */
 export async function updateChild(staff: Staff, id: number, input: ChildInput): Promise<Result> {
   const cur = await one<{ class_id: number | null; active: boolean }>(db, "select class_id, active from children where id = $1", [id]);
   if (!cur || !canEditChild(staff, cur.class_id) || (!cur.active && staff.role !== "admin")) return deny;
   const n = await normalize(input, id);
   if (!n.ok) return n;
   let classId = cur.class_id;
-  if (staff.role === "admin" && input.class_id !== undefined && input.class_id !== cur.class_id) {
+  if (canAssignClass(staff, cur.class_id) && input.class_id !== undefined && input.class_id !== cur.class_id) {
     if (input.class_id !== null && !(await classExists(input.class_id))) return fail("반을 찾을 수 없어요");
     classId = input.class_id;
   }
@@ -309,11 +352,15 @@ export async function setChildActive(staff: Staff, id: number, active: boolean):
   return { ok: true };
 }
 
+/**
+ * Records the paper consent form. Any teacher who may edit this child's profile can do it
+ * (담임 for their class, 부장 and 교역자 for everyone); consent no longer gates joining, so it is tracked here.
+ */
 export async function setConsent(staff: Staff, id: number, consentOn: string | null, photoConsent: boolean): Promise<Result> {
-  if (staff.role !== "admin") return deny;
+  const cur = await one<{ class_id: number | null; active: boolean; consent_on: string | null; photo_consent: boolean }>(db, "select class_id, active, consent_on, photo_consent from children where id = $1", [id]);
+  if (!cur || !canEditChild(staff, cur.class_id) || (!cur.active && staff.role !== "admin")) return deny;
   if (consentOn !== null && (!isDate(consentOn) || consentOn > todayKst())) return fail("동의 날짜가 올바르지 않아요");
-  const before = await one<{ consent_on: string | null; photo_consent: boolean }>(db, "select consent_on, photo_consent from children where id = $1", [id]);
-  if (!before) return fail("아이를 찾을 수 없어요");
+  const before = { consent_on: cur.consent_on, photo_consent: cur.photo_consent };
   await db.query("update children set consent_on = $2, photo_consent = $3 where id = $1", [id, consentOn, photoConsent]);
   await audit(db, staff.id, "child_consent", "child", id, { before, after: { consent_on: consentOn, photo_consent: photoConsent } });
   return { ok: true };

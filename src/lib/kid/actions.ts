@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { completeMission, dropBalance, ensureTree, harvestTree, missionsForChild, waterTree } from "@/lib/game";
 import { saveUpload } from "@/lib/uploads";
 import { addComment, deleteComment, reportComment, toggleLike } from "./feed";
-import { saveNewPin, saveOnboarding, type OnboardingErrors, type OnboardingInput } from "./onboarding";
+import { saveNewPin, saveOnboarding, selfRegister, type OnboardingErrors, type OnboardingInput } from "./onboarding";
 import { lockMinutes } from "./queries";
 import { afterSignInPath } from "./scan-cookie";
 import { deleteWorry, submitWorry } from "./worries";
@@ -18,14 +18,24 @@ import { deleteWorry, submitWorry } from "./worries";
  * A child id is never accepted from the browser.
  */
 
-export type JoinActionResult = { ok: false; reason: "not_found" | "no_consent" | "already" | "invalid"; errors?: OnboardingErrors };
+export type JoinActionResult = { ok: false; reason: "not_found" | "already" | "invalid" | "closed" | "busy"; errors?: OnboardingErrors };
 
+/** The personal-card flow: the child holding this card answers the questions and makes a PIN. */
 export async function completeOnboardingAction(token: string, input: OnboardingInput): Promise<JoinActionResult> {
   const r = await saveOnboarding(token, input);
   if (!r.ok) return r;
   await setSession("kid", r.childId);
   await rememberCard(token);
-  redirect(`/join/${encodeURIComponent(token)}/done`);
+  redirect("/welcome");
+}
+
+/** The shared-QR flow: a child registers themselves, is signed in, and this device remembers their new card. */
+export async function selfJoinAction(code: string, input: OnboardingInput): Promise<JoinActionResult> {
+  const r = await selfRegister(typeof code === "string" ? code : "", input);
+  if (!r.ok) return r;
+  await setSession("kid", r.childId);
+  await rememberCard(r.token);
+  redirect("/welcome");
 }
 
 export async function newPinAction(token: string, pin: string, pin2: string): Promise<JoinActionResult> {

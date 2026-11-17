@@ -4,14 +4,15 @@ process.env.PGLITE_DIR = "memory";
 process.env.DREAM_SEED = "off";
 
 import { ROLE_PRESETS } from "@/lib/authz";
-import { db, resetDbForTests } from "@/lib/db";
+import { db, one, resetDbForTests } from "@/lib/db";
 import { completeMission, dropBalance, pointBalance } from "@/lib/game";
 import { staffTabs } from "@/lib/staff/access";
-import { adjustPoints, attendanceCsv, balances, moveChildren, pointsCsv, saveSettings } from "@/lib/staff/admin-misc";
+import { joinCodeOpen } from "@/lib/self-join";
+import { adjustPoints, attendanceCsv, balances, moveChildren, pointsCsv, reissueJoinCode, saveSettings, setSelfJoin, sharedJoin } from "@/lib/staff/admin-misc";
 import { duplicateToNextWeek, listMissions, saveMission, weeklyDropCheck, defaultMissionInput } from "@/lib/staff/admin-missions";
 import { createStaff, listStaff, updateStaff } from "@/lib/staff/admin-staff";
 import { attendanceClasses, attendanceRoster, saveAttendance, streakFrom } from "@/lib/staff/attendance";
-import { addVisit, createChild, deleteVisit, getChildDetail, listChildren, longAbsent, proxyComplete, proxyMissions, reissueCard, resetPin, setChildActive, setConsent, updateChild, updateVisit } from "@/lib/staff/children";
+import { addVisit, createChild, deleteVisit, getChildDetail, listChildren, longAbsent, newJoinerCount, proxyComplete, proxyMissions, reissueCard, resetPin, setChildActive, setConsent, updateChild, updateVisit } from "@/lib/staff/children";
 import { resolveKakaoStaff } from "@/lib/staff/kakao";
 import { dismissReports, hideComment, listWorries, openWorry, pendingCompletions, replyWorry, reportedComments, reviewSubmission, unreadWorryCount } from "@/lib/staff/review";
 import { todayKst, weekStart, addDays } from "@/lib/time";
@@ -113,11 +114,10 @@ describe("children: list and detail", () => {
     expect(row.class_id).toBe(s.B);
   });
 
-  it("only admins create children, reissue cards and record consent", async () => {
+  it("only admins create children and reissue cards", async () => {
     for (const st of [s.staff.homeroom, s.staff.head, s.staff.basic]) {
       expect(await createChild(st, { name: "새아이", class_id: s.A })).toMatchObject({ ok: false });
       expect(await reissueCard(st, s.kidA)).toMatchObject({ ok: false });
-      expect(await setConsent(st, s.kidA, TODAY, true)).toMatchObject({ ok: false });
     }
     const made = await createChild(s.staff.admin, { name: "새아이", class_id: s.A });
     if (!made.ok) throw new Error("create failed");
@@ -134,6 +134,81 @@ describe("children: list and detail", () => {
     expect(await setConsent(s.staff.admin, s.kidA, TODAY, true)).toMatchObject({ ok: true });
     const log = await db.query<{ action: string }>("select action from audit_log where target_type = 'child' and target_id = $1 order by id", [s.kidA]);
     expect(log.map((l) => l.action)).toEqual(["child_card_reissue", "child_consent"]);
+  });
+
+  it("teachers who may edit a child record consent; others may not", async () => {
+    // Consent no longer gates joining, so the teachers who look after the child track it.
+    expect(await setConsent(s.staff.basic, s.kidA, TODAY, true)).toMatchObject({ ok: false });
+    expect(await setConsent(s.staff.other, s.kidA, TODAY, true)).toMatchObject({ ok: false }); // another class
+    expect(await one(db, "select consent_on from children where id = $1", [s.kidA])).toEqual({ consent_on: null });
+    expect(await setConsent(s.staff.homeroom, s.kidA, "2999-01-01", true)).toMatchObject({ ok: false }); // a future date
+    expect(await setConsent(s.staff.homeroom, s.kidA, TODAY, true)).toMatchObject({ ok: true });
+    expect(await one(db, "select consent_on, photo_consent from children where id = $1", [s.kidA])).toEqual({ consent_on: TODAY, photo_consent: true });
+    expect(await setConsent(s.staff.head, s.kidB, TODAY, false)).toMatchObject({ ok: true });
+    expect(await setConsent(s.staff.head, s.kidB, null, false)).toMatchObject({ ok: true }); // taken back
+    expect(await one(db, "select consent_on from children where id = $1", [s.kidB])).toEqual({ consent_on: null });
+    expect((await db.query("select id from audit_log where action = 'child_consent'")).length).toBe(3);
+  });
+
+  it("children who registered themselves: tags, the new-joiner list, and who assigns their class", async () => {
+    const lone = (await db.query<{ id: number }>("insert into children (name, qr_token, self_joined, onboarded_at, pin_hash) values ('스스로', 'tself', true, now(), 'hash') returning id"))[0].id;
+    // Everyone sees the name with "반 미정"; only teachers who see every class can open the profile.
+    for (const st of [s.staff.basic, s.staff.homeroom, s.staff.head, s.staff.admin]) {
+      const row = (await listChildren(st)).find((k) => k.id === lone)!;
+      const all = st.role === "head" || st.role === "admin";
+      expect(row).toMatchObject({ classPending: true, canOpen: all, needsConsent: all, selfJoined: all });
+      expect((await getChildDetail(st, lone)) !== null).toBe(all);
+      expect(await newJoinerCount(st)).toBe(all ? 1 : 0);
+      // The filter is ignored for teachers who cannot use it.
+      expect((await listChildren(st, { onlyNew: true })).map((k) => k.id)).toEqual(all ? [lone] : (await listChildren(st)).map((k) => k.id));
+    }
+    // Children a teacher registered are tagged for consent too, but are not "반 미정" and not new joiners.
+    expect((await listChildren(s.staff.homeroom)).find((k) => k.id === s.kidA)).toMatchObject({ needsConsent: true, classPending: false, selfJoined: false });
+
+    const detail = await getChildDetail(s.staff.head, lone);
+    expect(detail).toMatchObject({ self_joined: true, consent_on: null, class_id: null, can: { edit: true, consent: true, assignClass: true } });
+    // A homeroom teacher cannot reach a child without a class at all.
+    expect(await updateChild(s.staff.homeroom, lone, { name: "스스로", class_id: s.A })).toMatchObject({ ok: false });
+    expect(await setConsent(s.staff.homeroom, lone, TODAY, false)).toMatchObject({ ok: false });
+    // The head teacher gives the first class, but cannot move a child who already has one (admins only).
+    expect(await updateChild(s.staff.head, lone, { name: "스스로", class_id: 99999 })).toMatchObject({ ok: false });
+    expect(await updateChild(s.staff.head, lone, { name: "스스로", class_id: s.A })).toMatchObject({ ok: true });
+    expect(await one(db, "select class_id from children where id = $1", [lone])).toEqual({ class_id: s.A });
+    expect((await getChildDetail(s.staff.head, lone))!.can.assignClass).toBe(false);
+    expect(await updateChild(s.staff.head, lone, { name: "스스로", class_id: s.B })).toMatchObject({ ok: true });
+    expect(await one(db, "select class_id from children where id = $1", [lone])).toEqual({ class_id: s.A });
+    expect((await db.query("select id from audit_log where action = 'child_class_change' and target_id = $1", [lone])).length).toBe(1);
+    // Now the homeroom teacher of that class sees the child and records the consent form.
+    expect(await setConsent(s.staff.homeroom, lone, TODAY, false)).toMatchObject({ ok: true });
+    expect((await listChildren(s.staff.homeroom)).find((k) => k.id === lone)).toMatchObject({ classPending: false, needsConsent: false, selfJoined: true });
+    // With a class and consent, the child leaves the list once two weeks have passed.
+    expect(await newJoinerCount(s.staff.admin)).toBe(1);
+    await db.query("update children set onboarded_at = now() - interval '15 days' where id = $1", [lone]);
+    expect(await newJoinerCount(s.staff.admin)).toBe(0);
+  });
+
+  it("only admins see, reissue and switch the shared join QR", async () => {
+    for (const st of [s.staff.homeroom, s.staff.head, s.staff.basic]) {
+      expect(await sharedJoin(st)).toBeNull();
+      expect(await reissueJoinCode(st)).toMatchObject({ ok: false });
+      expect(await setSelfJoin(st, false)).toMatchObject({ ok: false });
+    }
+    const first = await sharedJoin(s.staff.admin);
+    expect(first).toMatchObject({ on: true, joined: 0 });
+    expect(first!.code.length).toBeGreaterThanOrEqual(12);
+    expect((await sharedJoin(s.staff.admin))!.code).toBe(first!.code); // stays the same until reissued
+    expect(await joinCodeOpen(first!.code)).toBe(true);
+    expect(await reissueJoinCode(s.staff.admin)).toMatchObject({ ok: true });
+    const second = await sharedJoin(s.staff.admin);
+    expect(second!.code).not.toBe(first!.code);
+    expect(await joinCodeOpen(first!.code)).toBe(false);
+    expect(await joinCodeOpen(second!.code)).toBe(true);
+    expect(await setSelfJoin(s.staff.admin, false)).toMatchObject({ ok: true });
+    expect(await joinCodeOpen(second!.code)).toBe(false);
+    expect((await sharedJoin(s.staff.admin))!.on).toBe(false);
+    expect(await setSelfJoin(s.staff.admin, true)).toMatchObject({ ok: true });
+    expect(await joinCodeOpen(second!.code)).toBe(true);
+    expect((await db.query<{ action: string }>("select action from audit_log where target_type = 'settings' order by id")).map((l) => l.action)).toEqual(["join_code_reissue", "self_join_off", "self_join_on"]);
   });
 
   it("homeroom teachers reset the PIN for their own class only", async () => {

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { readQuizJson } from "@/lib/quiz";
 import { saveUpload } from "@/lib/uploads";
-import { adjustPoints, archiveClass, copyPreviousWorship, deleteNotice, deletePost, moveChildren, moveClass, saveClass, saveNotice, savePost, saveSettings, saveWorship } from "./admin-misc";
+import { adjustPoints, archiveClass, copyPreviousWorship, deleteNotice, deletePost, moveChildren, moveClass, reissueJoinCode, saveClass, saveNotice, savePost, saveSettings, saveWorship, setSelfJoin } from "./admin-misc";
 import { duplicateToNextWeek, saveMission, setMissionActive } from "./admin-missions";
 import { createStaff, renewInvite, updateStaff } from "./admin-staff";
 import { clean, cleanOrNull, fail, toInt, type Result } from "./util";
@@ -191,6 +191,17 @@ export async function postAction(formData: FormData) {
   }
   const r = await savePost(staff, id, { body: clean(formData.get("body"), 2000), comments_open: on(formData, "comments_open"), image_url: image, removeImage: on(formData, "remove_image") });
   finish(r, back, id === null ? "소식을 올렸어요" : "소식을 고쳤어요", id === null ? back : `${back}?edit=${id}`);
+}
+
+/* ---------- the shared join QR ---------- */
+
+export async function joinQrAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const op = clean(formData.get("op"), 12);
+  if (op === "reissue") finish(await reissueJoinCode(staff), "/staff/admin/cards", "새 가입 QR을 만들었어요. 전에 쓰던 QR은 이제 안 돼요");
+  if (op === "on") finish(await setSelfJoin(staff, true), "/staff/admin/cards", "QR로 가입할 수 있게 켰어요");
+  if (op === "off") finish(await setSelfJoin(staff, false), "/staff/admin/cards", "QR 가입을 껐어요");
+  redirect("/staff/admin/cards");
 }
 
 /* ---------- points and settings ---------- */

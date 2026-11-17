@@ -1,6 +1,7 @@
 import "server-only";
 import { db, one } from "@/lib/db";
 import { getSettings, type Settings } from "@/lib/game";
+import { ensureJoinCode, newJoinCode, selfJoinState } from "@/lib/self-join";
 import { addDays, todayKst, weekStart } from "@/lib/time";
 import type { Staff } from "@/lib/types";
 import { audit, listClasses, type ClassRow } from "./access";
@@ -83,6 +84,32 @@ export async function cardRows(staff: Staff, classId: number | null): Promise<Ca
       where c.active and ($1::int is null or c.class_id = $1) order by k.sort nulls last, k.id, c.name, c.id`,
     [classId],
   );
+}
+
+/* ---------- the shared join QR ---------- */
+
+/** The shared QR's code and switch, for the admin's card screen. The code is made here the first time it is needed. */
+export async function sharedJoin(staff: Staff): Promise<{ code: string; on: boolean; joined: number } | null> {
+  if (!admin(staff)) return null;
+  const code = await ensureJoinCode();
+  const state = await selfJoinState();
+  const n = await one<{ n: number }>(db, "select count(*)::int as n from children where self_joined and active");
+  return { code, on: state.on, joined: n?.n ?? 0 };
+}
+
+/** A new code: the QR printed before stops working at once. */
+export async function reissueJoinCode(staff: Staff): Promise<Result> {
+  if (!admin(staff)) return deny;
+  await db.query("insert into settings (key, value) values ('join_code', $1) on conflict (key) do update set value = excluded.value", [JSON.stringify(newJoinCode())]);
+  await audit(db, staff.id, "join_code_reissue", "settings", null);
+  return { ok: true };
+}
+
+export async function setSelfJoin(staff: Staff, on: boolean): Promise<Result> {
+  if (!admin(staff)) return deny;
+  await db.query("insert into settings (key, value) values ('self_join_on', $1) on conflict (key) do update set value = excluded.value", [JSON.stringify(on === true)]);
+  await audit(db, staff.id, on ? "self_join_on" : "self_join_off", "settings", null);
+  return { ok: true };
 }
 
 /* ---------- worship ---------- */

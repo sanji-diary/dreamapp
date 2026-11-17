@@ -1,0 +1,11 @@
+{
+  "name": "꿈의숲키우기 교사",
+  "short_name": "꿈의숲 교사",
+  "id": "/staff",
+  "start_url": "/staff",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "ko",
+  "icons": [{ "src": "/img/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}

@@ -37,21 +37,7 @@ async function setup() {
   return { classId: cls[0].id, otherClassId: cls[1].id, adminId: st[0].id, teacherId: st[1].id, headId: st[2].id, newKid: kids[0].id, kidA: kids[1].id, kidB: kids[2].id, mission };
 }
 
-const good: OnboardingInput = {
-  name: " 새친구 ",
-  birthYear: 2015,
-  gender: "M",
-  school: " 꿈의숲초등학교 ",
-  schoolClass: "5학년 3반",
-  hasPhone: true,
-  phone: "010-1234-5678",
-  guardianPhone: "01098765432",
-  address: "꿈동 숲아파트 101동",
-  friendId: null,
-  friendName: "",
-  pin: "4821",
-  pin2: "4821",
-};
+const good: OnboardingInput = { name: " 새친구 ", gender: "M", birthYear: 2015, school: " 꿈의숲초등학교 ", classId: null, pin: "4821", pin2: "4821" };
 
 describe("korean helpers", () => {
   it("picks 아 or 야 from the last sound of the given name", () => {
@@ -84,30 +70,27 @@ describe("onboarding", () => {
   it("accepts a complete answer set and normalizes it", () => {
     const v = validateOnboarding(good, "2026-11-17");
     expect(v.ok).toBe(true);
-    if (v.ok) expect(v.data).toMatchObject({ name: "새친구", birthYear: 2015, school: "꿈의숲초등학교", phone: "01012345678", guardianPhone: "01098765432", friendId: null, friendName: null });
+    if (v.ok) expect(v.data).toEqual({ name: "새친구", gender: "M", birthYear: 2015, school: "꿈의숲초등학교", classId: null, pin: "4821" });
   });
 
-  it("rejects bad dates, PINs and phone numbers on the server", () => {
-    const v = validateOnboarding({ ...good, birthYear: 1999, pin: "12a4", phone: "12345", gender: "X", school: "" }, "2026-11-17");
+  it("rejects bad names, years, PINs and classes on the server", () => {
+    const v = validateOnboarding({ ...good, name: "가", birthYear: 1999, pin: "12a4", gender: "X", school: "", classId: 1.5 }, "2026-11-17");
     expect(v.ok).toBe(false);
-    if (!v.ok) expect(Object.keys(v.errors).sort()).toEqual(["birth", "gender", "phone", "pin", "school"]);
+    if (!v.ok) expect(Object.keys(v.errors).sort()).toEqual(["birth", "classId", "gender", "name", "pin", "school"]);
+    expect(validateOnboarding({ ...good, name: "열한글자가넘는긴이름이에요" }, "2026-11-17")).toMatchObject({ ok: false, errors: { name: expect.any(String) } });
+    expect(validateOnboarding({ ...good, school: "가".repeat(41) }, "2026-11-17")).toMatchObject({ ok: false, errors: { school: expect.any(String) } });
     const mismatch = validateOnboarding({ ...good, pin2: "0000" }, "2026-11-17");
     expect(mismatch).toMatchObject({ ok: false, errors: { pin2: expect.any(String) } });
   });
 
-  it("lets a child without a phone skip the number, and skip guardian phone and address", () => {
-    const v = validateOnboarding({ ...good, hasPhone: false, phone: "", guardianPhone: "", address: "" }, "2026-11-17");
-    expect(v).toMatchObject({ ok: true, data: { hasPhone: false, phone: null, guardianPhone: null, address: null } });
-  });
-
-  it("saves everything once, hashes the PIN and plants a tree", async () => {
-    await db.query("update children set guardian_phone = '01011112222', address = '선생님이 적은 주소' where id = $1", [s.newKid]);
-    const r = await saveOnboarding("card-new", { ...good, guardianPhone: "", address: "", friendId: s.kidA });
+  it("saves the five answers once, hashes the PIN and plants a tree, and leaves what the teacher entered alone", async () => {
+    await db.query("update children set guardian_phone = '01011112222', address = '선생님이 적은 주소', phone = '01033334444', school_class = '5학년 3반' where id = $1", [s.newKid]);
+    const r = await saveOnboarding("card-new", good);
     expect(r).toEqual({ ok: true, childId: s.newKid });
     const c = await one<Record<string, unknown>>(db, "select * from children where id = $1", [s.newKid]);
-    expect(c).toMatchObject({ name: "새친구", birth_year: 2015, birth_date: null, gender: "M", school: "꿈의숲초등학교", school_class: "5학년 3반", phone: "01012345678", has_phone: true, best_friend_id: s.kidA, best_friend_name: null });
-    // Skipped answers keep what the teacher had entered.
-    expect(c).toMatchObject({ guardian_phone: "01011112222", address: "선생님이 적은 주소" });
+    expect(c).toMatchObject({ name: "새친구", birth_year: 2015, birth_date: null, gender: "M", school: "꿈의숲초등학교", self_joined: false });
+    // The wizard no longer asks for these: what the teacher entered stays. A skipped class keeps the teacher's class.
+    expect(c).toMatchObject({ guardian_phone: "01011112222", address: "선생님이 적은 주소", phone: "01033334444", school_class: "5학년 3반", class_id: s.classId });
     expect(c!.onboarded_at).not.toBeNull();
     expect(c!.pin_hash).not.toBe("4821");
     expect(await verifyPin("4821", c!.pin_hash as string)).toBe(true);
@@ -117,17 +100,21 @@ describe("onboarding", () => {
     expect(await verifyPin("4821", (await one<{ pin_hash: string }>(db, "select pin_hash from children where id = $1", [s.newKid]))!.pin_hash)).toBe(true);
   });
 
-  it("refuses unknown cards, missing consent, and a friend that is not a real other child", async () => {
+  it("refuses unknown cards and classes that do not exist; a chosen class is saved", async () => {
     expect(await saveOnboarding("nope", good)).toMatchObject({ ok: false, reason: "not_found" });
-    expect(await saveOnboarding("card-noconsent", good)).toMatchObject({ ok: false, reason: "no_consent" });
-    expect(await saveOnboarding("card-new", { ...good, friendId: s.newKid })).toMatchObject({ ok: false, reason: "invalid", errors: { friend: expect.any(String) } });
-    expect(await saveOnboarding("card-new", { ...good, friendId: 99999 })).toMatchObject({ ok: false, reason: "invalid" });
+    expect(await saveOnboarding("card-new", { ...good, classId: 99999 })).toMatchObject({ ok: false, reason: "invalid", errors: { classId: expect.any(String) } });
     expect(await one(db, "select id from children where id = $1 and pin_hash is not null", [s.newKid])).toBeNull();
+    expect(await saveOnboarding("card-new", { ...good, classId: s.otherClassId })).toMatchObject({ ok: true });
+    expect(await one(db, "select class_id from children where id = $1", [s.newKid])).toEqual({ class_id: s.otherClassId });
   });
 
-  it("stores a typed friend name when the friend is not in the list", async () => {
-    await saveOnboarding("card-new", { ...good, friendName: " 동네 친구 " });
-    expect(await one(db, "select best_friend_id, best_friend_name from children where id = $1", [s.newKid])).toEqual({ best_friend_id: null, best_friend_name: "동네 친구" });
+  it("no longer waits for parental consent: a child without it joins, and can make a new PIN later", async () => {
+    expect(await saveOnboarding("card-noconsent", good)).toMatchObject({ ok: true });
+    const c = await one<{ id: number; consent_on: string | null; onboarded_at: Date | null }>(db, "select id, consent_on, onboarded_at from children where qr_token = 'card-noconsent'");
+    expect(c).toMatchObject({ consent_on: null });
+    expect(c!.onboarded_at).not.toBeNull();
+    await db.query("update children set pin_hash = null where id = $1", [c!.id]);
+    expect(await saveNewPin("card-noconsent", "1111", "1111")).toEqual({ ok: true, childId: c!.id });
   });
 
   it("only sets a new PIN for a child who joined before and has no PIN now", async () => {

@@ -80,15 +80,36 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/st
         <div className="flex min-w-0 flex-col gap-1.5">
           <h1 className="m-0 text-[22px] leading-7 font-bold tracking-[-0.5px]">{c.name}</h1>
           <div className="flex flex-wrap gap-[5px]">
-            <Tag>{c.class_name ?? "반 없음"}</Tag>
+            {c.class_name ? <Tag>{c.class_name}</Tag> : c.self_joined ? <Tag tone="danger">반 미정</Tag> : <Tag>반 없음</Tag>}
             {c.age !== null ? <Tag>{c.age}세</Tag> : null}
             {c.gender ? <Tag>{c.gender === "M" ? "남" : "여"}</Tag> : null}
             {!c.has_phone ? <Tag>휴대폰 없음</Tag> : null}
+            {!c.consent_on ? <Tag tone="warn">동의서 확인 필요</Tag> : null}
           </div>
         </div>
       </div>
       <Flash ok={sp.ok} error={sp.error} />
       {!c.active ? <p className="mx-4 mt-3.5 mb-0 rounded-[10px] bg-fill px-3 py-3 text-[14px] font-bold text-sub">명단에서 뺀 아이예요.</p> : null}
+      {c.self_joined && c.active && (c.class_id === null || !c.consent_on) ? (
+        <div className="mx-4 mt-3.5 flex flex-col gap-2 rounded-[10px] bg-warn-tint px-3 py-3">
+          <p className="m-0 text-[14px] leading-5 font-bold text-warn">함께 쓰는 QR로 스스로 가입한 아이예요.</p>
+          <p className="m-0 text-[13px] leading-[19px] text-sub">
+            {[c.class_id === null ? "반이 아직 없어요" : null, !c.consent_on ? "보호자 동의서를 아직 확인하지 않았어요" : null].filter(Boolean).join(" · ")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {c.class_id === null && c.can.assignClass ? (
+              <SmallLink href={`${here}/edit#f-class`} width={74}>
+                반 정하기
+              </SmallLink>
+            ) : null}
+            {!c.consent_on && c.can.consent ? (
+              <SmallLink href="#consent" width={96} tone="gray">
+                동의서 기록하기
+              </SmallLink>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {c.streak.kind === "absent" && c.streak.n >= 2 ? (
         <p className="mx-4 mt-3.5 mb-0 flex min-h-11 items-center rounded-[10px] bg-danger-tint px-3 text-[14px] font-bold text-[#8E2A22]">{c.streak.n}주 연속 결석이에요. 연락해 보세요.</p>
       ) : null}
@@ -113,9 +134,9 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/st
             </span>
           </span>
         </InfoRow>
-        <InfoRow label="앱 시작">{c.onboarded_on ? `${shortDate(c.onboarded_on)}에 시작${c.has_pin ? "" : " · 비밀번호 없음"}` : "아직 카드를 찍지 않았어요"}</InfoRow>
+        <InfoRow label="앱 시작">{c.onboarded_on ? `${shortDate(c.onboarded_on)}에 ${c.self_joined ? "스스로 가입" : "시작"}${c.has_pin ? "" : " · 비밀번호 없음"}` : "아직 카드를 찍지 않았어요"}</InfoRow>
         <InfoRow label="보호자 동의" last>
-          {c.consent_on ? `${c.consent_on.replaceAll("-", ". ")} · 사진 ${c.photo_consent ? "동의" : "동의 안 함"}` : "아직 받지 않았어요"}
+          {c.consent_on ? `${c.consent_on.replaceAll("-", ". ")} · 사진 ${c.photo_consent ? "동의" : "동의 안 함"}` : "동의서 확인 필요"}
         </InfoRow>
       </section>
 
@@ -232,6 +253,32 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/st
         </section>
       ) : null}
 
+      {c.can.consent ? (
+        <section className="flex flex-col px-4" id="consent">
+          <H2>보호자 동의서</H2>
+          <Note>종이 동의서를 받으면 받은 날을 적어 주세요. 날짜를 비우고 저장하면 다시 ‘확인 필요’가 돼요.</Note>
+          <form action={childOpAction} className="flex flex-col gap-2.5 pt-1">
+            <input type="hidden" name="id" value={c.id} />
+            <input type="hidden" name="op" value="consent" />
+            <div className="flex items-end gap-2">
+              <div className="flex min-w-0 grow flex-col gap-1.5">
+                <label htmlFor="consent-on" className={labelClass}>
+                  보호자 동의 받은 날
+                </label>
+                <input id="consent-on" type="date" name="consent_on" max={today} defaultValue={c.consent_on ?? (c.self_joined ? today : "")} className={`${inputClass} px-2.5`} />
+              </div>
+              <SmallButton width={60} tone={c.consent_on ? "gray" : "navy"}>
+                저장
+              </SmallButton>
+            </div>
+            <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] font-semibold text-ink2">
+              <input type="checkbox" name="photo_consent" defaultChecked={c.photo_consent} className="h-5 w-5 accent-navy" />
+              사진 올리는 것에 동의했어요
+            </label>
+          </form>
+        </section>
+      ) : null}
+
       {c.can.resetPin || c.can.admin ? (
         <section className="flex flex-col px-4">
           <H2>카드와 비밀번호</H2>
@@ -258,25 +305,6 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/st
                 <ConfirmButton name="op" value="reissue" message={`${c.name}의 카드를 새로 만들까요? 전에 쓰던 카드는 못 쓰게 돼요.`}>
                   <span className={`${pillClass} min-w-[60px] bg-fill text-sub`}>새 카드</span>
                 </ConfirmButton>
-              </form>
-              <form action={childOpAction} className="flex flex-col gap-2.5 border-b border-line py-3">
-                <input type="hidden" name="id" value={c.id} />
-                <input type="hidden" name="op" value="consent" />
-                <div className="flex items-end gap-2">
-                  <div className="flex min-w-0 grow flex-col gap-1.5">
-                    <label htmlFor="consent-on" className={labelClass}>
-                      보호자 동의 받은 날
-                    </label>
-                    <input id="consent-on" type="date" name="consent_on" max={today} defaultValue={c.consent_on ?? ""} className={`${inputClass} px-2.5`} />
-                  </div>
-                  <SmallButton width={60} tone="gray">
-                    저장
-                  </SmallButton>
-                </div>
-                <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] font-semibold text-ink2">
-                  <input type="checkbox" name="photo_consent" defaultChecked={c.photo_consent} className="h-5 w-5 accent-navy" />
-                  사진 올리는 것에 동의했어요
-                </label>
               </form>
               <form action={childOpAction} className="flex min-h-[60px] items-center justify-between gap-3">
                 <input type="hidden" name="id" value={c.id} />
