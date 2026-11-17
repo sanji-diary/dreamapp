@@ -3,11 +3,12 @@ import { db, one } from "@/lib/db";
 import { ensureTree } from "@/lib/game";
 import { hashPin, isValidPin } from "@/lib/pin";
 import { todayKst } from "@/lib/time";
-import { parseBirth, phoneDigits } from "./korean";
+import { phoneDigits } from "./korean";
 
 /** What the join wizard sends. Everything is untrusted and checked again here. */
 export interface OnboardingInput {
-  birth: string;
+  name: string;
+  birthYear: number;
   gender: string;
   school: string;
   schoolClass: string;
@@ -21,11 +22,12 @@ export interface OnboardingInput {
   pin2: string;
 }
 
-export type OnboardingField = "birth" | "gender" | "school" | "schoolClass" | "phone" | "guardianPhone" | "address" | "friend" | "pin" | "pin2";
+export type OnboardingField = "name" | "birth" | "gender" | "school" | "schoolClass" | "phone" | "guardianPhone" | "address" | "friend" | "pin" | "pin2";
 export type OnboardingErrors = Partial<Record<OnboardingField, string>>;
 
 export interface OnboardingData {
-  birth: string;
+  name: string;
+  birthYear: number;
   gender: "M" | "F";
   school: string;
   schoolClass: string;
@@ -49,8 +51,12 @@ export function validatePins(pin: unknown, pin2: unknown): OnboardingErrors {
 
 export function validateOnboarding(input: OnboardingInput, today: string = todayKst()): { ok: true; data: OnboardingData } | { ok: false; errors: OnboardingErrors } {
   const errors: OnboardingErrors = validatePins(input?.pin, input?.pin2);
-  const birth = parseBirth(typeof input?.birth === "string" ? input.birth : "", today);
-  if (!birth) errors.birth = "생년월일을 다시 확인해 주세요";
+  const name = text(input?.name, 10);
+  if (name.length < 2) errors.name = "이름을 적어 주세요";
+  // Grades 4-6 are 9 to 13 years old; allow a little room on both sides.
+  const thisYear = Number(today.slice(0, 4));
+  const birthYear = typeof input?.birthYear === "number" && Number.isInteger(input.birthYear) && input.birthYear >= thisYear - 15 && input.birthYear <= thisYear - 7 ? input.birthYear : null;
+  if (birthYear === null) errors.birth = "태어난 해를 골라 주세요";
   const gender = input?.gender === "M" || input?.gender === "F" ? input.gender : null;
   if (!gender) errors.gender = "하나를 골라 주세요";
   const school = text(input?.school, 40);
@@ -74,8 +80,8 @@ export function validateOnboarding(input: OnboardingInput, today: string = today
   const friendId = typeof input?.friendId === "number" && Number.isInteger(input.friendId) && input.friendId > 0 ? input.friendId : null;
   const friendName = friendId ? null : text(input?.friendName, 20) || null;
 
-  if (Object.keys(errors).length > 0 || !birth || !gender) return { ok: false, errors };
-  return { ok: true, data: { birth, gender, school, schoolClass, hasPhone, phone, guardianPhone, address, friendId, friendName, pin: input.pin } };
+  if (Object.keys(errors).length > 0 || birthYear === null || !gender) return { ok: false, errors };
+  return { ok: true, data: { name, birthYear, gender, school, schoolClass, hasPhone, phone, guardianPhone, address, friendId, friendName, pin: input.pin } };
 }
 
 export type SaveResult = { ok: true; childId: number } | { ok: false; reason: "not_found" | "no_consent" | "already" | "invalid"; errors?: OnboardingErrors };
@@ -104,11 +110,11 @@ export async function saveOnboarding(token: string, input: OnboardingInput): Pro
   const pinHash = await hashPin(d.pin);
   const saved = await db.tx(async (q) => {
     const rows = await q.query<{ id: number }>(
-      `update children set birth_date = $2, gender = $3, school = $4, school_class = $5, has_phone = $6, phone = $7,
+      `update children set name = $13, birth_year = $2, gender = $3, school = $4, school_class = $5, has_phone = $6, phone = $7,
          guardian_phone = coalesce($8, guardian_phone), address = coalesce($9, address),
          best_friend_id = $10, best_friend_name = $11, pin_hash = $12, pin_fail_count = 0, pin_locked_until = null, onboarded_at = now()
        where id = $1 and pin_hash is null returning id`,
-      [child.id, d.birth, d.gender, d.school, d.schoolClass, d.hasPhone, d.phone, d.guardianPhone, d.address, d.friendId, d.friendName, pinHash],
+      [child.id, d.birthYear, d.gender, d.school, d.schoolClass, d.hasPhone, d.phone, d.guardianPhone, d.address, d.friendId, d.friendName, pinHash, d.name],
     );
     if (rows.length === 0) return false;
     await ensureTree(q, child.id);

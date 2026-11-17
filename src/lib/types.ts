@@ -18,6 +18,7 @@ export interface Child {
   name: string;
   class_id: number | null;
   birth_date: string | null;
+  birth_year: number | null;
   gender: "M" | "F" | null;
   school: string | null;
   school_class: string | null;

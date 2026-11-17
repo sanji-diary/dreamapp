@@ -41,7 +41,7 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
       friends={friends}
       pinOnly={child.onboarded_at !== null}
       prefill={{
-        birth: child.birth_date ? child.birth_date.replaceAll("-", "") : "",
+        birthYear: child.birth_year ?? (child.birth_date ? Number(child.birth_date.slice(0, 4)) : null),
         gender: child.gender ?? "",
         school: child.school ?? "",
         schoolClass: child.school_class ?? "",

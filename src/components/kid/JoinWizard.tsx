@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { inputClass, primaryButtonClass } from "@/components/ui";
 import { completeOnboardingAction, newPinAction } from "@/lib/kid/actions";
-import { callName, formatBirth, formatPhone, parseBirth, phoneDigits } from "@/lib/kid/korean";
+import { callName, formatPhone, phoneDigits } from "@/lib/kid/korean";
 import type { OnboardingErrors, OnboardingField } from "@/lib/kid/onboarding";
 import { PinDots, PinKeys } from "./PinPad";
 
@@ -17,7 +17,7 @@ const ALL_STEPS: StepKey[] = ["name", "birth", "gender", "school", "schoolClass"
 const PIN_STEPS: StepKey[] = ["pin", "pin2"];
 
 export interface JoinPrefill {
-  birth: string;
+  birthYear: number | null;
   gender: "" | "M" | "F";
   school: string;
   schoolClass: string;
@@ -69,7 +69,8 @@ const choiceClass = "flex min-h-[60px] w-full cursor-pointer items-center rounde
 export function JoinWizard({ token, name, today, prefill, friends, pinOnly = false }: Props) {
   const steps = pinOnly ? PIN_STEPS : ALL_STEPS;
   const [index, setIndex] = useState(0);
-  const [birth, setBirth] = useState(prefill.birth ? formatBirth(prefill.birth) : "");
+  const [childName, setChildName] = useState(name);
+  const [birthYear, setBirthYear] = useState<number | null>(prefill.birthYear);
   const [gender, setGender] = useState<"" | "M" | "F">(prefill.gender);
   const [school, setSchool] = useState(prefill.school);
   const classMatch = /^(\d)학년\s*(\d{1,2})반$/.exec(prefill.schoolClass.trim());
@@ -95,7 +96,8 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
   const savingRef = useRef(false);
 
   const schoolClass = freeClass ? classText.trim() : grade && ban ? `${grade}학년 ${Number(ban)}반` : "";
-  const birthIso = parseBirth(birth, today);
+  const thisYear = Number(today.slice(0, 4));
+  const yearChoices = [14, 13, 12, 11, 10, 9].map((n) => thisYear - n);
 
   const go = useCallback(
     (delta: number) => {
@@ -114,8 +116,8 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
   };
 
   const valid: Record<StepKey, boolean> = {
-    name: true,
-    birth: birthIso !== null,
+    name: childName.trim().length >= 2,
+    birth: birthYear !== null,
     gender: gender !== "",
     school: school.trim().length >= 2,
     schoolClass: schoolClass !== "",
@@ -137,7 +139,8 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
         const r = pinOnly
           ? await newPinAction(token, pin, finalPin2)
           : await completeOnboardingAction(token, {
-              birth,
+              name: childName,
+              birthYear: birthYear ?? 0,
               gender,
               school,
               schoolClass,
@@ -169,7 +172,7 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
         setSaving(false);
       }
     },
-    [pinOnly, token, pin, birth, gender, school, schoolClass, hasPhone, phone, guardian, address, friendId, friendText, steps],
+    [pinOnly, token, pin, childName, birthYear, gender, school, schoolClass, hasPhone, phone, guardian, address, friendId, friendText, steps],
   );
 
   const onPinDigit = useCallback(
@@ -240,53 +243,59 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
   let body: ReactNode = null;
   let skip: ReactNode = null;
   let showNext = true;
-  let nextLabel = "다음";
+  const nextLabel = "다음";
 
   switch (step) {
     case "name":
-      question = `${callName(name)}, 반가워!`;
+      question = "이름을 알려 주세요";
       hint = "꿈의숲에 온 걸 환영해요. 몇 가지만 알려 주면 내 씨앗을 받을 수 있어요.";
-      body = (
-        <div className="mt-6 flex items-center gap-3.5 rounded-2xl bg-fill px-4 py-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img alt="" src="/img/tree-seed.webp" style={{ width: 52, height: 52 }} />
-          <div className="flex flex-col">
-            <span className="text-[13px] text-sub">이 카드의 주인</span>
-            <span className="text-[20px] leading-7 font-bold tracking-[-0.4px]">{name}</span>
-          </div>
-        </div>
-      );
-      skip = <p className="m-0 pb-2 text-center text-[13px] leading-[19px] text-mute">내 이름이 아니면 선생님께 카드를 보여 주세요</p>;
-      nextLabel = "내 이름이 맞아요";
-      break;
-    case "birth":
-      question = "생일이 언제예요?";
-      hint = "태어난 해부터 숫자 8개로 적어 주세요.";
       body = (
         <>
           {field(
-            "birth",
-            "생년월일",
+            "name",
+            "이름",
             <input
-              id="f-birth"
+              id="f-name"
               autoFocus
-              inputMode="numeric"
-              autoComplete="bday"
+              autoComplete="name"
               enterKeyHint="next"
-              placeholder="2015.03.14"
-              value={birth}
+              maxLength={10}
+              placeholder="홍길동"
+              value={childName}
               onChange={(e) => {
-                setBirth(formatBirth(e.target.value));
-                clearError("birth");
+                setChildName(e.target.value);
+                clearError("name");
               }}
               className={bigInput}
             />,
           )}
-          <p aria-live="polite" className={`m-0 mt-2 text-[14px] font-semibold ${birthIso ? "text-navy" : "text-danger"}`}>
-            {birthIso ? `${Number(birthIso.slice(0, 4))}년 ${Number(birthIso.slice(5, 7))}월 ${Number(birthIso.slice(8, 10))}일` : birth.replace(/\D/g, "").length === 8 ? "날짜를 다시 확인해 주세요" : ""}
-          </p>
-          {error("birth")}
+          {error("name")}
         </>
+      );
+      skip = <p className="m-0 pb-2 text-center text-[13px] leading-[19px] text-mute">선생님이 적어 둔 이름이에요. 틀렸으면 고쳐 주세요</p>;
+      break;
+    case "birth":
+      question = `${callName(childName.trim() || name)}, 반가워!\n몇 년에 태어났어요?`;
+      showNext = birthYear !== null;
+      body = (
+        <div role="group" aria-label="태어난 해" className="mt-6 grid grid-cols-2 gap-3">
+          {yearChoices.map((y) => (
+            <button
+              key={y}
+              type="button"
+              aria-pressed={birthYear === y}
+              onClick={() => {
+                setBirthYear(y);
+                clearError("birth");
+                setTimeout(next, 160);
+              }}
+              className={`h-[68px] cursor-pointer rounded-2xl border-[1.5px] text-[20px] font-bold ${birthYear === y ? "border-navy bg-navy-tint text-navy" : "border-[#D1D6DB] bg-white text-ink"}`}
+            >
+              {y}년
+            </button>
+          ))}
+          {error("birth")}
+        </div>
       );
       break;
     case "gender":
@@ -650,7 +659,7 @@ export function JoinWizard({ token, name, today, prefill, friends, pinOnly = fal
         <div className="flex shrink-0 flex-col gap-1 px-5 pt-2 pb-[max(16px,env(safe-area-inset-bottom))]">
           {skip}
           {showNext ? (
-            <button type={step === "name" || step === "gender" ? "button" : "submit"} form="step-form" disabled={!valid[step]} onClick={step === "name" || step === "gender" ? next : undefined} className={`${primaryButtonClass} h-14 cursor-pointer text-[17px]`}>
+            <button type={step === "birth" || step === "gender" ? "button" : "submit"} form="step-form" disabled={!valid[step]} onClick={step === "birth" || step === "gender" ? next : undefined} className={`${primaryButtonClass} h-14 cursor-pointer text-[17px]`}>
               {nextLabel}
             </button>
           ) : null}

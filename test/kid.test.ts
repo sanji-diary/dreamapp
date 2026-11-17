@@ -38,7 +38,8 @@ async function setup() {
 }
 
 const good: OnboardingInput = {
-  birth: "2015.05.09",
+  name: " 새친구 ",
+  birthYear: 2015,
   gender: "M",
   school: " 꿈의숲초등학교 ",
   schoolClass: "5학년 3반",
@@ -83,11 +84,11 @@ describe("onboarding", () => {
   it("accepts a complete answer set and normalizes it", () => {
     const v = validateOnboarding(good, "2026-11-17");
     expect(v.ok).toBe(true);
-    if (v.ok) expect(v.data).toMatchObject({ birth: "2015-05-09", school: "꿈의숲초등학교", phone: "01012345678", guardianPhone: "01098765432", friendId: null, friendName: null });
+    if (v.ok) expect(v.data).toMatchObject({ name: "새친구", birthYear: 2015, school: "꿈의숲초등학교", phone: "01012345678", guardianPhone: "01098765432", friendId: null, friendName: null });
   });
 
   it("rejects bad dates, PINs and phone numbers on the server", () => {
-    const v = validateOnboarding({ ...good, birth: "2015.02.31", pin: "12a4", phone: "12345", gender: "X", school: "" }, "2026-11-17");
+    const v = validateOnboarding({ ...good, birthYear: 1999, pin: "12a4", phone: "12345", gender: "X", school: "" }, "2026-11-17");
     expect(v.ok).toBe(false);
     if (!v.ok) expect(Object.keys(v.errors).sort()).toEqual(["birth", "gender", "phone", "pin", "school"]);
     const mismatch = validateOnboarding({ ...good, pin2: "0000" }, "2026-11-17");
@@ -104,7 +105,7 @@ describe("onboarding", () => {
     const r = await saveOnboarding("card-new", { ...good, guardianPhone: "", address: "", friendId: s.kidA });
     expect(r).toEqual({ ok: true, childId: s.newKid });
     const c = await one<Record<string, unknown>>(db, "select * from children where id = $1", [s.newKid]);
-    expect(c).toMatchObject({ birth_date: "2015-05-09", gender: "M", school: "꿈의숲초등학교", school_class: "5학년 3반", phone: "01012345678", has_phone: true, best_friend_id: s.kidA, best_friend_name: null });
+    expect(c).toMatchObject({ name: "새친구", birth_year: 2015, birth_date: null, gender: "M", school: "꿈의숲초등학교", school_class: "5학년 3반", phone: "01012345678", has_phone: true, best_friend_id: s.kidA, best_friend_name: null });
     // Skipped answers keep what the teacher had entered.
     expect(c).toMatchObject({ guardian_phone: "01011112222", address: "선생님이 적은 주소" });
     expect(c!.onboarded_at).not.toBeNull();

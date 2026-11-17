@@ -7,7 +7,7 @@ import { PIN_LOCK_MINUTES, PIN_MAX_FAILS, verifyPin } from "./pin";
 
 export * from "./pin";
 
-const CHILD_COLS = `id, name, class_id, birth_date, gender, school, school_class, address, phone, guardian_phone, photo_url,
+const CHILD_COLS = `id, name, class_id, birth_date, birth_year, gender, school, school_class, address, phone, guardian_phone, photo_url,
   best_friend_id, best_friend_name, has_phone, qr_token, onboarded_at, consent_on, photo_consent, memo, active,
   (pin_hash is not null) as has_pin`;
 
