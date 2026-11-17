@@ -80,6 +80,23 @@ describe("missions and drops", () => {
     expect(r2).toMatchObject({ ok: true, status: "approved", drops: 3 });
   });
 
+  it("a daily photo mission shows as waiting, not done, until the teacher has looked at it", async () => {
+    const m = await s.add("매일 가정예배", "photo", 1, 5, "daily", 3);
+    const state = async (date: string) => (await missionsForChild(db, s.kidId, date)).find((x) => x.id === m)?.state;
+    const r = await completeMission(s.kidId, m, { date: DATE, photoUrl: "x" });
+    if (!r.ok) throw new Error();
+    expect(r.status).toBe("pending");
+    // Nothing has been given yet, so the list must not call it done.
+    expect(await dropBalance(db, s.kidId)).toBe(0);
+    expect(await state(DATE)).toBe("pending");
+    // A second photo the same day is still refused while the first one waits.
+    expect(await completeMission(s.kidId, m, { date: DATE, photoUrl: "y" })).toMatchObject({ ok: false, reason: "already_done" });
+    await reviewCompletion(s.teacherId, r.completionId, true);
+    expect(await dropBalance(db, s.kidId)).toBe(1);
+    expect(await state(DATE)).toBe("done");
+    expect(await state("2027-01-07")).toBe("available");
+  });
+
   it("rejected submissions can be tried again", async () => {
     const m = await s.add("가정예배", "photo", 3, 30);
     const r = await completeMission(s.kidId, m, { date: DATE });

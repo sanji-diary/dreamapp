@@ -40,6 +40,7 @@ export async function scanQr(childId: number, code: string, date: string = today
   }
   const r = await completeMission(childId, m.id, { viaQr: code, date });
   if (!r.ok) return { ok: false, reason: r.reason === "already_done" ? "already" : "closed" };
-  if (m.kind === "attendance" && !marked) await recordAttendance(null, childId, date, "present");
+  // Only the mark: this scan has completed its own mission, and must not finish a second attendance mission open today.
+  if (m.kind === "attendance" && !marked) await recordAttendance(null, childId, date, "present", undefined, { markOnly: true });
   return { ok: true, completionId: r.completionId, kind: m.kind === "attendance" ? "attendance" : "qr" };
 }
