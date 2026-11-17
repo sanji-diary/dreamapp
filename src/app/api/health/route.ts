@@ -9,6 +9,7 @@ export async function GET() {
     session_secret: Boolean(process.env.SESSION_SECRET),
     app_url: Boolean(process.env.APP_URL),
     kakao_key: Boolean(process.env.KAKAO_REST_API_KEY),
+    kakao_client_secret: Boolean(process.env.KAKAO_CLIENT_SECRET),
     admin_invite_code: Boolean(process.env.ADMIN_INVITE_CODE),
   };
   try {
