@@ -40,6 +40,7 @@ npx tsc --noEmit
 | `src/lib/auth.ts`, `session.ts`, `pin.ts` | 아이(QR 카드 + 비밀번호)와 교사 로그인 |
 | `src/lib/authz.ts` | 교사 등급별로 볼 수 있는 범위. 모든 교사용 조회가 여기를 거칩니다 |
 | `src/lib/game.ts` | 미션 완료, 주간 물방울 상한, 나무 성장, 수확 규칙 |
+| `src/lib/talents.ts` | 달란트 잔치 규칙: 포인트를 달란트로 바꾸기, 결제, 취소, 조정 |
 | `src/app/(kid)/` | 아이 화면 |
 | `src/app/staff/` | 교사·관리자 화면 |
 | `design-reference/` | 확정된 화면 시안 |

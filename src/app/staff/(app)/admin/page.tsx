@@ -14,6 +14,7 @@ const MENU = [
   { href: "/staff/admin/classes", icon: "house", title: "반", sub: "반 만들기, 아이들 반 옮기기" },
   { href: "/staff/admin/cards", icon: "leaf", title: "QR 카드", sub: "아이 로그인 카드 인쇄" },
   { href: "/staff/admin/points", icon: "pouch", title: "포인트", sub: "포인트 고치기, 엑셀로 내려받기" },
+  { href: "/staff/admin/talents", icon: "persimmon", title: "달란트 잔치", sub: "포인트를 달란트로 바꾸기, 잔치 결제" },
   { href: "/staff/admin/settings", icon: "can", title: "설정", sub: "주간 물방울 한도, 나무 단계" },
 ];
 

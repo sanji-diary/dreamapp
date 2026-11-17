@@ -281,7 +281,7 @@ export async function recentAdjustments(staff: Staff): Promise<{ id: number; chi
 
 /* ---------- CSV exports ---------- */
 
-function csv(rows: (string | number | null)[][]): string {
+export function csv(rows: (string | number | null)[][]): string {
   const cell = (v: string | number | null) => {
     let s = v === null ? "" : String(v);
     // Stop spreadsheet programs from running a cell that starts like a formula.

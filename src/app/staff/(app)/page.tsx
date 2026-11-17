@@ -10,6 +10,7 @@ import { mostRecentSunday, uncheckedCount } from "@/lib/staff/attendance";
 import { longAbsent } from "@/lib/staff/children";
 import { pendingCount, reportedComments, unreadWorryCount } from "@/lib/staff/review";
 import { shortDate } from "@/lib/staff/util";
+import { openEvent } from "@/lib/talents";
 import { formatKoreanDate, todayKst } from "@/lib/time";
 import { ROLE_NAMES } from "@/lib/types";
 
@@ -30,7 +31,7 @@ export default async function StaffHome() {
   const sunday = mostRecentSunday(today);
   const isSunday = sunday === today;
   const canAttend = hasScope(attendanceScope(staff));
-  const [classes, unchecked, pending, reports, unread, absent, notices] = await Promise.all([
+  const [classes, unchecked, pending, reports, unread, absent, notices, festival] = await Promise.all([
     staff.class_ids.length > 0 ? db.query<{ name: string }>("select name from classes where id = any($1::int[]) order by sort, id", [staff.class_ids]) : [],
     canAttend ? uncheckedCount(staff, sunday) : 0,
     pendingCount(staff),
@@ -38,6 +39,7 @@ export default async function StaffHome() {
     tabs.worries ? unreadWorryCount(staff) : 0,
     longAbsent(staff),
     recentNotices(),
+    openEvent(),
   ]);
   const scopeText = staff.role === "admin" || staff.role === "head" || (staff.role === "homeroom" && staff.can_view_all) ? "전체 반" : classes.length > 0 ? classes.map((c) => c.name).join(", ") : "담당 반 없음";
   const nothing = !(canAttend && unchecked > 0) && pending === 0 && reports.length === 0 && unread === 0 && absent.length === 0;
@@ -49,6 +51,22 @@ export default async function StaffHome() {
         <Tag tone="tint">{ROLE_NAMES[staff.role]}</Tag>
         <Tag>{scopeText}</Tag>
       </div>
+
+      {/* Shown to every teacher, but only while a 달란트 잔치 is open. */}
+      {festival ? (
+        <Link href="/staff/festival" className="mx-4 mt-4 flex min-h-[76px] items-center gap-3 rounded-2xl bg-navy px-4 py-3 text-white no-underline">
+          <Circle bg="#ffffff">
+            <Icon name="persimmon" />
+          </Circle>
+          <span className="flex min-w-0 grow flex-col gap-0.5">
+            <span className="text-[17px] leading-[23px] font-bold tracking-[-0.4px]">달란트 결제하기</span>
+            <span className="truncate text-[13px] leading-[18px] text-white/85">{festival.name} 진행 중</span>
+          </span>
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <path d="M8 5l5 5-5 5" />
+          </svg>
+        </Link>
+      ) : null}
 
       <section className="flex flex-col px-4">
         <SectionTitle>확인할 것</SectionTitle>

@@ -7,6 +7,7 @@ import { signOutAction } from "@/lib/kid/actions";
 import { formatPoints } from "@/lib/kid/korean";
 import { attendanceStreak, badgesFor, classForestCount, className, harvestedCount, homeroomNames, weekPoints } from "@/lib/kid/queries";
 import { unreadReplyCount } from "@/lib/kid/worries";
+import { kidTalents } from "@/lib/talents";
 
 export const metadata = { title: "나 · 꿈의숲키우기" };
 
@@ -21,6 +22,12 @@ const FOREST: [string, number, number][] = [
   ["flower", 46, 55],
 ];
 
+const CLOCK = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "numeric", minute: "2-digit", hour12: true });
+/** '오후 2:05' in Korea time. */
+function timeOf(ts: Date | string): string {
+  return CLOCK.format(ts instanceof Date ? ts : new Date(ts));
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
@@ -33,7 +40,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 /* eslint-disable @next/next/no-img-element */
 export default async function MePage() {
   const kid = await requireKid();
-  const [tree, points, week, streak, grown, badges, forest, cls, teachers, unread] = await Promise.all([
+  const [tree, points, week, streak, grown, badges, forest, cls, teachers, unread, talents] = await Promise.all([
     ensureTree(db, kid.id),
     pointBalance(db, kid.id),
     weekPoints(kid.id),
@@ -44,6 +51,7 @@ export default async function MePage() {
     className(kid.class_id),
     homeroomNames(kid.class_id),
     unreadReplyCount(kid.id),
+    kidTalents(kid.id),
   ]);
   const under = [cls, teachers.length > 0 ? `${teachers.join(", ")} 선생님` : ""].filter(Boolean).join(" · ");
 
@@ -74,6 +82,38 @@ export default async function MePage() {
             <Stat label="키운 나무" value={`${grown}그루`} />
           </div>
         </div>
+
+        {/* Only while a 달란트 잔치 is open: the child's own talents and where they spent them. */}
+        {talents ? (
+          <section aria-label="달란트 잔치" className="mx-4 mt-3 flex flex-col rounded-2xl bg-warn-tint p-[18px]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <h2 className="m-0 text-[13px] font-normal text-sub">내 달란트</h2>
+                <span className="text-[28px] leading-[34px] font-bold tracking-[-0.6px]">{talents.balance.toLocaleString("ko-KR")}개</span>
+                <span className="text-[13px] leading-[18px] text-sub">
+                  {formatPoints(talents.pointsAtOpen)} → {talents.granted.toLocaleString("ko-KR")}달란트 · {talents.eventName}
+                </span>
+              </div>
+              <Icon name="pouch" size={56} />
+            </div>
+            {talents.rows.length === 0 ? (
+              <p className="m-0 mt-3 border-t border-[#EAD9B8] pt-3 text-[14px] leading-5 text-sub">아직 쓴 달란트가 없어요. 잔치에서 선생님께 카드를 보여 주세요.</p>
+            ) : (
+              <ul className="m-0 mt-3 flex list-none flex-col border-t border-[#EAD9B8] p-0 pt-1">
+                {talents.rows.map((r) => (
+                  <li key={r.id} className="flex min-h-10 items-center gap-3 py-1">
+                    <span className="min-w-0 grow truncate text-[15px] font-semibold text-ink2">{r.reason}</span>
+                    <span className="shrink-0 text-[13px] text-sub">{timeOf(r.created_at)}</span>
+                    <span className={`w-[52px] shrink-0 text-right text-[15px] font-bold ${r.delta < 0 ? "text-ink2" : "text-blue"}`}>
+                      {r.delta < 0 ? "−" : "+"}
+                      {Math.abs(r.delta)}개
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
 
         <div className="px-4 pt-[18px]">
           <h2 className="m-0 mb-2.5 text-[15px] font-bold text-mute">내 배지 {badges.length}개</h2>
