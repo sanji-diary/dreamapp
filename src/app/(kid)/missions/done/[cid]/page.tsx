@@ -19,8 +19,10 @@ export default async function MissionDonePage({ params }: { params: Promise<{ ci
   let title = "미션을 마쳤어요";
   let sub = "잘했어요!";
   if (pending) {
-    title = "선생님께 보냈어요";
-    sub = "선생님이 확인하면 물방울을 받아요";
+    // What is waiting for the teacher: drops, points only (a mission without drops), or just the tick.
+    const after = c.mission_drops > 0 ? "확인이 끝나면 물방울을 받아요" : c.mission_points > 0 ? "확인이 끝나면 포인트를 받아요" : "확인이 끝나면 완료돼요";
+    title = c.kind === "teacher" ? "선생님께 확인을 요청했어요" : "선생님께 보냈어요";
+    sub = `선생님이 확인하고 있어요. ${after}`;
   } else if (c.status === "rejected") {
     title = "다시 해 볼까요?";
     sub = "선생님이 한 번 더 해 보자고 했어요";
@@ -29,7 +31,8 @@ export default async function MissionDonePage({ params }: { params: Promise<{ ci
     sub = points > 0 ? `${points}P도 함께 쌓였어요` : "나무에 물을 줄 수 있어요";
   } else if (points > 0) {
     title = `${points}P를 받았어요`;
-    sub = "이번 주 물방울은 모두 받아서 포인트만 쌓였어요";
+    // No drops because the mission has none, or because this week's drops are all received.
+    sub = c.mission_drops > 0 ? "이번 주 물방울은 모두 받아서 포인트만 쌓였어요" : "포인트가 차곡차곡 쌓이고 있어요";
   }
   if (c.kind === "worry" && !pending) sub = `${sub}. 답장이 오면 '나'에서 볼 수 있어요`;
 
@@ -40,8 +43,8 @@ export default async function MissionDonePage({ params }: { params: Promise<{ ci
           <Icon name={pending ? "stamp" : drops > 0 ? "drop" : "persimmon"} size={72} />
         </div>
         <p className="m-0 text-[14px] font-bold text-navy">{c.title}</p>
-        <h1 className="m-0 text-[26px] leading-[35px] font-bold tracking-[-0.6px]">{title}</h1>
-        <p className="m-0 text-[15px] leading-[22px] text-sub">{sub}</p>
+        <h1 className="m-0 text-[26px] leading-[35px] font-bold tracking-[-0.6px] break-keep [overflow-wrap:anywhere]">{title}</h1>
+        <p className="m-0 text-[15px] leading-[22px] break-keep [overflow-wrap:anywhere] text-sub">{sub}</p>
         {!pending && (drops > 0 || points > 0) ? (
           <div className="mt-4 flex gap-2">
             {drops > 0 ? <span className="flex h-9 items-center gap-1 rounded-full bg-fill pr-3.5 pl-2 text-[15px] font-bold"><Icon name="drop" size={24} />+{drops}</span> : null}

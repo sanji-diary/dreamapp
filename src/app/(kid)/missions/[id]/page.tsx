@@ -1,33 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PhotoMission, SelfMission, TextMission, VerseMission, WorryForm } from "@/components/kid/MissionForms";
+import { PhotoMission, SelfMission, TeacherCheckMission, TextMission, VerseMission, WorryForm } from "@/components/kid/MissionForms";
 import { MissionNote, MissionShell } from "@/components/kid/MissionShell";
 import { QuizMission } from "@/components/kid/QuizMission";
 import { primaryButtonClass } from "@/components/ui";
 import { requireKid } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { missionsForChild, type MissionForChild } from "@/lib/game";
+import { missionsForChild } from "@/lib/game";
 import { GamePlayer } from "@/games/GamePlayer";
 import { findGame } from "@/games/registry";
 import { audienceChoices } from "@/lib/kid/audience";
 import { issueGameToken } from "@/lib/kid/game-proof";
+import { afterCheckLine, RETURNED_LINE, rewardButton, rewardPill } from "@/lib/kid/mission-text";
 import { parseQuiz, passNeed, publicQuiz } from "@/lib/quiz";
+import { normalizeVerse } from "@/lib/verse";
 
 export const metadata = { title: "미션 · 꿈의숲키우기" };
-
-function rewardPill(m: MissionForChild): string {
-  const parts = [];
-  if (m.points > 0) parts.push(`${m.points}P`);
-  if (m.drops_now > 0) parts.push(`물방울 ${m.drops_now}개`);
-  return parts.join(" · ");
-}
-
-/** Button text: drops when there is room under the weekly cap, otherwise points. */
-function rewardButton(m: MissionForChild): string {
-  if (m.drops_now > 0) return `물방울 ${m.drops_now}개 받기`;
-  if (m.points > 0) return `${m.points}P 받기`;
-  return "완료하기";
-}
 
 function BackToList({ label = "미션 목록으로" }: { label?: string }) {
   return (
@@ -49,6 +37,8 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
   if (!m) notFound();
   const reward = rewardPill(m);
   const capNote = m.state === "available" && m.drops > 0 && m.drops_now === 0 ? "이번 주 물방울은 모두 받았어요. 이 미션은 포인트만 쌓여요." : null;
+  // A teacher looked at the last try and asked for it once more: said plainly, once, above the headline.
+  const notice = m.returned ? RETURNED_LINE : null;
 
   // Writing a worry stays possible after this week's mission is done; it just gives no more drops.
   if (m.kind === "worry") {
@@ -61,11 +51,18 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
   }
 
   if (m.state !== "available") {
+    const everyDay = m.repeat === "daily" && m.weekly_limit === null && m.mode === "fixed";
     return (
       <MissionShell title={m.title} sub={m.description}>
         <MissionNote
           icon={m.icon}
-          lines={m.state === "pending" ? ["선생님이 확인하고 있어요", "확인이 끝나면 물방울을 받아요."] : m.repeat === "daily" ? ["오늘은 이미 했어요", "내일 또 할 수 있는지 미션 목록에서 확인해 보세요."] : ["이미 완료한 미션이에요", "다른 미션도 해 볼까요?"]}
+          lines={
+            m.state === "pending"
+              ? ["선생님이 확인하고 있어요", afterCheckLine(m)]
+              : m.repeat === "daily"
+                ? ["오늘은 이미 했어요", everyDay ? "내일 또 할 수 있어요." : "내일 또 할 수 있는지 미션 목록에서 확인해 보세요."]
+                : ["이미 완료한 미션이에요", "다른 미션도 해 볼까요?"]
+          }
         />
         <BackToList />
       </MissionShell>
@@ -86,17 +83,20 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
           <TextMission missionId={m.id} reward={rewardButton(m)} />
         </MissionShell>
       );
-    case "verse":
-      if (!m.verse_text) break;
+    case "verse": {
+      if (!m.verse_list || m.verse_list.length === 0) break;
+      // The verses go to the browser the way they are compared: spaces tidied, quotes straightened.
+      const verses = m.verse_list.map((v) => ({ n: v.n, text: normalizeVerse(v.text) }));
       return (
         <MissionShell reward={reward} title={"이번 주 말씀을\n따라 써 보세요"} sub={capNote ?? m.verse_ref ?? m.description}>
-          <VerseMission missionId={m.id} verse={m.verse_text.trim()} reward={rewardButton(m)} />
+          <VerseMission missionId={m.id} verses={verses} startAt={m.verse_done} reward={rewardButton(m)} />
         </MissionShell>
       );
+    }
     case "photo":
       return (
-        <MissionShell reward={reward} title={m.title} sub={capNote ?? m.description}>
-          <PhotoMission missionId={m.id} />
+        <MissionShell reward={reward} notice={notice} title={m.title} sub={capNote ?? m.description}>
+          <PhotoMission missionId={m.id} hasDrops={m.drops_now > 0} />
         </MissionShell>
       );
     case "comment":
@@ -130,9 +130,9 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
       );
     case "teacher":
       return (
-        <MissionShell reward={reward} title={m.title} sub={capNote ?? m.description}>
-          <MissionNote icon={m.icon} lines={["선생님이 확인해 주는 미션이에요", "미션을 하고 선생님께 말하면 완료로 바꿔 주세요."]} />
-          <BackToList />
+        <MissionShell reward={reward} notice={notice} title={m.title} sub={capNote ?? m.description}>
+          <MissionNote icon={m.icon} lines={["선생님이 확인해 주는 미션이에요", "미션을 다 했으면 아래 버튼을 눌러 선생님께 알려 주세요."]} />
+          <TeacherCheckMission missionId={m.id} />
         </MissionShell>
       );
     case "quiz": {
@@ -151,7 +151,7 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
       );
     }
   }
-  // a quiz without questions, a game that no longer exists, and anything not ready yet
+  // a verse mission without verses, a quiz without questions, a game that no longer exists, and anything not ready yet
   return (
     <MissionShell reward={reward} title={m.title} sub={m.description}>
       <MissionNote icon={m.icon} lines={["준비 중이에요", "조금만 기다려 주세요. 곧 할 수 있게 만들고 있어요."]} />
