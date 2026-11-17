@@ -270,8 +270,12 @@ async function revokeAttendanceAward(staffId: number | null, childId: number, da
  * Saves attendance. Present or late completes this week's attendance mission; changing to
  * absent or clearing the mark takes that award back. An omitted note keeps the existing one.
  * A null staff id means the child checked in alone by scanning the attendance QR.
+ *
+ * `markOnly`: write the mark without completing an attendance mission. The QR scan uses it: the scan
+ * has already completed the mission that owns the code, and must not also finish another attendance
+ * mission that happens to be open on the same day (that one is for the teacher's roll call).
  */
-export async function recordAttendance(staffId: number | null, childId: number, date: string, status: "present" | "late" | "absent" | null, note?: string) {
+export async function recordAttendance(staffId: number | null, childId: number, date: string, status: "present" | "late" | "absent" | null, note?: string, opts: { markOnly?: boolean } = {}) {
   if (status === null) {
     await db.query("delete from attendance where child_id = $1 and date = $2", [childId, date]);
     await revokeAttendanceAward(staffId, childId, date);
@@ -284,5 +288,5 @@ export async function recordAttendance(staffId: number | null, childId: number, 
     [childId, date, status, note ?? null, staffId, note !== undefined],
   );
   if (status === "absent") await revokeAttendanceAward(staffId, childId, date);
-  else await autoComplete(childId, "attendance", { byStaffId: staffId ?? undefined, date });
+  else if (!opts.markOnly) await autoComplete(childId, "attendance", { byStaffId: staffId ?? undefined, date });
 }

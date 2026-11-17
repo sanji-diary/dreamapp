@@ -176,6 +176,22 @@ describe("QR self check-in for attendance", () => {
     expect(await pointBalance(db, s.kid)).toBe(0);
   });
 
+  it("a scan completes only the mission that owns the code, not another attendance mission open that day", async () => {
+    // The usual weekly attendance mission (the teacher's roll call), and a one-day event with its own QR.
+    const weekly = await s.add("attendance");
+    const event = await s.add("attendance", { code: "att-code-evt", starts: TODAY, ends: TODAY });
+    expect(await scanQr(s.kid, "att-code-evt")).toMatchObject({ ok: true, kind: "attendance" });
+    expect(await db.query("select mission_id from mission_completions where child_id = $1", [s.kid])).toEqual([{ mission_id: event }]);
+    expect(await dropBalance(db, s.kid)).toBe(2);
+    expect(await pointBalance(db, s.kid)).toBe(10);
+    // The child is still marked present today, without a teacher.
+    expect(await one(db, "select status, staff_id, date from attendance where child_id = $1", [s.kid])).toEqual({ status: "present", staff_id: null, date: TODAY });
+    // The weekly mission is left for the teacher's roll call, which completes it once as before.
+    await recordAttendance(s.teacherId, s.kid, TODAY, "present");
+    expect(await db.query("select mission_id from mission_completions where child_id = $1 order by mission_id", [s.kid])).toEqual([{ mission_id: weekly }, { mission_id: event }]);
+    expect(await dropBalance(db, s.kid)).toBe(4);
+  });
+
   it("clearing a self check-in with no staff id also works (system correction)", async () => {
     await s.add("attendance", { code: "att-code-001" });
     await scanQr(s.kid, "att-code-001");
