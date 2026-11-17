@@ -105,6 +105,12 @@ export default async function CardsPage({ searchParams }: PageProps<"/staff/admi
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
+            {/* Opens the sign-up a child would see, in a new tab, so a teacher can try it without a phone. */}
+            {join.on ? (
+              <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="flex h-11 shrink-0 items-center no-underline">
+                <span className="flex h-[30px] min-w-[96px] items-center justify-center rounded-md bg-white px-2 text-[12px] font-semibold whitespace-nowrap text-sub">가입 화면 열기</span>
+              </a>
+            ) : null}
             <SmallLink href="/staff/admin/cards?sheet=join" width={96}>
               크게 인쇄하기
             </SmallLink>
