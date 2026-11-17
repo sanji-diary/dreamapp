@@ -47,6 +47,15 @@ export interface QuizQuestion {
   answer: number;
 }
 
+/** How a mission is scheduled: by its dates, on every week, or only in the weeks whose rotation plan lists it. */
+export type MissionMode = "dated" | "fixed" | "pool";
+
+/** One verse to copy. `n` is the verse number as printed ("16"), or null when the text has none. */
+export interface Verse {
+  n: string | null;
+  text: string;
+}
+
 export interface Mission {
   id: number;
   title: string;
@@ -72,6 +81,11 @@ export interface Mission {
   quiz_pass: number | null;
   /** Game missions only: an id from src/games/registry.ts. */
   game_id: string | null;
+  mode: MissionMode;
+  /** Rotating missions only: the admin's order of the pool (smaller first). */
+  pool_order: number;
+  /** Verse missions only, as stored (read it with parseVerses). Null means the single `verse_text`. */
+  verses: Verse[] | null;
 }
 
 export interface Tree {
