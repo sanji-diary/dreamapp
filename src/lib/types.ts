@@ -40,6 +40,13 @@ export interface Child {
 
 export type MissionKind = "self" | "text" | "photo" | "verse" | "quiz" | "game" | "qr" | "teacher" | "worry" | "comment" | "attendance";
 
+/** One quiz question. `answer` is the index of the right choice and must never reach a child's browser before they answer. */
+export interface QuizQuestion {
+  q: string;
+  choices: string[];
+  answer: number;
+}
+
 export interface Mission {
   id: number;
   title: string;
@@ -59,6 +66,12 @@ export interface Mission {
   ends_on: string;
   is_challenge: boolean;
   active: boolean;
+  /** Quiz missions only. Holds the right answers: server-side use only. */
+  quiz: QuizQuestion[] | null;
+  /** How many answers must be right; null means all. */
+  quiz_pass: number | null;
+  /** Game missions only: an id from src/games/registry.ts. */
+  game_id: string | null;
 }
 
 export interface Tree {

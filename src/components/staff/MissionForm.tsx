@@ -4,6 +4,7 @@ import { useState } from "react";
 import { inputClass, labelClass, primaryButtonClass } from "@/components/ui";
 import { missionSaveAction } from "@/lib/staff/actions-admin";
 import type { MissionInput } from "@/lib/staff/admin-missions";
+import { QuizEditor } from "./QuizEditor";
 import { Stepper } from "./widgets";
 
 type Option = { value: string; label: string };
@@ -28,8 +29,15 @@ function Pick({ legend, name, options, value, onChange }: { legend: string; name
 
 const ICON_NAMES: Record<string, string> = { bible: "성경", stamp: "도장", house: "집", bubble: "말풍선", pray: "기도", drop: "물방울", can: "물뿌리개", persimmon: "감", badge: "배지", pouch: "주머니" };
 
-/** Create or edit a mission. Verse fields show only for verse missions, the weekly count only for daily ones. */
-export function MissionForm({ id, initial, kinds, icons, targets }: { id: number | null; initial: MissionInput; kinds: Option[]; icons: string[]; targets: Option[] }) {
+const hintClass = "m-0 text-[13px] leading-[19px] text-sub";
+
+/**
+ * Create or edit a mission. Fields that belong to one kind show only for that kind:
+ * verse text, quiz questions, the game picker, and the QR notes.
+ */
+export function MissionForm({ id, initial, kinds, icons, targets, games }: { id: number | null; initial: MissionInput; kinds: Option[]; icons: string[]; targets: Option[]; games: { id: string; title: string; description: string }[] }) {
+  const [gameId, setGameId] = useState(initial.game_id ?? games[0]?.id ?? "");
+  const [qrSelf, setQrSelf] = useState(initial.qr_self);
   const [kind, setKind] = useState(initial.kind);
   const [repeat, setRepeat] = useState(initial.repeat);
   const [icon, setIcon] = useState(initial.icon);
@@ -66,6 +74,50 @@ export function MissionForm({ id, initial, kinds, icons, targets }: { id: number
             </label>
             <input id="m-ref" name="verse_ref" maxLength={40} defaultValue={initial.verse_ref ?? ""} placeholder="예: 시편 23편 1절" className={inputClass} />
           </div>
+        </div>
+      ) : null}
+      {kind === "quiz" ? <QuizEditor initial={initial.quiz} initialPass={initial.quiz_pass} /> : null}
+      {kind === "game" ? (
+        <fieldset className="m-0 flex min-w-0 flex-col gap-2 rounded-xl border-0 bg-fill p-3">
+          <legend className="sr-only">어떤 게임인가요</legend>
+          <span aria-hidden="true" className={labelClass}>
+            어떤 게임인가요
+          </span>
+          {games.map((g) => (
+            <label key={g.id} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-transparent bg-white px-3.5 py-2 has-checked:border-navy has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-navy">
+              <input type="radio" name="game_id" value={g.id} checked={gameId === g.id} onChange={() => setGameId(g.id)} className="h-5 w-5 shrink-0 accent-navy" />
+              <span className="flex min-w-0 flex-col">
+                <span className="text-[15px] font-bold text-ink2">{g.title}</span>
+                <span className="text-[13px] leading-[18px] text-sub">{g.description}</span>
+              </span>
+            </label>
+          ))}
+          <p className={hintClass}>아이가 게임을 끝까지 하면 미션이 완료돼요. 시간을 재거나 순위를 매기지 않아요.</p>
+        </fieldset>
+      ) : null}
+      {kind === "qr" ? (
+        <div className="flex flex-col gap-1 rounded-xl bg-fill p-3">
+          <p className="m-0 text-[14px] font-bold text-ink2">QR을 인쇄해서 교회에 붙여 주세요</p>
+          <p className={hintClass}>{id === null ? "미션을 올리면 QR이 만들어져요. 미션 목록의 ‘QR 인쇄’에서 A4로 뽑을 수 있어요." : "이 화면 위쪽의 ‘QR 인쇄하기’에서 A4로 뽑을 수 있어요."} 아이가 휴대폰 카메라로 찍으면 바로 완료돼요.</p>
+        </div>
+      ) : null}
+      {kind === "attendance" ? (
+        <div className="flex flex-col gap-2 rounded-xl bg-fill p-3">
+          <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3">
+            <span className="flex flex-col">
+              <span className="text-[15px] font-semibold text-ink2">QR로 스스로 출석</span>
+              <span className="text-[12px] leading-[17px] text-mute">아이가 교회에 붙은 QR을 찍으면 출석으로 기록돼요</span>
+            </span>
+            <input type="checkbox" role="switch" name="qr_self" checked={qrSelf} onChange={(e) => setQrSelf(e.target.checked)} className="peer sr-only" />
+            <span className="flex h-[30px] w-[52px] shrink-0 items-center rounded-full bg-faint px-[3px] peer-checked:justify-end peer-checked:bg-navy peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
+              <span className="h-6 w-6 rounded-full bg-white" />
+            </span>
+          </label>
+          {qrSelf ? (
+            <p className={hintClass}>
+              기간 안의 어느 날이든 QR을 찍으면 그날 출석으로 기록돼요. 기간을 주일 하루로 정하고, 예배가 끝나면 QR을 떼어 주세요. QR 주소를 전달받은 아이도 찍을 수 있으니 출석부에서 한 번 더 확인해 주세요.
+            </p>
+          ) : null}
         </div>
       ) : null}
       <fieldset className="m-0 flex min-w-0 flex-col gap-1 border-0 p-0">
