@@ -1,116 +1,113 @@
-import Link from "next/link";
-import { Empty, Face, Flash, SmallButton, SmallLink, TabHeader } from "@/components/staff/ui";
-import { PhotoZoom } from "@/components/staff/widgets";
-import { Circle, Icon, SectionTitle } from "@/components/ui";
+import { Chip, Chips, EmptyNote, FlashNote, Page, SectionHead } from "@/components/staff/kit";
+import { CommentCard, MissionCard } from "@/components/staff/todo/cards";
+import { TodoHeader } from "@/components/staff/todo/TodoHeader";
+import { BulkApprove } from "@/components/staff/todo/widgets";
 import { requireStaff } from "@/lib/auth";
 import { approveScope, canSeeWorryBox, hasScope } from "@/lib/staff/access";
-import { commentAction, reviewAction } from "@/lib/staff/actions";
 import { pendingCompletions, reportedComments, unreadWorryCount } from "@/lib/staff/review";
-import { shortDate } from "@/lib/staff/util";
+import { approvalFilter, approvalsHref, type ApprovalFilter } from "@/lib/staff/todo";
 
-export const metadata = { title: "확인 · 꿈의숲키우기" };
+export const metadata = { title: "할 일 · 꿈의숲키우기" };
 
+const grid = "m-0 grid list-none grid-cols-1 gap-3.5 p-0 sm:grid-cols-2 lg:grid-cols-3";
+
+/**
+ * 할 일: missions children sent in (for teachers who may check them) and reported comments (any teacher).
+ *
+ * Below `lg` the two are tabs of one screen, `?tab=comments` being the second; 고민 is the third
+ * segment and lives at /staff/worries. From `lg` this is the sidebar's "미션 확인": the cards three
+ * across with a checkbox each and "고른 N건 한꺼번에 확인", the filter chips (`?f=`), and the reported
+ * comments underneath when there are any.
+ */
 export default async function ApprovalsPage({ searchParams }: PageProps<"/staff/approvals">) {
   const staff = await requireStaff();
   const sp = await searchParams;
-  const canReview = hasScope(approveScope(staff));
-  const [pending, reports, unread] = await Promise.all([pendingCompletions(staff), reportedComments(staff), canSeeWorryBox(staff) ? unreadWorryCount(staff) : 0]);
-  const total = pending.length + reports.length;
+  const scope = approveScope(staff);
+  const canReview = hasScope(scope);
+  const [pending, reports, unread] = await Promise.all([pendingCompletions(staff), reportedComments(staff), canSeeWorryBox(staff) ? unreadWorryCount(staff) : null]);
+  const tab = canReview && sp.tab !== "comments" ? "missions" : "comments";
+  const counts = { missions: canReview ? pending.length : null, worries: unread, comments: reports.length };
+  const hasTabs = canReview || unread !== null;
+
+  // Filter chips, each only where it tells things apart: 사진 / 글 when both kinds are waiting,
+  // 우리 반만 for a teacher who has a class of their own and also checks other classes.
+  const photos = pending.filter((p) => p.photo_url);
+  const texts = pending.filter((p) => !p.photo_url);
+  const mine = pending.filter((p) => p.class_id !== null && staff.class_ids.includes(p.class_id));
+  const byKind = photos.length > 0 && texts.length > 0;
+  const byClass = staff.class_ids.length > 0 && (scope === null || scope.some((id) => !staff.class_ids.includes(id)));
+  const asked = approvalFilter(sp.f);
+  const f: ApprovalFilter = ((asked === "photo" || asked === "text") && !byKind) || (asked === "mine" && !byClass) ? "all" : asked;
+  const shown = f === "photo" ? photos : f === "text" ? texts : f === "mine" ? mine : pending;
+  const showClass = scope === null || scope.length > 1;
+  const now = new Date();
 
   return (
-    <>
-      <TabHeader title={total > 0 ? `확인할 것 ${total}건` : "확인할 것이 없어요"} sub={canReview ? "승인하면 아이에게 물방울이 가요" : "신고된 댓글을 살펴볼 수 있어요"} />
-      <Flash ok={sp.ok} error={sp.error} />
-      <div className="flex grow flex-col px-4 pb-6">
-        {canReview ? (
-          <section className="flex flex-col">
-            <SectionTitle>미션 제출 {pending.length}건</SectionTitle>
-            <ul className="m-0 flex list-none flex-col p-0">
-              {pending.map((p, i) => (
-                <li key={p.id} className={`flex flex-col ${i === pending.length - 1 ? "" : "border-b border-line"}`}>
-                  <div className="flex min-h-[72px] items-center gap-[13px] py-2">
-                    {p.photo_url ? (
-                      <PhotoZoom src={p.photo_url} alt={`${p.child_name} ${p.title} 사진`} />
-                    ) : (
-                      <Circle>
-                        <Icon name={p.icon} />
-                      </Circle>
-                    )}
-                    <div className="flex min-w-0 grow flex-col gap-px">
-                      <Link href={`/staff/children/${p.child_id}`} className="truncate text-[17px] leading-[23px] font-bold tracking-[-0.4px] text-ink2 no-underline">
-                        {p.child_name}
-                      </Link>
-                      <div className="truncate text-[13px] leading-[18px] tracking-[-0.2px] text-sub">
-                        {p.title} · {p.photo_url ? "사진 1장" : p.kind === "teacher" ? "교사 확인" : "글"} · {shortDate(p.done_on)}
-                      </div>
-                    </div>
-                    <form action={reviewAction} className="flex shrink-0 gap-[5px]">
-                      <input type="hidden" name="id" value={p.id} />
-                      <SmallButton tone="gray" name="decision" value="reject" label={`${p.child_name} ${p.title} 반려`}>
-                        반려
-                      </SmallButton>
-                      <SmallButton name="decision" value="approve" label={`${p.child_name} ${p.title} 승인`}>
-                        승인
-                      </SmallButton>
-                    </form>
-                  </div>
-                  {p.text_content ? <p className="m-0 pb-3 pl-[59px] text-[14px] leading-[21px] whitespace-pre-line text-ink2">{p.text_content}</p> : null}
-                </li>
+    <Page wide>
+      <TodoHeader
+        active={tab}
+        counts={counts}
+        wideTitle={canReview ? "미션 확인" : "신고된 댓글"}
+        wideCount={canReview ? `기다리는 것 ${pending.length}건` : `${reports.length}건`}
+        // A new key whenever the cards change: the count of ticked boxes starts from what is on the page.
+        right={canReview && shown.length > 0 ? <BulkApprove key={shown.map((p) => p.id).join(",")} filter={f} /> : undefined}
+      />
+      <FlashNote ok={sp.ok} error={sp.error} />
+
+      {canReview ? (
+        <section aria-label="미션 확인" className={`flex-col gap-3.5 ${tab === "missions" ? "flex" : "hidden lg:flex"}`}>
+          {byKind || byClass ? (
+            // Phones have no chips in the design; they show only while a filter is on, so that it can be taken off.
+            <div className={f === "all" ? "hidden lg:block" : ""}>
+              <Chips label="골라 보기">
+                <Chip href={approvalsHref()} on={f === "all"}>
+                  전체 {pending.length}
+                </Chip>
+                {byKind ? (
+                  <>
+                    <Chip href={approvalsHref("photo")} on={f === "photo"}>
+                      사진 {photos.length}
+                    </Chip>
+                    <Chip href={approvalsHref("text")} on={f === "text"}>
+                      글 {texts.length}
+                    </Chip>
+                  </>
+                ) : null}
+                {byClass ? (
+                  <Chip href={approvalsHref("mine")} on={f === "mine"}>
+                    우리 반만 {mine.length}
+                  </Chip>
+                ) : null}
+              </Chips>
+            </div>
+          ) : null}
+          {shown.length > 0 ? (
+            <ul className={grid}>
+              {shown.map((p) => (
+                <MissionCard key={p.id} p={p} showClass={showClass} filter={f} now={now} />
               ))}
             </ul>
-            {pending.length === 0 ? <Empty>기다리는 제출이 없어요.</Empty> : null}
-          </section>
-        ) : null}
+          ) : (
+            <EmptyNote>{pending.length > 0 ? "여기에 맞는 미션이 없어요." : "확인을 기다리는 미션이 없어요. 아이가 사진을 올리면 여기에 보여요."}</EmptyNote>
+          )}
+        </section>
+      ) : null}
 
-        <section className="flex flex-col">
-          <SectionTitle>신고된 댓글 {reports.length}건</SectionTitle>
-          <ul className="m-0 flex list-none flex-col p-0">
-            {reports.map((r, i) => (
-              <li key={r.comment_id} className={`flex flex-col py-2 ${i === reports.length - 1 ? "" : "border-b border-line"}`}>
-                <div className="flex min-h-14 items-center gap-[13px]">
-                  <Face name={r.author} id={r.author_id ?? 0} />
-                  <div className="flex min-w-0 grow flex-col gap-px">
-                    <div className="truncate text-[17px] leading-[23px] font-bold tracking-[-0.4px] text-ink2">{r.author}</div>
-                    <div className="truncate text-[13px] leading-[18px] tracking-[-0.2px] text-sub">
-                      신고 {r.reports}번 · {shortDate(r.last_reported)}
-                    </div>
-                  </div>
-                  <form action={commentAction} className="flex shrink-0 gap-[5px]">
-                    <input type="hidden" name="id" value={r.comment_id} />
-                    <SmallButton tone="gray" name="decision" value="keep" label={`${r.author} 댓글 그대로 두기`}>
-                      그대로
-                    </SmallButton>
-                    <SmallButton name="decision" value="hide" label={`${r.author} 댓글 삭제`}>
-                      삭제
-                    </SmallButton>
-                  </form>
-                </div>
-                <p className="m-0 rounded-[10px] bg-fill px-3 py-2.5 text-[14px] leading-[21px] whitespace-pre-line text-ink2">{r.body}</p>
-                <p className="mt-1.5 mb-0 truncate text-[12px] leading-[18px] text-mute">소식: {r.post_body}</p>
-              </li>
+      <section aria-label="신고된 댓글" className={`flex-col gap-3.5 ${tab === "comments" ? "flex" : reports.length > 0 ? "hidden lg:flex" : "hidden"}`}>
+        {/* The heading stands where nothing else names this part: under the mission cards on wide screens, and on a phone without the switch. */}
+        <div className={canReview ? "hidden lg:block" : hasTabs ? "hidden" : "lg:hidden"}>
+          <SectionHead>신고된 댓글 {reports.length}건</SectionHead>
+        </div>
+        {reports.length > 0 ? (
+          <ul className={grid}>
+            {reports.map((r) => (
+              <CommentCard key={r.comment_id} r={r} />
             ))}
           </ul>
-          {reports.length === 0 ? <Empty>신고된 댓글이 없어요.</Empty> : null}
-        </section>
-
-        {canSeeWorryBox(staff) ? (
-          <section className="flex flex-col">
-            <SectionTitle>고민함</SectionTitle>
-            <div className="flex min-h-[72px] items-center gap-[13px]">
-              <Circle>
-                <Icon name="bubble" />
-              </Circle>
-              <div className="flex min-w-0 grow flex-col gap-px">
-                <div className="text-[17px] leading-[23px] font-bold tracking-[-0.4px] text-ink2">{unread > 0 ? `새 고민 ${unread}건` : "새 고민이 없어요"}</div>
-                <div className="truncate text-[13px] leading-[18px] tracking-[-0.2px] text-sub">{unread > 0 ? "아이가 보여 주기로 했어요" : "지난 고민과 답장을 볼 수 있어요"}</div>
-              </div>
-              <SmallLink href="/staff/worries" width={60} tone={unread > 0 ? "navy" : "gray"}>
-                열기
-              </SmallLink>
-            </div>
-          </section>
-        ) : null}
-      </div>
-    </>
+        ) : (
+          <EmptyNote>신고된 댓글이 없어요. 아이가 숲 소식 댓글을 신고하면 여기에 보여요.</EmptyNote>
+        )}
+      </section>
+    </Page>
   );
 }
