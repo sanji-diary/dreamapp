@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClayIcon, CtaLink, EmptyNote, FlashNote, InfoField, List, ListRow, Notice, Page, PageHeader, PillButton, PillLink, PillNote, RoundLink, SectionHead, Segmented, StatTile, Tag, TreeAvatar, pillClass } from "@/components/staff/kit";
+import { Chevron, ClayIcon, CtaLink, EmptyNote, FlashNote, InfoField, List, ListRow, Notice, Page, PageHeader, PillButton, PillLink, PillNote, RoundLink, SectionHead, Segmented, StatTile, Tag, TreeAvatar, pillClass } from "@/components/staff/kit";
 import { selectClass, textareaClass } from "@/components/staff/ui";
 import { ConfirmButton } from "@/components/staff/widgets";
 import { inputClass, labelClass } from "@/components/ui";
@@ -201,6 +201,12 @@ function VisitsTab({ c, here, today, adding, editing }: { c: ChildDetail; here: 
         심방 기록
       </SectionHead>
       {adding && canAdd ? <VisitForm childId={c.id} today={today} /> : null}
+      {c.writingCount > 0 ? (
+        <Link href={`${here}?tab=activity#writing`} scroll={false} className="flex min-h-11 items-center gap-2 rounded-2xl bg-fill px-4 py-2.5 text-[14px] font-semibold text-ink2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+          <span className="min-w-0 grow">아이가 쓴 글 {c.writingCount}개 보기</span>
+          <Chevron />
+        </Link>
+      ) : null}
       <div className="flex flex-col">
         {visits.map((v) => (
           <div key={v.id} className="flex flex-col gap-1 border-b border-line py-3 last:border-b-0">
@@ -241,7 +247,7 @@ function VisitsTab({ c, here, today, adding, editing }: { c: ChildDetail; here: 
 }
 
 /** 활동: attendance, the tree, missions a teacher enters for the child, and what the child did lately. */
-function ActivityTab({ c, missions }: { c: ChildDetail; missions: ProxyMission[] }) {
+function ActivityTab({ c, missions, here, allWritings }: { c: ChildDetail; missions: ProxyMission[]; here: string; allWritings: boolean }) {
   return (
     <>
       <section className="flex flex-col gap-2">
@@ -261,6 +267,29 @@ function ActivityTab({ c, missions }: { c: ChildDetail; missions: ProxyMission[]
           <StatTile value={`${c.tree.given} / ${c.tree.need}`} label="이 단계에 준 물" />
           <StatTile value={`${c.drops}개`} label="남은 물방울" />
         </div>
+      </section>
+
+      <section className="flex flex-col" id="writing">
+        <SectionHead note={c.writingCount > 0 ? `${c.writingCount}개` : undefined}>아이가 쓴 글</SectionHead>
+        <div className="flex flex-col">
+          {c.writings.map((w) => (
+            <div key={w.id} className="flex flex-col gap-1 border-b border-line py-3 last:border-b-0">
+              <div className="flex items-baseline gap-2">
+                <b className="min-w-0 grow text-[14px] font-bold tracking-[-0.02em] text-ink2">{w.title}</b>
+                <span className="shrink-0 text-[13px] text-mute">{shortDate(w.done_on)}</span>
+              </div>
+              <p className="m-0 text-[14px] leading-[21px] whitespace-pre-line text-ink2 [overflow-wrap:anywhere]">{w.text}</p>
+            </div>
+          ))}
+        </div>
+        {c.writingCount === 0 ? <EmptyNote>글 쓰기 미션에 쓴 글이 여기에 모여요.</EmptyNote> : null}
+        {!allWritings && c.writingCount > c.writings.length ? (
+          <div className="flex justify-center pt-1">
+            <PillLink href={`${here}?tab=activity&writing=all#writing`} tone="gray" label="아이가 쓴 글 모두 보기">
+              {c.writingCount}개 모두 보기
+            </PillLink>
+          </div>
+        ) : null}
       </section>
 
       {c.can.proxy && c.active ? (
@@ -323,7 +352,8 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/st
   const id = toInt((await params).id);
   const sp = await searchParams;
   // Children outside this teacher's scope look exactly like children that do not exist.
-  const c = id === null ? null : await getChildDetail(staff, id);
+  const allWritings = sp.writing === "all";
+  const c = id === null ? null : await getChildDetail(staff, id, { allWritings });
   if (!c) notFound();
   const st = (await childStats(staff, [c.id])).get(c.id);
   const editing = toInt(sp.visit);
@@ -400,7 +430,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/st
           />
           {tab === "info" ? <InfoTab c={c} today={today} /> : null}
           {tab === "visits" ? <VisitsTab c={c} here={here} today={today} adding={adding} editing={editing} /> : null}
-          {tab === "activity" ? <ActivityTab c={c} missions={missions} /> : null}
+          {tab === "activity" ? <ActivityTab c={c} missions={missions} here={here} allWritings={allWritings} /> : null}
         </div>
 
         {showButtons ? (
