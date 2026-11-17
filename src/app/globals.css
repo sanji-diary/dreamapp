@@ -84,3 +84,7 @@ select {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* The birth-year wheel scrolls without showing a scrollbar. */
+.year-wheel { scrollbar-width: none; }
+.year-wheel::-webkit-scrollbar { display: none; }

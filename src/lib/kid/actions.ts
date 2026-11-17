@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { kidLogin, requireKid, setSession, signOut } from "@/lib/auth";
-import { forgetCard, readCard, rememberCard } from "@/lib/card";
+import { chooseCard, forgetCard, leaveCard, readCard, rememberCard } from "@/lib/card";
 import { db } from "@/lib/db";
 import { completeMission, dropBalance, ensureTree, harvestTree, missionsForChild, waterTree } from "@/lib/game";
 import { saveUpload } from "@/lib/uploads";
 import { addComment, deleteComment, reportComment, toggleLike } from "./feed";
 import { saveNewPin, saveOnboarding, selfRegister, type OnboardingErrors, type OnboardingInput } from "./onboarding";
+import { rememberedFriends } from "./friends";
 import { lockMinutes } from "./queries";
 import { afterSignInPath } from "./scan-cookie";
 import { deleteWorry, submitWorry } from "./worries";
@@ -61,9 +62,24 @@ export async function loginAction(pin: string): Promise<LoginActionResult> {
   return { ok: false, reason: "no_card" };
 }
 
-export async function forgetCardAction(): Promise<void> {
-  await forgetCard();
+/**
+ * "다른 친구예요": stop asking for this card's PIN and show the friends who have used this device.
+ * Nothing is forgotten, so a mistaken tap is undone by picking the name again.
+ */
+export async function otherFriendAction(): Promise<void> {
+  await leaveCard();
   await signOut("kid");
+  redirect("/login");
+}
+
+/**
+ * Pick one of the friends remembered on this device. The browser sends only a short key made from
+ * the card; the card itself comes from this device's own cookie, and the PIN is still asked next.
+ */
+export async function pickFriendAction(form: FormData): Promise<void> {
+  const key = String(form.get("k") ?? "");
+  const friend = (await rememberedFriends()).find((f) => f.key === key);
+  if (friend) await chooseCard(friend.token);
   redirect("/login");
 }
 

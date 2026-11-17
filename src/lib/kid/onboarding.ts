@@ -4,6 +4,7 @@ import { ensureTree } from "@/lib/game";
 import { hashPin, isValidPin, newToken } from "@/lib/pin";
 import { joinCodeOpen } from "@/lib/self-join";
 import { todayKst } from "@/lib/time";
+import { isBirthYear } from "./birth";
 
 /**
  * What the join wizard sends: name, gender, birth year, school, church class, then the PIN twice.
@@ -51,7 +52,7 @@ export function validateOnboarding(input: OnboardingInput, today: string = today
   if (!gender) errors.gender = "하나를 골라 주세요";
   // Grades 4-6 are 9 to 13 years old; allow a little room on both sides.
   const thisYear = Number(today.slice(0, 4));
-  const birthYear = typeof input?.birthYear === "number" && Number.isInteger(input.birthYear) && input.birthYear >= thisYear - 15 && input.birthYear <= thisYear - 7 ? input.birthYear : null;
+  const birthYear = isBirthYear(input?.birthYear, thisYear) ? input.birthYear : null;
   if (birthYear === null) errors.birth = "태어난 해를 골라 주세요";
   const school = text(input?.school);
   if (school.length < 2 || school.length > 40) errors.school = "학교 이름을 적어 주세요";

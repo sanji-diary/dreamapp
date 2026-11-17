@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
-import { forgetCardAction, loginAction } from "@/lib/kid/actions";
+import { loginAction, otherFriendAction } from "@/lib/kid/actions";
 import { PinDots, PinKeys } from "./PinPad";
 
 /* eslint-disable @next/next/no-img-element */
@@ -86,7 +86,8 @@ export function LoginForm({ greeting, lockedMinutes }: { greeting: string; locke
       <div className="min-h-4 grow" />
       {isLocked ? null : <PinKeys onDigit={onDigit} onDelete={onDelete} disabled={pending} />}
       <p className="mx-5 mt-3.5 mb-1 text-center text-[13px] leading-[19px] text-mute">카드를 잃어버렸거나 비밀번호를 잊었으면 선생님께 말해 주세요</p>
-      <form action={forgetCardAction} className="mb-5 flex justify-center">
+      {/* Leads to the list of friends on this device; nothing is forgotten, so a mistaken tap is easy to undo. */}
+      <form action={otherFriendAction} className="mb-5 flex justify-center">
         <button type="submit" className="h-11 cursor-pointer border-0 bg-transparent px-4 text-[14px] font-semibold text-sub underline underline-offset-2">
           다른 친구예요
         </button>

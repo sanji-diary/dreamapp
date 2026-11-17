@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { primaryButtonClass } from "@/components/ui";
 import { completeOnboardingAction, newPinAction, selfJoinAction } from "@/lib/kid/actions";
+import { birthYearChoices, defaultBirthYear, usualGrade } from "@/lib/kid/birth";
 import type { OnboardingErrors, OnboardingField } from "@/lib/kid/onboarding";
 import { PinDots, PinKeys } from "./PinPad";
+import { YearWheel } from "./YearWheel";
 
 /**
  * Sign-up, one question at a time: name, gender, birth year, school, church class, then the PIN twice.
@@ -64,7 +66,7 @@ const LABEL: Record<AskKey, string> = { name: "이름", gender: "성별", birth:
 const QUESTION: Record<AskKey, string> = {
   name: "이름을 알려 주세요",
   gender: "성별을 골라 주세요",
-  birth: "태어난 해를 골라 주세요",
+  birth: "몇 년에 태어났어요?",
   school: "다니는 학교를 알려 주세요",
   classId: "교회에서 몇 반이에요?",
 };
@@ -109,7 +111,9 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
   const step = steps[index];
 
   const thisYear = Number(today.slice(0, 4));
-  const yearChoices = [14, 13, 12, 11, 10, 9].map((n) => thisYear - n);
+  const years = useMemo(() => birthYearChoices(thisYear), [thisYear]);
+  /** What the wheel rests on: the chosen year, or fifth grade until the child moves it. */
+  const wheelYear = birthYear !== null && years.includes(birthYear) ? birthYear : defaultBirthYear(thisYear);
 
   /** After an answer: on to the next question, or back to where the child was when they went to change an earlier one. */
   const advance = useCallback(
@@ -341,31 +345,27 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
         </>
       );
       break;
-    case "birth":
+    case "birth": {
+      const grade = usualGrade(wheelYear, thisYear);
       body = (
         <>
-          <div role="group" aria-label="태어난 해" className="grid grid-cols-3 gap-2.5">
-            {yearChoices.map((y) => (
-              <button
-                key={y}
-                type="button"
-                aria-pressed={birthYear === y}
-                onClick={() =>
-                  pick(() => {
-                    setBirthYear(y);
-                    clearError("birth");
-                  })
-                }
-                className={`${optionBase} h-[64px] ${birthYear === y ? optionOn : optionOff}`}
-              >
-                {y}년
-              </button>
-            ))}
-          </div>
+          <YearWheel
+            years={years}
+            value={wheelYear}
+            label="태어난 해"
+            onChange={(y) => {
+              setBirthYear(y);
+              clearError("birth");
+            }}
+          />
+          <p aria-live="polite" className="m-0 mt-4 min-h-5 text-center text-[14px] leading-5 font-medium text-mute">
+            {grade ? `${wheelYear}년에 태어났으면 보통 ${grade}이에요` : ""}
+          </p>
           {error("birth")}
         </>
       );
       break;
+    }
     case "school":
       body = textStep(
         "school",
@@ -468,6 +468,20 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
         // With the keyboard up the button is a full-width bar resting on it; otherwise a rounded button at the bottom.
         <div className={`shrink-0 ${keyboard ? "" : "px-5 pb-[max(16px,env(safe-area-inset-bottom))]"}`}>
           <button type="submit" form="step-form" disabled={!valid[step]} className={`${primaryButtonClass} h-14 cursor-pointer text-[17px] ${keyboard ? "rounded-none" : "rounded-2xl"}`}>
+            확인
+          </button>
+        </div>
+      ) : step === "birth" ? (
+        // The wheel always rests on a year, so the child confirms it rather than tapping one.
+        <div className="shrink-0 px-5 pb-[max(16px,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => {
+              setBirthYear(wheelYear);
+              advance(index);
+            }}
+            className={`${primaryButtonClass} h-14 cursor-pointer rounded-2xl text-[17px]`}
+          >
             확인
           </button>
         </div>

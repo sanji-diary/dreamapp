@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/kid/LoginForm";
 import { childByToken, getKid } from "@/lib/auth";
 import { readCard } from "@/lib/card";
+import { Avatar } from "@/components/ui";
+import { pickFriendAction } from "@/lib/kid/actions";
+import { rememberedFriends, type RememberedFriend } from "@/lib/kid/friends";
 import { callName } from "@/lib/kid/korean";
 import { lockMinutes } from "@/lib/kid/queries";
 
@@ -36,11 +39,50 @@ function ScanCard() {
   );
 }
 
+/**
+ * Friends who have used this device before. Reached by "다른 친구예요" or when no card is current.
+ * Picking a name only chooses whose PIN to ask for; the PIN screen comes next.
+ */
+function PickFriend({ friends }: { friends: RememberedFriend[] }) {
+  return (
+    <main className="flex min-h-dvh flex-col bg-white px-6 pt-[max(64px,env(safe-area-inset-top))] pb-[max(24px,env(safe-area-inset-bottom))]">
+      <h1 className="m-0 text-[26px] leading-[35px] font-bold tracking-[-0.6px]">누구예요?</h1>
+      <p className="mt-2 mb-0 text-[15px] leading-[22px] text-sub">이름을 누르고 비밀번호를 넣으면 내 나무로 들어가요.</p>
+      <ul aria-label="이 휴대폰으로 들어온 친구" className="m-0 mt-7 flex list-none flex-col gap-2.5 p-0">
+        {friends.map((f, i) => (
+          <li key={f.key}>
+            <form action={pickFriendAction}>
+              <input type="hidden" name="k" value={f.key} />
+              <button type="submit" className="flex h-[72px] w-full cursor-pointer items-center gap-3.5 rounded-2xl border-[1.5px] border-solid border-[#D9DEE3] bg-white px-4 text-left">
+                <Avatar name={f.name} id={i} size={44} />
+                <span className="min-w-0 grow truncate text-[19px] font-bold tracking-[-0.3px] text-ink">{f.name}</span>
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B95A1" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-8 rounded-2xl bg-fill px-4 py-4">
+        <p className="m-0 text-[15px] leading-[22px] font-bold text-ink2">내 이름이 없어요</p>
+        <p className="mt-1.5 mb-0 text-[14px] leading-[21px] text-sub">
+          가입한 적이 있으면 내 QR 카드를, 처음이면 교회에 있는 가입 QR을 휴대폰 카메라로 찍어 주세요. 카드가 없으면 선생님께 말해 주세요.
+        </p>
+      </div>
+    </main>
+  );
+}
+
 export default async function LoginPage() {
   if (await getKid()) redirect("/home");
   const token = await readCard();
   const child = token ? await childByToken(token) : null;
-  if (!token || !child) return <ScanCard />;
-  if (!child.has_pin) redirect(`/join/${encodeURIComponent(token)}`);
-  return <LoginForm greeting={`${callName(child.name)}, 반가워!`} lockedMinutes={await lockMinutes(token)} />;
+  if (token && child) {
+    if (!child.has_pin) redirect(`/join/${encodeURIComponent(token)}`);
+    return <LoginForm greeting={`${callName(child.name)}, 반가워!`} lockedMinutes={await lockMinutes(token)} />;
+  }
+  // No card is current (first visit, or "다른 친구예요"): offer the friends this device remembers.
+  const friends = await rememberedFriends();
+  return friends.length > 0 ? <PickFriend friends={friends} /> : <ScanCard />;
 }

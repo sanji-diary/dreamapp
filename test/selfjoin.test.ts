@@ -15,9 +15,12 @@ vi.mock("next/headers", () => ({
 
 import { GET as manifestGet } from "@/app/api/manifest/route";
 import { kidLogin } from "@/lib/auth";
+import { chooseCard, forgetCard, leaveCard, readCard, readCards, rememberCard } from "@/lib/card";
 import { db, one, resetDbForTests } from "@/lib/db";
+import { birthYearChoices, defaultBirthYear, usualGrade } from "@/lib/kid/birth";
+import { rememberedFriends } from "@/lib/kid/friends";
 import { chromeIntentUrl, classifyInstallPlatform } from "@/lib/kid/install-platform";
-import { SELF_JOIN_HOURLY_LIMIT, selfRegister, type OnboardingInput } from "@/lib/kid/onboarding";
+import { SELF_JOIN_HOURLY_LIMIT, selfRegister, validateOnboarding, type OnboardingInput } from "@/lib/kid/onboarding";
 import { ensureJoinCode, joinCodeOpen } from "@/lib/self-join";
 import { readSession, setSession } from "@/lib/session";
 
@@ -169,6 +172,8 @@ describe("self-join with the shared QR", () => {
   });
 });
 
+const manifestReq = (card?: string) => new Request("http://localhost/api/manifest" + (card ? "?c=" + encodeURIComponent(card) : ""));
+
 describe("the home-screen manifest", () => {
   let s: Awaited<ReturnType<typeof setup>>;
   beforeEach(async () => {
@@ -176,7 +181,7 @@ describe("the home-screen manifest", () => {
   });
 
   it("gives a signed-out visitor the generic manifest, never cached", async () => {
-    const res = await manifestGet();
+    const res = await manifestGet(manifestReq());
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("content-type")).toContain("application/manifest+json");
     expect(await res.json()).toMatchObject({ start_url: "/", display: "standalone", name: "꿈의숲키우기" });
@@ -186,7 +191,7 @@ describe("the home-screen manifest", () => {
     const r = await selfRegister(s.code, good);
     if (!r.ok) throw new Error("self-join failed");
     await setSession("kid", r.childId);
-    const res = await manifestGet();
+    const res = await manifestGet(manifestReq());
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("vary")).toBe("Cookie");
     const m = await res.json();
@@ -194,10 +199,93 @@ describe("the home-screen manifest", () => {
     expect(m.id).toBe("/"); // the same app for every child; only the start differs
     // A teacher's session alone does not make it personal, and a child taken off the list falls back too.
     await db.query("update children set active = false where id = $1", [r.childId]);
-    expect((await (await manifestGet()).json()).start_url).toBe("/");
+    expect((await (await manifestGet(manifestReq())).json()).start_url).toBe("/");
     jar.clear();
     await setSession("staff", 1);
-    expect((await (await manifestGet()).json()).start_url).toBe("/");
+    expect((await (await manifestGet(manifestReq())).json()).start_url).toBe("/");
+  });
+});
+
+describe("the manifest address carries the card, for browsers that fetch it without cookies", () => {
+  it("answers with that child's card entry with no session at all, and ignores a card that is not on the list", async () => {
+    const s = await setup();
+    const r = await selfRegister(s.code, good);
+    if (!r.ok) throw new Error("self-join failed");
+    jar.clear(); // no cookies, like an iPhone fetching the manifest for the home screen
+    const res = await manifestGet(manifestReq(r.token));
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect((await res.json()).start_url).toBe(`/join/${encodeURIComponent(r.token)}/card`);
+    expect((await (await manifestGet(manifestReq("no-such-card"))).json()).start_url).toBe("/");
+    await db.query("update children set active = false where id = $1", [r.childId]);
+    expect((await (await manifestGet(manifestReq(r.token))).json()).start_url).toBe("/");
+  });
+});
+
+describe("friends remembered on this device", () => {
+  it("keeps every card that was used, newest first, and 'someone else' forgets nothing", async () => {
+    await setup();
+    await db.query("insert into children (name, qr_token) values ('김하나', 'card-a'), ('이두리', 'card-b'), ('박세찬', 'card-c')");
+    await rememberCard("card-a");
+    await rememberCard("card-b");
+    expect(await readCard()).toBe("card-b");
+    expect((await rememberedFriends()).map((f) => f.name)).toEqual(["이두리", "김하나"]);
+
+    // "다른 친구예요": nobody is current, but both names can still be picked.
+    await leaveCard();
+    expect(await readCard()).toBeNull();
+    const friends = await rememberedFriends();
+    expect(friends.map((f) => f.name)).toEqual(["이두리", "김하나"]);
+    // The pick form carries a fingerprint, never the card itself.
+    expect(friends.every((f) => f.key.length === 16 && !f.key.includes(f.token))).toBe(true);
+
+    // Picking a remembered card makes it current again; a card this device never used is refused.
+    expect(await chooseCard("card-a")).toBe(true);
+    expect(await readCard()).toBe("card-a");
+    expect(await chooseCard("card-c")).toBe(false);
+    expect(await readCard()).toBe("card-a");
+  });
+
+  it("moves a card remembered before the list existed into the list, and drops cards that stopped working", async () => {
+    await setup();
+    await db.query("insert into children (name, qr_token) values ('김하나', 'card-a'), ('이두리', 'card-b')");
+    jar.set("dream_card", "card-a"); // an older version stored only the current card
+    expect((await rememberedFriends()).map((f) => f.name)).toEqual(["김하나"]);
+    await leaveCard();
+    expect((await rememberedFriends()).map((f) => f.name)).toEqual(["김하나"]);
+
+    await rememberCard("card-b");
+    await db.query("update children set active = false where qr_token = 'card-a'");
+    expect((await rememberedFriends()).map((f) => f.name)).toEqual(["이두리"]);
+    await forgetCard(); // the current card turned out to be invalid
+    expect(await readCard()).toBeNull();
+    expect(await readCards()).toEqual(["card-a"]);
+  });
+
+  it("remembers at most six cards and ignores anything in the cookie that is not a card", async () => {
+    await setup();
+    for (let i = 1; i <= 8; i++) await rememberCard("card-" + i);
+    expect(await readCards()).toEqual(["card-8", "card-7", "card-6", "card-5", "card-4", "card-3"]);
+    jar.set("dream_cards", "card-1.<script>.card-2..card-1");
+    jar.delete("dream_card");
+    expect(await readCards()).toEqual(["card-1", "card-2"]);
+  });
+});
+
+describe("the birth-year wheel", () => {
+  it("offers eleven years around the department's ages and the server accepts exactly those", () => {
+    expect(birthYearChoices(2026)).toEqual([2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]);
+    expect(defaultBirthYear(2026)).toBe(2015);
+    for (const y of [2010, 2015, 2020]) expect(validateOnboarding({ ...good, birthYear: y }, "2026-11-17").ok).toBe(true);
+    for (const y of [2009, 2021]) expect(validateOnboarding({ ...good, birthYear: y }, "2026-11-17")).toMatchObject({ ok: false, errors: { birth: expect.any(String) } });
+  });
+
+  it("tells a child which school year usually goes with a birth year", () => {
+    expect(usualGrade(2016, 2026)).toBe("초등학교 4학년");
+    expect(usualGrade(2015, 2026)).toBe("초등학교 5학년");
+    expect(usualGrade(2014, 2026)).toBe("초등학교 6학년");
+    expect(usualGrade(2013, 2026)).toBe("중학교 1학년");
+    expect(usualGrade(2020, 2026)).toBeNull();
+    expect(usualGrade(2010, 2026)).toBeNull();
   });
 });
 
