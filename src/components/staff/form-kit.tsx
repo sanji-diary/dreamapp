@@ -80,9 +80,9 @@ export function FieldGroup({ legend, hint, error, children, className = "" }: { 
 /* ---------- boxes to type in ---------- */
 
 // 16px text below `lg`: a phone browser zooms into a box with smaller text when it is tapped.
-// The ring is on :focus, not :focus-visible: a box to type in shows it however it was reached, and a
-// date box (whose focus sits in its inner day / month / year parts) shows it too.
-const boxBase = "w-full min-w-0 rounded-xl border-[1.5px] bg-white text-[16px] text-ink placeholder:text-faint focus:border-navy focus:outline-2 focus:outline-offset-[-1.5px] focus:outline-navy disabled:bg-fill disabled:text-mute lg:text-[15px]";
+// The ring is on :focus-within, not :focus-visible: a box to type in shows it however it was reached, and a
+// date box shows it for each of its inner parts (day, month, year and the calendar button) too.
+const boxBase = "w-full min-w-0 rounded-xl border-[1.5px] bg-white text-[16px] text-ink placeholder:text-faint focus-within:border-navy focus-within:outline-2 focus-within:outline-offset-[-1.5px] focus-within:outline-navy disabled:bg-fill disabled:text-mute lg:text-[15px]";
 const boxBorder = (invalid: boolean) => (invalid ? "border-danger" : "border-[#d1d6db]");
 
 /**

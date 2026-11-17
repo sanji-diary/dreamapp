@@ -35,7 +35,7 @@ export default async function WorshipAdminPage({ searchParams }: PageProps<"/sta
             <label htmlFor="w-date" className="sr-only">
               주일 고르기
             </label>
-            <input id="w-date" type="date" name="date" defaultValue={date} className="h-11 min-w-0 cursor-pointer rounded-full border-0 bg-fill px-3.5 text-[14px] font-semibold text-ink2 focus:outline-2 focus:outline-offset-2 focus:outline-navy lg:h-[38px]" />
+            <input id="w-date" type="date" name="date" defaultValue={date} className="h-11 min-w-0 cursor-pointer rounded-full border-0 bg-fill px-3.5 text-[14px] font-semibold text-ink2 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-navy lg:h-[38px]" />
           </AutoForm>
           {data.hasPrevious ? (
             <form action={worshipSaveAction} className="flex">
