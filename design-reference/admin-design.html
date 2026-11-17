@@ -266,7 +266,7 @@ table.t{border-collapse:collapse;width:100%;font-size:13px}
           <img class="gt" src="img/tree-big.webp" alt="" style="left:132px;bottom:100px;height:78px">
           <img class="gt" src="img/tree-flower.webp" alt="" style="left:194px;bottom:98px;height:78px">
           <img class="gt" src="img/tree-sap.webp" alt="" style="left:262px;bottom:94px;height:60px">
-          <div class="hd"><div class="sp"><small>5학년 2반 · 박지현 선생님</small><span class="t1">우리 반 나무 6그루가<br>자라고 있어요</span></div><div class="rb w"><svg class="ico"><use href="#i-bell"/></svg><i class="cnt">2</i></div></div>
+          <div class="hd"><div class="sp"><small>5학년 2반 · 박지현 선생님</small><span class="t1">우리 반 나무 6그루가<br>자라고 있어요</span></div><div class="av s" style="background:#fff;width:40px;height:40px;box-shadow:0 2px 10px rgba(25,31,40,.1)">박</div></div>
         </div>
         <div class="panel">
           <div class="row"><span class="t2 sp">우리 반 물방울</span><span class="pct">22 / 30</span></div>
@@ -307,8 +307,8 @@ table.t{border-collapse:collapse;width:100%;font-size:13px}
         <div id="att" style="display:flex;flex-direction:column"></div>
         <span class="sp"></span>
         <div class="cta" style="margin-bottom:16px">저장하기</div>
-      </div><div class="tab" data-tab="-1"></div></div>
-      <div class="cap"><b>출석 체크</b><span>위에서 주차를 고르고, 아이마다 한 번만 누르면 됩니다. 결석 사유는 이름 아래에 적힙니다.</span></div>
+      </div><div class="tab" data-tab="4"></div></div>
+      <div class="cap"><b>출석 체크</b><span>담임 선생님은 아래 탭의 "출석"으로 바로 들어옵니다. 위에서 주차를 고르고, 아이마다 한 번만 누르면 됩니다. 결석 사유는 이름 아래에 적힙니다.</span></div>
     </div>
 
     <!-- 4. More (admin) -->
@@ -336,8 +336,8 @@ table.t{border-collapse:collapse;width:100%;font-size:13px}
         <div class="list" style="margin-top:2px">
           <div class="item"><div class="ic s"><img src="img/icon-bird.webp" alt=""></div><div class="sp"><b>새로 가입한 아이 2명</b><span class="sub">반 배정과 동의서 확인하기</span></div><span class="pb">보기</span></div>
         </div>
-      </div><div class="tab" data-tab="4"></div></div>
-      <div class="cap"><b>더보기 (총괄)</b><span>전도사님과 부장 선생님에게는 부서 현황과 운영 메뉴가 추가로 보입니다. 담임 선생님에게는 이 부분이 없습니다.</span></div>
+      </div><div class="tab" data-tab="4" data-tabs="all"></div></div>
+      <div class="cap"><b>더보기 (총괄)</b><span>전도사님과 부장 선생님은 다섯 번째 탭이 "더보기"이고, 부서 현황과 운영 메뉴가 여기에 있습니다. 담임 선생님은 이 자리가 "출석" 탭이고, 내 정보와 로그아웃은 홈 오른쪽 위 동그라미에서 엽니다.</span></div>
     </div>
 
     <!-- 5. Child -->
@@ -666,10 +666,12 @@ table.t{border-collapse:collapse;width:100%;font-size:13px}
 <script>
 (function(){
   var ic=function(n){return '<svg class="ico"><use href="#i-'+n+'"/></svg>'};
-  var tabs=[['home','홈'],['kids','우리 반'],null,['list','할 일'],['grid','더보기']];
+  /* homeroom teachers get 출석 as the fifth tab; teachers who see every class get 더보기 there */
+  var tabs=[['home','홈'],['kids','우리 반'],null,['list','할 일'],['check','출석']];
+  var tabsAll=[['home','홈'],['kids','우리 반'],null,['list','할 일'],['grid','더보기']];
   document.querySelectorAll('[data-tab]').forEach(function(el){
     var on=+el.getAttribute('data-tab');
-    el.innerHTML=tabs.map(function(t,i){return t?'<div'+(i===on?' class="on"':'')+'>'+ic(t[0])+t[1]+'</div>':'<div class="plus">'+ic('plus')+'</div>'}).join('');
+    el.innerHTML=(el.getAttribute('data-tabs')==='all'?tabsAll:tabs).map(function(t,i){return t?'<div'+(i===on?' class="on"':'')+'>'+ic(t[0])+t[1]+'</div>':'<div class="plus">'+ic('plus')+'</div>'}).join('');
   });
   var nav=[['home','대시보드'],['check','출석'],['kids','교적부'],['list','미션 확인',7],['chat','고민',2],0,['flag','미션'],['pen','소식·예배'],['grid','반 편성'],['kids','교사·권한'],['qr','QR 카드'],['coin','달란트'],['gear','설정']];
   document.querySelectorAll('[data-side]').forEach(function(el){
