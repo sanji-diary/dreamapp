@@ -142,7 +142,7 @@ export type CompleteResult =
 export async function completeMission(
   childId: number,
   missionId: number,
-  input: { text?: string; photoUrl?: string; byStaffId?: number; date?: string } = {},
+  input: { text?: string; photoUrl?: string; byStaffId?: number; date?: string; auto?: boolean } = {},
 ): Promise<CompleteResult> {
   const date = input.date ?? todayKst();
   return db.tx(async (q) => {
@@ -150,6 +150,9 @@ export async function completeMission(
     const m = list.find((x) => x.id === missionId);
     if (!m) return { ok: false, reason: "not_found" } as const;
     if (m.state !== "available") return { ok: false, reason: "already_done" } as const;
+    // A child cannot finish these directly: they are completed by a teacher or by the action they belong to.
+    const indirect = m.kind === "attendance" || m.kind === "qr" || m.kind === "teacher" || m.kind === "worry" || m.kind === "comment";
+    if (indirect && m.kind !== "teacher" && !input.byStaffId && !input.auto) return { ok: false, reason: "not_available" } as const;
     if (m.kind === "verse" && !input.byStaffId) {
       if ((input.text ?? "").trim() !== (m.verse_text ?? "").trim()) return { ok: false, reason: "invalid" } as const;
     }
@@ -184,7 +187,7 @@ export async function autoComplete(childId: number, kind: Mission["kind"], opts:
   const list = await missionsForChild(db, childId, date);
   const m = list.find((x) => x.kind === kind && x.state === "available");
   if (!m) return null;
-  return completeMission(childId, m.id, { byStaffId: opts.byStaffId, date });
+  return completeMission(childId, m.id, { byStaffId: opts.byStaffId, date, auto: true });
 }
 
 export type WaterResult =

@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Not app source: agent work folders, local data, approved mock-ups.
+    ".claude/**",
+    ".data/**",
+    "design-reference/**",
   ]),
 ]);
 

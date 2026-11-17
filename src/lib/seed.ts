@@ -58,7 +58,7 @@ export async function seedIfEmpty(q: Queryable) {
 
   await q.query(
     `insert into missions (title, description, kind, icon, verse_text, verse_ref, qr_code, points, drops, repeat, weekly_limit, starts_on, ends_on, is_challenge, created_by) values
-      ('주일 예배 출석', '입구 QR 찍기', 'attendance', 'stamp', null, null, null, 20, 2, 'weekly', null, $1, $2, false, $3),
+      ('주일 예배 출석', '선생님이 출석을 확인해요', 'attendance', 'stamp', null, null, null, 20, 2, 'weekly', null, $1, $2, false, $3),
       ('이번 주 말씀 쓰기', '시편 23편 1절 따라 쓰기', 'verse', 'bible', '여호와는 나의 목자시니 내게 부족함이 없으리로다', '시편 23편 1절', null, 15, 2, 'weekly', null, $1, $2, false, $3),
       ('가정예배 드리기', '예배 사진 한 장 올리기', 'photo', 'house', null, null, null, 30, 3, 'weekly', null, $1, $2, true, $3),
       ('내 고민 적기', '읽을 사람은 내가 골라요', 'worry', 'bubble', null, null, null, 10, 1, 'weekly', null, $1, $2, false, $3),
