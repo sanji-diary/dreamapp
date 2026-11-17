@@ -10,6 +10,7 @@ import { saveUpload } from "@/lib/uploads";
 import { addComment, deleteComment, reportComment, toggleLike } from "./feed";
 import { saveNewPin, saveOnboarding, type OnboardingErrors, type OnboardingInput } from "./onboarding";
 import { lockMinutes } from "./queries";
+import { afterSignInPath } from "./scan-cookie";
 import { deleteWorry, submitWorry } from "./worries";
 
 /**
@@ -32,7 +33,7 @@ export async function newPinAction(token: string, pin: string, pin2: string): Pr
   if (!r.ok) return r;
   await setSession("kid", r.childId);
   await rememberCard(token);
-  redirect("/home");
+  redirect(await afterSignInPath(r.childId));
 }
 
 export type LoginActionResult = { ok: false; reason: "no_card" | "wrong" | "locked"; left?: number; minutes?: number };
@@ -41,7 +42,8 @@ export async function loginAction(pin: string): Promise<LoginActionResult> {
   const token = await readCard();
   if (!token) return { ok: false, reason: "no_card" };
   const r = await kidLogin(token, typeof pin === "string" ? pin : "");
-  if (r.ok) redirect("/home");
+  // A mission QR scanned before signing in is waiting in a cookie: finish it now.
+  if (r.ok) redirect(await afterSignInPath(r.childId));
   if (r.reason === "wrong") return { ok: false, reason: "wrong", left: r.left };
   if (r.reason === "locked") return { ok: false, reason: "locked", minutes: Math.max(1, await lockMinutes(token)) };
   if (r.reason === "no_pin") redirect(`/join/${encodeURIComponent(token)}`);

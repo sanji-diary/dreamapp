@@ -138,11 +138,17 @@ export type CompleteResult =
 /**
  * Records that a child did a mission. Photo and teacher-check missions wait for a teacher
  * unless a teacher enters them on the child's behalf (children without a phone).
+ *
+ * - `viaQr`: the code the child scanned. It lets a child finish a 'qr' mission (or an attendance
+ *   mission set up for QR self check-in) only when it equals that mission's own qr_code.
+ * - `verified`: the caller has already checked the work on the server (quiz answers scored from the
+ *   recorded attempt, or a game start token). Quiz and game missions need it; it must never be set
+ *   from something the browser merely claims.
  */
 export async function completeMission(
   childId: number,
   missionId: number,
-  input: { text?: string; photoUrl?: string; byStaffId?: number; date?: string; auto?: boolean } = {},
+  input: { text?: string; photoUrl?: string; byStaffId?: number; date?: string; auto?: boolean; viaQr?: string; verified?: boolean } = {},
 ): Promise<CompleteResult> {
   const date = input.date ?? todayKst();
   return db.tx(async (q) => {
@@ -152,7 +158,10 @@ export async function completeMission(
     if (m.state !== "available") return { ok: false, reason: "already_done" } as const;
     // A child cannot finish these directly: they are completed by a teacher or by the action they belong to.
     const indirect = m.kind === "attendance" || m.kind === "qr" || m.kind === "teacher" || m.kind === "worry" || m.kind === "comment";
-    if (indirect && m.kind !== "teacher" && !input.byStaffId && !input.auto) return { ok: false, reason: "not_available" } as const;
+    const scanned = (m.kind === "qr" || m.kind === "attendance") && typeof input.viaQr === "string" && input.viaQr !== "" && m.qr_code !== null && input.viaQr === m.qr_code;
+    if (indirect && m.kind !== "teacher" && !input.byStaffId && !input.auto && !scanned) return { ok: false, reason: "not_available" } as const;
+    // Quizzes and games count only after the server has checked the answers or the game token.
+    if ((m.kind === "quiz" || m.kind === "game") && !input.byStaffId && input.verified !== true) return { ok: false, reason: "not_available" } as const;
     if (m.kind === "verse" && !input.byStaffId) {
       if ((input.text ?? "").trim() !== (m.verse_text ?? "").trim()) return { ok: false, reason: "invalid" } as const;
     }
@@ -237,7 +246,7 @@ export async function harvestTree(childId: number): Promise<HarvestResult> {
  * Takes back what an attendance mission gave when the attendance turns out to be wrong
  * (a mistaken tap). The ledgers stay append-only: the award is cancelled with opposite rows.
  */
-async function revokeAttendanceAward(staffId: number, childId: number, date: string) {
+async function revokeAttendanceAward(staffId: number | null, childId: number, date: string) {
   await db.tx(async (q) => {
     const rows = await q.query<{ id: number; drops_awarded: number; points_awarded: number; week_start: string }>(
       `select mc.id, mc.drops_awarded, mc.points_awarded, mc.week_start
@@ -260,8 +269,9 @@ async function revokeAttendanceAward(staffId: number, childId: number, date: str
 /**
  * Saves attendance. Present or late completes this week's attendance mission; changing to
  * absent or clearing the mark takes that award back. An omitted note keeps the existing one.
+ * A null staff id means the child checked in alone by scanning the attendance QR.
  */
-export async function recordAttendance(staffId: number, childId: number, date: string, status: "present" | "late" | "absent" | null, note?: string) {
+export async function recordAttendance(staffId: number | null, childId: number, date: string, status: "present" | "late" | "absent" | null, note?: string) {
   if (status === null) {
     await db.query("delete from attendance where child_id = $1 and date = $2", [childId, date]);
     await revokeAttendanceAward(staffId, childId, date);
@@ -274,5 +284,5 @@ export async function recordAttendance(staffId: number, childId: number, date: s
     [childId, date, status, note ?? null, staffId, note !== undefined],
   );
   if (status === "absent") await revokeAttendanceAward(staffId, childId, date);
-  else await autoComplete(childId, "attendance", { byStaffId: staffId, date });
+  else await autoComplete(childId, "attendance", { byStaffId: staffId ?? undefined, date });
 }
