@@ -184,6 +184,13 @@ export interface VisitRow {
   canEdit: boolean;
 }
 
+export interface Writing {
+  id: number;
+  title: string;
+  done_on: string;
+  text: string;
+}
+
 export interface ChildDetail {
   id: number;
   name: string;
@@ -217,6 +224,9 @@ export interface ChildDetail {
   drops: number;
   points: number;
   completions: { id: number; title: string; status: string; done_on: string; by_staff: string | null }[];
+  /** What the child wrote in free-text missions, newest first (worries are not here: they have their own readers). */
+  writings: Writing[];
+  writingCount: number;
   /** null when this teacher may not read visit notes. */
   visits: VisitRow[] | null;
   can: { edit: boolean; writeVisits: boolean; proxy: boolean; resetPin: boolean; admin: boolean; consent: boolean; assignClass: boolean };
@@ -242,7 +252,7 @@ export function canResetPin(staff: Staff, classId: number | null): boolean {
 }
 
 /** Returns null when the child does not exist or the teacher may not see details. Callers show "not found" either way. */
-export async function getChildDetail(staff: Staff, id: number): Promise<ChildDetail | null> {
+export async function getChildDetail(staff: Staff, id: number, opts: { allWritings?: boolean } = {}): Promise<ChildDetail | null> {
   const c = await one<{
     id: number; name: string; class_id: number | null; class_name: string | null; birth_date: string | null; birth_year: number | null; gender: "M" | "F" | null;
     school: string | null; school_class: string | null; address: string | null; phone: string | null; guardian_phone: string | null;
@@ -278,6 +288,15 @@ export async function getChildDetail(staff: Staff, id: number): Promise<ChildDet
        from mission_completions mc join missions m on m.id = mc.mission_id left join staff s on s.id = mc.entered_by_staff_id
       where mc.child_id = $1 order by mc.done_on desc, mc.id desc limit 10`,
     [id],
+  );
+
+  // Free-text missions only. A worry is kept in its own table with its own readers and never shows up here.
+  const written = await db.query<Writing & { total: number }>(
+    `select mc.id, m.title, mc.done_on, mc.text_content as text, (count(*) over ())::int as total
+       from mission_completions mc join missions m on m.id = mc.mission_id
+      where mc.child_id = $1 and m.kind = 'text' and mc.status <> 'rejected' and btrim(coalesce(mc.text_content, '')) <> ''
+      order by mc.done_on desc, mc.id desc limit $2`,
+    [id, opts.allWritings ? 100 : 5],
   );
 
   let visits: VisitRow[] | null = null;
@@ -325,6 +344,8 @@ export async function getChildDetail(staff: Staff, id: number): Promise<ChildDet
     drops: await dropBalance(db, id),
     points: await pointBalance(db, id),
     completions,
+    writings: written.map(({ id: wid, title, done_on, text }) => ({ id: wid, title, done_on, text })),
+    writingCount: written[0]?.total ?? 0,
     visits,
     can: {
       edit: canEditChild(staff, c.class_id),
