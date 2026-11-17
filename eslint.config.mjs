@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     ".claude/**",
     ".data/**",
     "design-reference/**",
+    // Plain Node scripts that open the screens in a browser; not part of the app.
+    "tools/**",
   ]),
 ]);
 

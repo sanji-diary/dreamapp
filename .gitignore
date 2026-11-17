@@ -47,3 +47,6 @@ next-env.d.ts
 .claude/worktrees/
 
 !.env.example
+
+# screenshots written by tools/checks
+/tools/checks/out/
