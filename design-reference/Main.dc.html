@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>아이 홈 - 내 나무</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Pretendard';font-weight:45 920;font-style:normal;font-display:swap;src:url(/_blob/beb6939f9cca6955468f4914f53cc35a) format('woff2')}
+body{margin:0}
+button{font-family:inherit;cursor:pointer}
+a{color:#1B64DA}a:hover{color:#1957C2}
+@keyframes sway{0%,100%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}}
+@keyframes settle{0%,100%{transform:scale(1,1)}50%{transform:scale(1.025,.975)}}
+@keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+.rim-seed{-webkit-mask-image:radial-gradient(ellipse 37.8px 70.4px at 70px -25.5px,transparent 0,transparent 96%,#000 100%);mask-image:radial-gradient(ellipse 37.8px 70.4px at 70px -25.5px,transparent 0,transparent 96%,#000 100%)}
+.rim-sprout{-webkit-mask-image:radial-gradient(ellipse 26.6px 70.4px at 70px -22.8px,transparent 0,transparent 96%,#000 100%);mask-image:radial-gradient(ellipse 26.6px 70.4px at 70px -22.8px,transparent 0,transparent 96%,#000 100%)}
+@keyframes wiggle{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes seedDrop{0%{transform:translateY(-430px)}55%{transform:translateY(0)}70%{transform:translateY(-34px)}84%{transform:translateY(0)}92%{transform:translateY(-10px)}100%{transform:translateY(0)}}
+@keyframes moundRise{0%{transform:scale(.6,0)}70%{transform:scale(1.06,1.1)}100%{transform:scale(1,1)}}
+@keyframes chargeA{0%{filter:brightness(1);transform:scale(1)}55%{filter:brightness(1.5);transform:scale(.97,1.03)}100%{filter:brightness(7);transform:scale(1.03)}}
+@keyframes revealA{0%{filter:brightness(7);transform:scale(.84)}35%{filter:brightness(4);transform:scale(1.08)}65%{filter:brightness(1.5);transform:scale(.98)}100%{filter:brightness(1);transform:scale(1)}}
+@keyframes squashA{0%{transform:scale(1,1)}30%{transform:scale(1.04,.965)}62%{transform:scale(.985,1.02)}100%{transform:scale(1,1)}}
+@keyframes squashB{0%{transform:scale(1,1)}30%{transform:scale(1.04,.965)}62%{transform:scale(.985,1.02)}100%{transform:scale(1,1)}}
+@keyframes glowIn{0%{opacity:0;transform:scale(.35)}100%{opacity:1;transform:scale(1)}}
+@keyframes glowOut{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
+@keyframes ray{0%{opacity:0;transform:translateY(-40px) scale(.4)}20%{opacity:1}100%{opacity:0;transform:translateY(-175px) scale(1)}}
+@keyframes leafUp{0%{opacity:0;transform:translate(0,0) rotate(0deg)}25%{opacity:1}100%{opacity:0;transform:translate(14px,-170px) rotate(260deg)}}
+@keyframes cloudA{0%{opacity:0;transform:translateX(50px)}16%{opacity:1;transform:translateX(0)}78%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(-36px)}}
+@keyframes cloudB{0%{opacity:0;transform:translateX(50px)}16%{opacity:1;transform:translateX(0)}78%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(-36px)}}
+@keyframes dropA{0%{opacity:0;transform:translateY(0)}15%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateY(230px)}}
+@keyframes dropB{0%{opacity:0;transform:translateY(0)}15%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateY(230px)}}
+@keyframes cloudPop{0%{opacity:0;transform:scale(.2)}18%{opacity:1;transform:scale(1.12)}28%{transform:scale(1)}80%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.9)}}
+@keyframes cloudPopB{0%{opacity:0;transform:scale(.2)}18%{opacity:1;transform:scale(1.12)}28%{transform:scale(1)}80%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.9)}}
+@keyframes toastA{0%{opacity:0;transform:translateY(10px)}15%{opacity:1;transform:translateY(0)}80%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-8px)}}
+@keyframes toastB{0%{opacity:0;transform:translateY(10px)}15%{opacity:1;transform:translateY(0)}80%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-8px)}}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1.1)}}
+@keyframes fall{0%{opacity:0;transform:translate(0,0) rotate(0deg)}12%{opacity:1}100%{opacity:0;transform:translate(-50px,215px) rotate(250deg)}}
+@keyframes fly1{0%{transform:translate(0,0) rotate(-8deg)}25%{transform:translate(50px,-36px) rotate(10deg)}50%{transform:translate(104px,4px) rotate(-6deg)}75%{transform:translate(46px,30px) rotate(8deg)}100%{transform:translate(0,0) rotate(-8deg)}}
+@keyframes fly2{0%{transform:translate(0,0)}25%{transform:translate(-34px,22px)}50%{transform:translate(-70px,-8px)}75%{transform:translate(-30px,-30px)}100%{transform:translate(0,0)}}
+@keyframes flap{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.35)}}
+@keyframes hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes birdIn{0%{transform:translate(150px,-90px)}18%{transform:translate(0,0)}22%{transform:translate(0,-6px)}26%{transform:translate(0,0)}74%{transform:translate(0,0)}78%{transform:translate(0,-6px)}82%{transform:translate(0,0)}100%{transform:translate(-190px,-110px)}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #EAEAA8; font-family: 'Pretendard', system-ui, sans-serif; color: #191F28">
+<img alt="" src="/_blob/f579c672827d5cb5b95aa9b3be293a47" style="position: absolute; left: 0; top: 0; width: 390px; height: 699px; display: block">
+<div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; background: linear-gradient(180deg, #FFF9D6 0%, #FFF3A8 62%, rgba(255,243,168,0) 100%); opacity: {{tintOpacity}}; transition: opacity 0.6s ease"></div>
+<div role="img" aria-label="{{treeLabel}}" style="position: absolute; left: 0; top: 0; width: 390px; height: 600px">
+<div style="position: absolute; left: 75px; top: 250px; width: 240px; height: 300px; border-radius: 120px 120px 100px 100px; background: radial-gradient(ellipse at 50% 70%, rgba(255,251,214,0.98) 0%, rgba(255,244,170,0.8) 34%, rgba(255,244,170,0) 70%); opacity: 0; transform-origin: 50% 85%; animation: {{glowAnim}}"></div>
+<div style="position: absolute; left: 135px; top: 500px; width: 120px; height: 22px; border-radius: 60px; background: radial-gradient(ellipse, rgba(120,132,40,0.28) 0%, rgba(120,132,40,0) 70%)"></div>
+<div style="position: absolute; left: 0; top: 0; width: 390px; height: 600px; transform-origin: 195px 512px; animation: {{treeAnim}}">
+<sc-if value="{{is1}}" hint-placeholder-val="{{ false }}">
+<img alt="" src="/_blob/85e38a4ada8ae137ea7b2460b8eb98f7" style="position: absolute; left: 125px; top: 450px; width: 140px; height: 68px; transform-origin: 50% 100%; animation: moundRise 0.5s ease-out 0.9s both;">
+<div style="position: absolute; left: 163px; top: 462px; width: 64px; height: 32px; border-radius: 50%; background: radial-gradient(ellipse, rgba(70,40,20,0.5) 0%, rgba(70,40,20,0) 72%); animation: fadeIn 0.3s ease-out 1.2s both;"></div>
+<div style="position: absolute; left: 160px; top: 422px; width: 70px; height: 72px; animation: seedDrop 1s cubic-bezier(0.5, 0, 0.8, 0.6) both">
+<img alt="" src="/_blob/41a56f4eb0568f7457b5d12e9ebc6780" style="width: 70px; height: 72px; display: block; transform-origin: 50% 100%; animation: settle 3.200s ease-in-out 1.800s infinite">
+</div>
+<img alt="" class="rim-seed" src="/_blob/85e38a4ada8ae137ea7b2460b8eb98f7" style="position: absolute; left: 125px; top: 450px; width: 140px; height: 68px; transform-origin: 50% 100%; animation: moundRise 0.5s ease-out 0.9s both;">
+</sc-if>
+<sc-if value="{{is2}}" hint-placeholder-val="{{ false }}">
+<img alt="" src="/_blob/85e38a4ada8ae137ea7b2460b8eb98f7" style="position: absolute; left: 125px; top: 450px; width: 140px; height: 68px; transform-origin: 50% 100%;">
+<div style="position: absolute; left: 170px; top: 466px; width: 50px; height: 30px; border-radius: 50%; background: radial-gradient(ellipse, rgba(70,40,20,0.5) 0%, rgba(70,40,20,0) 72%);"></div>
+<img alt="" src="/_blob/87c6cacc4e31f304b8ce449d7c5da791" style="position: absolute; left: 158px; top: 392px; width: 80px; height: 105px; transform-origin: 46% 96%; animation: sway 3.600s ease-in-out infinite">
+<img alt="" class="rim-sprout" src="/_blob/85e38a4ada8ae137ea7b2460b8eb98f7" style="position: absolute; left: 125px; top: 450px; width: 140px; height: 68px; transform-origin: 50% 100%;">
+</sc-if>
+<sc-if value="{{is3}}" hint-placeholder-val="{{ false }}">
+<img alt="" src="/_blob/1214d78cd0a6466b864acc2118aa6ad2" style="position: absolute; left: 129px; top: 305px; width: 121px; height: 207px; transform-origin: 54% 98%; animation: sway 4.200s ease-in-out infinite">
+</sc-if>
+<sc-if value="{{is4}}" hint-placeholder-val="{{ false }}">
+<img alt="" src="/_blob/672262b63450ab48902153fccd35b5a2" style="position: absolute; left: 70px; top: 211px; width: 251px; height: 301px; transform-origin: 50% 98%; animation: sway 4.800s ease-in-out infinite">
+</sc-if>
+<sc-if value="{{is5}}" hint-placeholder-val="{{ true }}">
+<img alt="" src="/_blob/72007926d77f9dd817d64f770c7d95e7" style="position: absolute; left: 68px; top: 207px; width: 255px; height: 305px; transform-origin: 50% 98%; animation: sway 4.800s ease-in-out infinite">
+</sc-if>
+<sc-if value="{{is6}}" hint-placeholder-val="{{ false }}">
+<img alt="" src="/_blob/bc7356aecc779555223366dfc5357de8" style="position: absolute; left: 68px; top: 208px; width: 254px; height: 304px; transform-origin: 50% 98%; animation: sway 4.800s ease-in-out infinite">
+</sc-if>
+</div>
+<sc-for list="{{leaves}}" as="lf" hint-placeholder-count="6">
+<img alt="" src="/_blob/df6aa7a196b5b86d8a4002cf2a974e37" style="position: absolute; left: {{lf.x}}; top: 480px; width: 18px; height: 18px; opacity: 0; animation: {{lf.anim}}">
+</sc-for>
+<sc-for list="{{rays}}" as="ray" hint-placeholder-count="10">
+<div style="position: absolute; left: 189px; top: 400px; width: 12px; height: 12px; transform: rotate({{ray.deg}})">
+<div style="width: 12px; height: 12px; border-radius: 6px; background: {{ray.color}}; opacity: 0; animation: {{ray.anim}}"></div>
+</div>
+</sc-for>
+<img alt="" src="/_blob/3749e8ab4d64e91d167fffe1236b3d9c" style="position: absolute; left: 110px; top: 84px; width: 170px; height: 170px; opacity: 0; animation: {{cloudAnim}}">
+<sc-for list="{{drops}}" as="drop" hint-placeholder-count="5">
+<img alt="" src="/_blob/573e770ae0b3b96e22986de2ee760939" style="position: absolute; left: {{drop.x}}; top: 214px; width: 16px; height: 16px; opacity: 0; animation: {{drop.anim}}">
+</sc-for>
+<div style="position: absolute; left: 0; top: 304px; width: 390px; display: flex; justify-content: center; opacity: 0; animation: {{toastAnim}}">
+<div style="height: 34px; padding: 0 14px; border-radius: 17px; background: #FFFFFF; box-shadow: 0 4px 12px rgba(25, 31, 40, 0.10); display: flex; align-items: center; font-size: 13px; font-weight: 700; letter-spacing: -0.2px; color: #333D4B">{{toastText}}</div>
+</div>
+<sc-if value="{{showFly}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 86px; top: 330px; animation: fly1 9s ease-in-out infinite">
+<img alt="" src="/_blob/d85dfb55d8d29dd6600aa7eae83281df" style="width: 34px; height: 34px; display: block; animation: flap 0.4s ease-in-out infinite">
+</div>
+<div style="position: absolute; left: 286px; top: 300px; animation: fly2 11s ease-in-out infinite">
+<img alt="" src="/_blob/d85dfb55d8d29dd6600aa7eae83281df" style="width: 26px; height: 26px; display: block; animation: flap 0.34s ease-in-out infinite">
+</div>
+</sc-if>
+<sc-if value="{{showBird}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 262px; top: 262px; animation: birdIn 9s ease-in-out 1s infinite both">
+<img alt="" src="/_blob/7571b612c8ebba39c6db53f171de8fc5" style="width: 46px; height: 46px; display: block">
+</div>
+<img alt="" src="/_blob/df6aa7a196b5b86d8a4002cf2a974e37" style="position: absolute; left: 110px; top: 250px; width: 16px; height: 16px; opacity: 0; animation: fall 7s linear 2.500s infinite">
+<img alt="" src="/_blob/df6aa7a196b5b86d8a4002cf2a974e37" style="position: absolute; left: 300px; top: 290px; width: 14px; height: 14px; opacity: 0; animation: fall 6.400s linear 5s infinite">
+</sc-if>
+<sc-if value="{{showBee}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 300px; top: 250px; animation: fly2 8s ease-in-out infinite">
+<img alt="" src="/_blob/695a1a50fe49193b92d21ef29eb0f458" style="width: 34px; height: 34px; display: block; animation: hover 0.9s ease-in-out infinite">
+</div>
+<div style="position: absolute; left: 258px; top: 256px; width: 9px; height: 7px; border-radius: 5px 5px 5px 1px; background: #FFFFFF; opacity: 0; animation: fall 6s linear 0.5s infinite"></div>
+<div style="position: absolute; left: 150px; top: 240px; width: 8px; height: 6px; border-radius: 5px 5px 5px 1px; background: #FFFFFF; opacity: 0; animation: fall 7s linear 2.600s infinite"></div>
+<div style="position: absolute; left: 298px; top: 320px; width: 8px; height: 6px; border-radius: 5px 5px 5px 1px; background: #FFFFFF; opacity: 0; animation: fall 6.500s linear 4.200s infinite"></div>
+</sc-if>
+<sc-if value="{{showTwinkle}}" hint-placeholder-val="{{ false }}">
+<svg aria-hidden="true" width="14" height="14" viewBox="-7 -7 14 14" style="position: absolute; left: 52px; top: 270px; animation: twinkle 2.800s ease-in-out infinite"><path d="M0 -7 L1.800 -1.800 L7 0 L1.800 1.800 L0 7 L-1.800 1.800 L-7 0 L-1.800 -1.800 Z" fill="#FFFFFF"></path></svg>
+<svg aria-hidden="true" width="14" height="14" viewBox="-7 -7 14 14" style="position: absolute; left: 328px; top: 246px; animation: twinkle 3.400s ease-in-out 0.900s infinite"><path d="M0 -7 L1.800 -1.800 L7 0 L1.800 1.800 L0 7 L-1.800 1.800 L-7 0 L-1.800 -1.800 Z" fill="#FFFFFF"></path></svg>
+<svg aria-hidden="true" width="12" height="12" viewBox="-7 -7 14 14" style="position: absolute; left: 338px; top: 400px; animation: twinkle 3s ease-in-out 1.600s infinite"><path d="M0 -7 L1.800 -1.800 L7 0 L1.800 1.800 L0 7 L-1.800 1.800 L-7 0 L-1.800 -1.800 Z" fill="#FFFFFF"></path></svg>
+<svg aria-hidden="true" width="12" height="12" viewBox="-7 -7 14 14" style="position: absolute; left: 40px; top: 410px; animation: twinkle 3.600s ease-in-out 0.400s infinite"><path d="M0 -7 L1.800 -1.800 L7 0 L1.800 1.800 L0 7 L-1.800 1.800 L-7 0 L-1.800 -1.800 Z" fill="#FFFFFF"></path></svg>
+</sc-if>
+</div>
+<div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; display: flex; flex-direction: column; pointer-events: none">
+<div style="padding: 58px 20px 0 20px; display: flex; justify-content: space-between; align-items: center">
+<div style="font-size: 14px; font-weight: 600; color: #4E5968">5학년 2반 김하준</div>
+<div style="height: 34px; padding: 0 13px 0 8px; border-radius: 17px; background: #FFFFFF; display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; letter-spacing: -0.2px">
+<img alt="" src="/_blob/12cf795ef119aca33a98772dcb1b8636" style="width: 24px; height: 24px">
+{{points}}
+</div>
+</div>
+<div style="padding: 18px 20px 0 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; opacity: {{uiOpacity}}; transition: opacity 0.3s ease">
+<h1 style="margin: 0; font-size: 25px; line-height: 34px; font-weight: 700; letter-spacing: -0.6px; white-space: pre-line">{{headline}}</h1>
+<a href="Missions.dc.html" aria-label="이번 주 미션 3개 보기" style="pointer-events: auto; position: relative; width: 70px; height: 70px; border-radius: 35px; background: #FFFFFF; box-shadow: 0 6px 16px rgba(25, 31, 40, 0.10); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; text-decoration: none; color: #191F28; flex-shrink: 0">
+<img alt="" src="/_blob/f149d598895be03cedc206b97541c9a6" style="width: 36px; height: 36px">
+<span style="font-size: 12px; font-weight: 700">미션</span>
+<span style="position: absolute; right: -3px; top: -3px; min-width: 22px; height: 22px; box-sizing: border-box; padding: 0 6px; border-radius: 11px; background: #D22030; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">3</span>
+</a>
+</div>
+<div style="flex-grow: 1"></div>
+<div style="pointer-events: auto; margin: 0 16px 12px 16px; padding: 20px 18px 18px 18px; background: #FFFFFF; border-radius: 24px; box-shadow: 0 8px 24px rgba(25, 31, 40, 0.08); display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<div style="font-size: 17px; font-weight: 700; letter-spacing: -0.3px">{{levelName}}</div>
+<div style="font-size: 17px; font-weight: 700; color: #1B64DA">{{pctText}}</div>
+</div>
+<div role="progressbar" aria-label="나무 성장" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{pctNum}}" style="height: 10px; border-radius: 5px; background: #E5E8EB; overflow: hidden">
+<div style="width: {{pctText}}; height: 10px; border-radius: 5px; background: #3182F6; transition: width 0.5s ease"></div>
+</div>
+<div style="font-size: 13px; line-height: 18px; font-weight: 500; color: #4E5968; letter-spacing: -0.2px; margin-top: -4px">{{nextText}}</div>
+<sc-if value="{{busy}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="height: 76px; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: #333D4B">{{busyText}}
+<img alt="" src="/_blob/3749e8ab4d64e91d167fffe1236b3d9c" style="width: 40px; height: 40px">
+</div>
+</sc-if>
+<sc-if value="{{idle}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px">
+<sc-if value="{{canWater}}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ water }}" style="height: 76px; border-radius: 16px; border: none; background: #F2F4F6; padding: 0 10px 0 16px; display: flex; align-items: center; justify-content: space-between; text-align: left; color: #191F28">
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 700; letter-spacing: -0.3px">물 주기</span>
+<span style="font-size: 13px; font-weight: 500; color: #4E5968">{{dropsText}}</span>
+</span>
+<img alt="" src="/_blob/573e770ae0b3b96e22986de2ee760939" style="width: 46px; height: 46px">
+</button>
+</sc-if>
+<sc-if value="{{noWater}}" hint-placeholder-val="{{ false }}">
+<div style="height: 76px; box-sizing: border-box; border-radius: 16px; background: #F2F4F6; padding: 0 10px 0 16px; display: flex; align-items: center; justify-content: space-between; color: #6B7684">
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 700; letter-spacing: -0.3px">물 주기</span>
+<span style="font-size: 13px; font-weight: 500">{{noWaterText}}</span>
+</span>
+<img alt="" src="/_blob/573e770ae0b3b96e22986de2ee760939" style="width: 46px; height: 46px; filter: grayscale(1); opacity: 0.5">
+</div>
+</sc-if>
+<sc-if value="{{growing}}" hint-placeholder-val="{{ true }}">
+<a href="Missions.dc.html" style="height: 76px; box-sizing: border-box; border-radius: 16px; background: #F2F4F6; padding: 0 10px 0 16px; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: #191F28">
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 700; letter-spacing: -0.3px">미션 하기</span>
+<span style="font-size: 13px; font-weight: 500; color: #4E5968">3개 남음</span>
+</span>
+<img alt="" src="/_blob/7d08fe7b11c2fd75a11f209354ad60c6" style="width: 48px; height: 48px">
+</a>
+</sc-if>
+<sc-if value="{{ripe}}" hint-placeholder-val="{{ false }}">
+<a href="Harvest.dc.html" style="grid-column: 1 / -1; height: 76px; box-sizing: border-box; border-radius: 16px; background: #0B1FA6; padding: 0 14px 0 20px; white-space: nowrap; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: #FFFFFF">
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 700; letter-spacing: -0.3px">열매 수확하기</span>
+<span style="font-size: 13px; font-weight: 500; color: #E8F3FF">다 익었어요</span>
+</span>
+<img alt="" src="/_blob/12cf795ef119aca33a98772dcb1b8636" style="width: 46px; height: 46px">
+</a>
+</sc-if>
+</div>
+</sc-if>
+</div>
+<nav aria-label="메뉴" style="pointer-events: auto; height: 76px; box-sizing: border-box; padding: 8px 8px 18px 8px; background: #FFFFFF; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0px">
+<a href="Main.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #191F28; font-size: 11px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24"><rect x="10.600" y="13" width="2.800" height="8" rx="1.400" fill="currentColor"></rect><circle cx="12" cy="9.500" r="6.500" fill="currentColor"></circle></svg>
+내 나무</a>
+<a href="Missions.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v16l-5 -3.200 -5 3.200z"></path><path d="M9.500 10l2 2 3.200 -3.600"></path></svg>
+미션</a>
+<a href="Feed.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="3.500"></rect><circle cx="9" cy="10" r="1.600"></circle><path d="M5 17l4.500 -4 3.500 3 2.500 -2 3.500 3"></path></svg>
+숲 소식</a>
+<a href="Worship.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2 -1.500 -4.500 -2 -7.500 -1.500v13c3 -0.500 5.500 0 7.500 1.500 2 -1.500 4.500 -2 7.500 -1.500v-13c-3 -0.500 -5.500 0 -7.500 1.500zM12 6v13"></path></svg>
+예배</a>
+<a href="Me.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.600"></circle><path d="M5 19.500c0.800 -3.600 3.500 -5.500 7 -5.500s6.200 1.900 7 5.500"></path></svg>
+나</a>
+</nav>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startLevel":{"editor":"int","default":1,"min":1,"max":6,"step":1},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var lv = Number(props && props.startLevel != null ? props.startLevel : 1);
+this.state = { level: lv, given: 0, drops: 12, points: 1240, tick: 0, kind: '', busy: false, seed: lv, msg: '' };
+this.timers = [];
+}
+componentDidUpdate() {
+var lv = Number(this.props.startLevel != null ? this.props.startLevel : 1);
+if (lv !== this.state.seed) {
+this.setState({ level: lv, seed: lv, given: 0, drops: 12, kind: '', busy: false, msg: '' });
+}
+}
+componentWillUnmount() {
+this.timers.forEach(function (t) { clearTimeout(t); });
+}
+renderVals() {
+var self = this;
+var st = this.state;
+var names = ['씨앗', '새싹', '어린나무', '큰나무', '꽃나무', '열매나무'];
+var lines = [
+'씨앗을 심었어요\n물을 주면 싹이 나요',
+'새싹이 돋았어요!\n쑥쑥 자라는 중이에요',
+'어린나무가 되었어요\n가지가 생겼어요',
+'이제 큰나무예요\n곧 꽃이 필 거예요',
+'꽃이 피었어요!\n물을 주면 열매가 열려요',
+'열매가 열렸어요!\n다 익을 때까지 조금만 더'
+];
+var needs = [2, 4, 6, 8, 10, 10];
+var need = needs[st.level - 1];
+var pct = Math.round(Math.min(1, st.given / need) * 100);
+var left = Math.max(0, need - st.given);
+var ripe = st.level >= 6 && st.given >= need && st.kind !== 'charge';
+var s = st.tick % 2 === 1 ? 'A' : 'B';
+var charge = st.kind === 'charge';
+var reveal = st.kind === 'reveal';
+var water = st.kind === 'water';
+var wet = water || charge;
+var rayColors = ['#FFFFFF', '#FFE27A', '#FFFFFF', '#BFE6A8', '#FFFFFF', '#FFE27A', '#FFFFFF', '#BFE6A8', '#FFFFFF', '#FFE27A'];
+var rays = rayColors.map(function (c, i) {
+return { deg: (i * 36) + 'deg', color: c, anim: reveal ? ('ray 1s ease-out ' + ((i % 3) * 0.06) + 's both') : 'none' };
+});
+var leaves = [84, 126, 168, 214, 256, 296].map(function (x, i) {
+return { x: x + 'px', anim: charge ? ('leafUp 0.9s ease-out ' + (0.55 + i * 0.07) + 's both') : 'none' };
+});
+var drops = [150, 170, 190, 210, 230].map(function (x, i) {
+return { x: x + 'px', anim: wet ? ('drop' + s + ' 0.75s ease-in ' + (0.4 + (i * 37 % 5) * 0.1) + 's both') : 'none' };
+});
+return {
+is1: st.level === 1, is2: st.level === 2, is3: st.level === 3, is4: st.level === 4, is5: st.level === 5, is6: st.level === 6,
+treeLabel: '내 나무: ' + names[st.level - 1],
+treeAnim: charge ? 'chargeA 0.75s ease-in 0.85s both' : (reveal ? 'revealA 1s cubic-bezier(0.2, 0.9, 0.3, 1.1) both' : (water ? ('squash' + s + ' 0.6s ease-out 0.75s') : 'none')),
+glowAnim: charge ? 'glowIn 0.75s ease-in 0.85s both' : (reveal ? 'glowOut 1s ease-out both' : 'none'),
+cloudAnim: wet ? ((s === 'A' ? 'cloudPop' : 'cloudPopB') + ' 1.6s ease-out both') : 'none',
+tintOpacity: (charge || reveal) ? 0.9 : 0,
+uiOpacity: (wet || reveal) ? 0 : 1,
+busy: st.busy,
+idle: !st.busy,
+busyText: (charge || reveal) ? '쑥쑥 자라는 중…' : '물 주는 중…',
+toastAnim: reveal ? ('toast' + s + ' 1.3s ease-out both') : (water ? ('toast' + s + ' 1.2s ease-out 0.5s both') : 'none'),
+toastText: reveal ? (names[st.level - 1] + '(으)로 레벨업!') : '물방울 1개를 줬어요',
+rays: rays,
+leaves: leaves,
+drops: drops,
+showFly: st.level === 2 || st.level === 3,
+showBird: st.level === 4,
+showBee: st.level === 5,
+showTwinkle: st.level === 6,
+points: st.points.toLocaleString('ko-KR') + 'P',
+headline: ripe ? '열매가 다 익었어요!\n이제 수확할 수 있어요' : (st.msg === 'level' ? '레벨업!\n몰라보게 자라났어요' : (st.msg === 'water' ? '물 주기 완료!\n왠지 튼튼해 보여요' : lines[st.level - 1])),
+levelName: '레벨 ' + st.level + ' ' + names[st.level - 1],
+pctText: pct + '%',
+pctNum: pct,
+nextText: ripe ? '다 자랐어요. 열매를 수확해 보세요' : (st.level >= 6 ? ('다 익을 때까지 물방울 ' + left + '개') : (names[st.level] + '까지 물방울 ' + left + '개')),
+dropsText: '물방울 ' + st.drops + '개',
+noWaterText: ripe ? '다 자랐어요' : '미션을 하면 받아요',
+canWater: st.drops > 0 && !ripe,
+noWater: st.drops <= 0 && !ripe,
+growing: !ripe,
+ripe: ripe,
+water: function () {
+var c = self.state;
+var nd = needs[c.level - 1];
+if (c.busy || c.drops <= 0 || (c.level >= 6 && c.given >= nd)) return;
+var g = c.given + 1;
+if (g >= nd && c.level < 6) {
+self.setState({ given: nd, drops: c.drops - 1, tick: c.tick + 1, kind: 'charge', busy: true });
+self.timers.push(setTimeout(function () { self.setState({ level: self.state.level + 1, given: 0, kind: 'reveal', msg: 'level' }); }, 1600));
+self.timers.push(setTimeout(function () { self.setState({ kind: '', busy: false }); }, 2900));
+} else {
+self.setState({ given: g, drops: c.drops - 1, tick: c.tick + 1, kind: 'water', busy: true, msg: 'water' });
+self.timers.push(setTimeout(function () { self.setState({ kind: '', busy: false }); }, 1800));
+}
+}
+};
+}
+}
+</script>
+</body>
+</html>

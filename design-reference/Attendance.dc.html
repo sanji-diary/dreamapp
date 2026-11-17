@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>교사 출석체크</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Pretendard';font-weight:45 920;font-style:normal;font-display:swap;src:url(/_blob/beb6939f9cca6955468f4914f53cc35a) format('woff2')}
+body{margin:0}
+button{font-family:inherit;cursor:pointer}
+a{color:#0B1FA6}a:hover{color:#081780}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFFFF; font-family: 'Pretendard', system-ui, sans-serif; color: #191F28; display: flex; flex-direction: column">
+<div style="padding: 60px 16px 0 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 22px; line-height: 30px; font-weight: 700; letter-spacing: -0.5px">출석체크</h1>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #6B7684; letter-spacing: -0.2px">11월 22일 주일 · {{doneText}}</p>
+</div>
+<button style="height: 44px; padding: 0 12px 0 14px; border-radius: 22px; border: none; background: #F0F3F7; font-size: 14px; font-weight: 700; letter-spacing: -0.2px; color: #191F28; display: flex; align-items: center; gap: 4px; flex-shrink: 0">5학년 2반
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#191F28" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4 -4"></path></svg>
+</button>
+</div>
+<div style="padding: 14px 16px 6px 16px; display: flex; gap: 6px">
+<div style="height: 30px; padding: 0 10px; border-radius: 6px; background: #EEF1FB; color: #0B1FA6; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 4px">출석 <span>{{nPresent}}</span></div>
+<div style="height: 30px; padding: 0 10px; border-radius: 6px; background: #FBF0DC; color: #7A4A00; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 4px">지각 <span>{{nLate}}</span></div>
+<div style="height: 30px; padding: 0 10px; border-radius: 6px; background: #FBE9E7; color: #8E2A22; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 4px">결석 <span>{{nAbsent}}</span></div>
+<div style="height: 30px; padding: 0 10px; border-radius: 6px; background: #F0F3F7; color: #4E5968; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 4px">미체크 <span>{{nNone}}</span></div>
+</div>
+<div style="flex-grow: 1; padding: 0 16px; display: flex; flex-direction: column">
+<sc-for list="{{kids}}" as="kid" hint-placeholder-count="7">
+<div style="height: 70px; display: flex; align-items: center; gap: 13px; border-bottom: 1px solid #EEF0F2">
+<div aria-hidden="true" style="width: 46px; height: 46px; border-radius: 23px; background: {{kid.tint}}; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #333D4B; flex-shrink: 0">{{kid.initial}}</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<div style="font-size: 17px; line-height: 23px; font-weight: 700; letter-spacing: -0.4px; color: #333D4B">{{kid.name}}</div>
+<div style="font-size: 13px; line-height: 18px; color: {{kid.noteColor}}; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{kid.note}}</div>
+</div>
+<div style="display: flex; gap: 5px; flex-shrink: 0">
+<button onClick="{{ kid.setPresent }}" aria-pressed="{{kid.isPresent}}" style="height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center">
+<span style="width: 46px; height: 30px; border-radius: 6px; background: {{kid.pBg}}; color: {{kid.pFg}}; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">출석</span>
+</button>
+<button onClick="{{ kid.setLate }}" aria-pressed="{{kid.isLate}}" style="height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center">
+<span style="width: 46px; height: 30px; border-radius: 6px; background: {{kid.lBg}}; color: {{kid.lFg}}; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">지각</span>
+</button>
+<button onClick="{{ kid.setAbsent }}" aria-pressed="{{kid.isAbsent}}" style="height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center">
+<span style="width: 46px; height: 30px; border-radius: 6px; background: {{kid.aBg}}; color: {{kid.aFg}}; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">결석</span>
+</button>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="padding: 10px 16px 10px 16px">
+<button style="width: 100%; height: 52px; border-radius: 12px; border: none; background: #0B1FA6; color: #FFFFFF; font-size: 16px; font-weight: 700; letter-spacing: -0.3px">출석 저장하기</button>
+</div>
+<nav aria-label="교사 메뉴" style="height: 76px; box-sizing: border-box; padding: 8px 8px 18px 8px; background: #FFFFFF; border-top: 1px solid #EEF0F2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0px">
+<a href="#" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #191F28; font-size: 11px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3.500" fill="currentColor"></rect><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M8.500 13l2.500 2.500 4.500 -5" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+출석</a>
+<a href="Profile.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3.200"></circle><path d="M3.500 19c0.600 -3 2.800 -4.600 5.500 -4.600s4.900 1.600 5.500 4.600M16 6.200a3 3 0 0 1 0 5.600M17.500 14.800c1.700 0.600 2.700 2 3 4.200"></path></svg>
+우리 반</a>
+<a href="Approvals.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.500"></circle><path d="M8.500 12.200l2.400 2.400 4.600 -5"></path></svg>
+승인</a>
+<a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v11H10l-5 4z"></path></svg>
+예배·소식</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { s: { k1: 'P', k2: 'P', k3: 'L', k4: 'P', k5: 'A', k6: '', k7: '' } };
+}
+renderVals() {
+var self = this;
+var s = this.state.s;
+var base = [
+{ id: 'k1', name: '김하준', initial: '하', note: '4주 연속 출석', tint: '#E3F0D6' },
+{ id: 'k2', name: '이서윤', initial: '서', note: '4주 연속 출석', tint: '#DCECF7' },
+{ id: 'k3', name: '박도윤', initial: '도', note: '지난주 출석', tint: '#F8E7CF' },
+{ id: 'k4', name: '최지우', initial: '지', note: '2주 연속 출석', tint: '#E9E4F4' },
+{ id: 'k5', name: '정시우', initial: '시', note: '2주 연속 결석', tint: '#F7E1DE', warn: true },
+{ id: 'k6', name: '강하은', initial: '은', note: '지난주 출석', tint: '#E3F0D6' },
+{ id: 'k7', name: '윤예준', initial: '예', note: '새 친구', tint: '#DCECF7' }
+];
+var off = { bg: '#F0F3F7', fg: '#4E5968' };
+var kids = base.map(function (k) {
+var v = s[k.id];
+var set = function (val) {
+return function () {
+var next = Object.assign({}, self.state.s);
+next[k.id] = self.state.s[k.id] === val ? '' : val;
+self.setState({ s: next });
+};
+};
+var p = v === 'P' ? { bg: '#0B1FA6', fg: '#FFFFFF' } : off;
+var l = v === 'L' ? { bg: '#8A5300', fg: '#FFFFFF' } : off;
+var a = v === 'A' ? { bg: '#B3261E', fg: '#FFFFFF' } : off;
+return {
+name: k.name, initial: k.initial, note: k.note, tint: k.tint,
+noteColor: k.warn ? '#B3261E' : '#4E5968',
+isPresent: v === 'P' ? 'true' : 'false', isLate: v === 'L' ? 'true' : 'false', isAbsent: v === 'A' ? 'true' : 'false',
+setPresent: set('P'), setLate: set('L'), setAbsent: set('A'),
+pBg: p.bg, pFg: p.fg, lBg: l.bg, lFg: l.fg, aBg: a.bg, aFg: a.fg
+};
+});
+var count = function (val) { return base.filter(function (k) { return s[k.id] === val; }).length; };
+var none = count('');
+return {
+kids: kids,
+nPresent: count('P'), nLate: count('L'), nAbsent: count('A'), nNone: none,
+doneText: base.length + '명 중 ' + (base.length - none) + '명 체크'
+};
+}
+}
+</script>
+</body>
+</html>

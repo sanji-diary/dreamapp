@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>교사 - 아이 프로필과 심방일지</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Pretendard';font-weight:45 920;font-style:normal;font-display:swap;src:url(/_blob/beb6939f9cca6955468f4914f53cc35a) format('woff2')}
+body{margin:0}
+button,input,textarea{font-family:inherit}
+button{cursor:pointer}
+a{color:#0B1FA6}a:hover{color:#081780}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFFFF; font-family: 'Pretendard', system-ui, sans-serif; color: #191F28; display: flex; flex-direction: column">
+<div style="padding: 52px 16px 0 8px; display: flex; align-items: center; justify-content: space-between">
+<a href="Attendance.dc.html" aria-label="우리 반 명단으로 돌아가기" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #191F28">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<button style="height: 44px; padding: 0 8px; border: none; background: none; font-size: 15px; font-weight: 700; color: #0B1FA6">수정</button>
+</div>
+<div style="padding: 4px 16px 0 16px; display: flex; align-items: center; gap: 14px">
+<div aria-hidden="true" style="width: 64px; height: 64px; border-radius: 32px; background: #F7E1DE; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #333D4B; flex-shrink: 0">시</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.5px">정시우</h1>
+<div style="display: flex; gap: 5px"><span style="height: 26px; padding: 0 9px; border-radius: 6px; background: #F0F3F7; color: #4E5968; font-size: 12px; font-weight: 700; display: flex; align-items: center">5학년 2반</span><span style="height: 26px; padding: 0 9px; border-radius: 6px; background: #F0F3F7; color: #4E5968; font-size: 12px; font-weight: 700; display: flex; align-items: center">12세</span><span style="height: 26px; padding: 0 9px; border-radius: 6px; background: #F0F3F7; color: #4E5968; font-size: 12px; font-weight: 700; display: flex; align-items: center">남</span></div>
+</div>
+</div>
+<div style="margin: 14px 16px 0 16px; height: 44px; padding: 0 12px; border-radius: 10px; background: #FBE9E7; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #8E2A22">2주 연속 결석이에요. 연락해 보세요.</div>
+<div style="padding: 8px 16px 0 16px; display: flex; flex-direction: column">
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #EEF0F2">
+<span style="width: 84px; font-size: 14px; color: #6B7684; flex-shrink: 0">학교</span>
+<span style="font-size: 15px; font-weight: 600; color: #333D4B; flex-grow: 1; min-width: 0">[학교 이름] 5학년 3반</span>
+</div>
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #EEF0F2">
+<span style="width: 84px; font-size: 14px; color: #6B7684; flex-shrink: 0">주소</span>
+<span style="font-size: 15px; font-weight: 600; color: #333D4B; flex-grow: 1; min-width: 0">[집 주소]</span>
+</div>
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #EEF0F2">
+<span style="width: 84px; font-size: 14px; color: #6B7684; flex-shrink: 0">연락처</span>
+<span style="font-size: 15px; font-weight: 600; color: #333D4B; flex-grow: 1; min-width: 0">[보호자 연락처]</span>
+</div>
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #EEF0F2">
+<span style="width: 84px; font-size: 14px; color: #6B7684; flex-shrink: 0">친한 친구</span>
+<span style="font-size: 15px; font-weight: 600; color: #333D4B; flex-grow: 1; min-width: 0">박도윤 (같은 반)</span>
+</div>
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px">
+<span style="width: 84px; font-size: 14px; color: #6B7684; flex-shrink: 0">출석</span>
+<span style="font-size: 15px; font-weight: 600; color: #333D4B; flex-grow: 1; min-width: 0">최근 8주 중 5번</span>
+</div>
+</div>
+<div style="padding: 14px 16px 0 16px; display: flex; flex-direction: column">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.3px">심방일지</h2>
+<button style="height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center"><span style="width: 74px; height: 30px; border-radius: 6px; background: #0B1FA6; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">기록 추가</span></button>
+</div>
+<div style="padding: 12px 0; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #EEF0F2">
+<div style="display: flex; align-items: center; gap: 6px"><span style="height: 26px; padding: 0 9px; border-radius: 6px; background: #F0F3F7; color: #4E5968; font-size: 12px; font-weight: 700; display: flex; align-items: center">전화</span><span style="font-size: 13px; color: #6B7684">11월 15일 · 박지현 교사</span></div>
+<p style="margin: 0; font-size: 14px; line-height: 21px; color: #333D4B">[심방 내용이 여기에 들어갑니다. 어머니와 통화, 지난주 결석 사유 확인.]</p>
+</div>
+<div style="padding: 12px 0; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 6px"><span style="height: 26px; padding: 0 9px; border-radius: 6px; background: #F0F3F7; color: #4E5968; font-size: 12px; font-weight: 700; display: flex; align-items: center">대면</span><span style="font-size: 13px; color: #6B7684">10월 18일 · 박지현 교사</span></div>
+<p style="margin: 0; font-size: 14px; line-height: 21px; color: #333D4B">[심방 내용이 여기에 들어갑니다. 예배 후 따로 이야기 나눔.]</p>
+</div>
+</div>
+<p style="margin: 6px 16px 0 16px; font-size: 12px; line-height: 18px; color: #6B7684">이 화면은 담임, 부장, 교역자만 볼 수 있어요.</p>
+<div style="flex-grow: 1"></div>
+<nav aria-label="교사 메뉴" style="height: 76px; box-sizing: border-box; padding: 8px 8px 18px 8px; background: #FFFFFF; border-top: 1px solid #EEF0F2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0px; flex-shrink: 0">
+<a href="Attendance.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3.500"></rect><path d="M8 3v4M16 3v4M8.500 13l2.500 2.500 4.500 -5"></path></svg>
+출석</a>
+<a href="Profile.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #191F28; font-size: 11px; font-weight: 700">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.400" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3.200"></circle><path d="M3.500 19c0.600 -3 2.800 -4.600 5.500 -4.600s4.900 1.600 5.500 4.600M16 6.200a3 3 0 0 1 0 5.600M17.500 14.800c1.700 0.600 2.700 2 3 4.200"></path></svg>
+우리 반</a>
+<a href="Approvals.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.500"></circle><path d="M8.500 12.200l2.400 2.400 4.600 -5"></path></svg>
+승인</a>
+<a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #6B7684; font-size: 11px; font-weight: 500">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v11H10l-5 4z"></path></svg>
+예배·소식</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

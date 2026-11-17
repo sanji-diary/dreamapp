@@ -1,0 +1,10 @@
+{
+  "name": "꿈의숲키우기",
+  "short_name": "꿈의숲",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "ko",
+  "icons": [{ "src": "/img/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}

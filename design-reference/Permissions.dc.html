@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>관리자 - 교사 권한</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Pretendard';font-weight:45 920;font-style:normal;font-display:swap;src:url(/_blob/beb6939f9cca6955468f4914f53cc35a) format('woff2')}
+body{margin:0}
+button,input,textarea{font-family:inherit}
+button{cursor:pointer}
+a{color:#0B1FA6}a:hover{color:#081780}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFFFF; font-family: 'Pretendard', system-ui, sans-serif; color: #191F28; display: flex; flex-direction: column">
+<div style="padding: 52px 16px 0 8px; display: flex; align-items: center; gap: 4px">
+<a href="#" aria-label="관리로 돌아가기" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #191F28">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<h1 style="margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.4px">교사 권한</h1>
+</div>
+<div style="padding: 0 16px; display: flex; flex-direction: column">
+<div style="height: 72px; display: flex; align-items: center; gap: 13px; border-bottom: 1px solid #EEF0F2">
+<div aria-hidden="true" style="width: 46px; height: 46px; border-radius: 23px; background: #DCECF7; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #333D4B; flex-shrink: 0">지</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<div style="display: flex; align-items: baseline; gap: 6px"><span style="font-size: 17px; line-height: 23px; font-weight: 700; letter-spacing: -0.4px; color: #333D4B">박지현</span></div>
+<div style="font-size: 13px; line-height: 18px; color: #4E5968; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">5학년 2반 담임</div>
+</div>
+<span style="height: 30px; padding: 0 10px; border-radius: 6px; background: #0B1FA6; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; flex-shrink: 0">담임</span>
+</div>
+<div style="height: 72px; display: flex; align-items: center; gap: 13px; border-bottom: 1px solid #EEF0F2">
+<div aria-hidden="true" style="width: 46px; height: 46px; border-radius: 23px; background: #E9E4F4; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #333D4B; flex-shrink: 0">민</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<div style="display: flex; align-items: baseline; gap: 6px"><span style="font-size: 17px; line-height: 23px; font-weight: 700; letter-spacing: -0.4px; color: #333D4B">[교사 이름]</span></div>
+<div style="font-size: 13px; line-height: 18px; color: #4E5968; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">전체 반</div>
+</div>
+<span style="height: 30px; padding: 0 10px; border-radius: 6px; background: #F0F3F7; color: #4E5968; font-size: 12px; font-weight: 600; display: flex; align-items: center; flex-shrink: 0">부장</span>
+</div>
+<div style="height: 72px; display: flex; align-items: center; gap: 13px">
+<div aria-hidden="true" style="width: 46px; height: 46px; border-radius: 23px; background: #E3F0D6; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #333D4B; flex-shrink: 0">수</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<div style="display: flex; align-items: baseline; gap: 6px"><span style="font-size: 17px; line-height: 23px; font-weight: 700; letter-spacing: -0.4px; color: #333D4B">[교사 이름]</span></div>
+<div style="font-size: 13px; line-height: 18px; color: #4E5968; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">담당 반 없음</div>
+</div>
+<span style="height: 30px; padding: 0 10px; border-radius: 6px; background: #F0F3F7; color: #4E5968; font-size: 12px; font-weight: 600; display: flex; align-items: center; flex-shrink: 0">교사 기본</span>
+</div>
+</div>
+<div style="margin: 10px 16px 0 16px; padding: 16px; border-radius: 16px; background: #F0F3F7; display: flex; flex-direction: column; gap: 10px; flex-grow: 1">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.3px">박지현 선생님</h2>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13px; font-weight: 600; color: #4E5968">등급</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{levels}}" as="c" hint-placeholder-count="4">
+<button onClick="{{ c.pick }}" aria-pressed="{{c.on}}" style="height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center"><span style="height: 34px; padding: 0 12px; border-radius: 8px; background: {{c.bg}}; color: {{c.fg}}; font-size: 14px; font-weight: 600; display: flex; align-items: center">{{c.label}}</span></button>
+</sc-for>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13px; font-weight: 600; color: #4E5968">담당 반</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{classes}}" as="c" hint-placeholder-count="4">
+<button onClick="{{ c.pick }}" aria-pressed="{{c.on}}" style="height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center"><span style="height: 34px; padding: 0 12px; border-radius: 8px; background: {{c.bg}}; color: {{c.fg}}; font-size: 14px; font-weight: 600; display: flex; align-items: center">{{c.label}}</span></button>
+</sc-for>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; background: #FFFFFF; border-radius: 12px; padding: 2px 14px">
+<div style="height: 48px; display: flex; align-items: center; justify-content: space-between">
+<span id="lb-att" style="font-size: 15px; font-weight: 600; color: #333D4B">출석 체크</span>
+<button role="switch" aria-checked="{{attOn}}" aria-labelledby="lb-att" onClick="{{ attTog }}" style="width: 52px; height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center"><span style="width: 52px; height: 30px; border-radius: 15px; background: {{attBg}}; display: flex; align-items: center; padding: 0 3px; box-sizing: border-box; justify-content: {{attPos}}"><span style="width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF"></span></span></button>
+</div>
+<div style="height: 48px; display: flex; align-items: center; justify-content: space-between">
+<span id="lb-vis" style="font-size: 15px; font-weight: 600; color: #333D4B">심방일지 쓰기·보기</span>
+<button role="switch" aria-checked="{{visOn}}" aria-labelledby="lb-vis" onClick="{{ visTog }}" style="width: 52px; height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center"><span style="width: 52px; height: 30px; border-radius: 15px; background: {{visBg}}; display: flex; align-items: center; padding: 0 3px; box-sizing: border-box; justify-content: {{visPos}}"><span style="width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF"></span></span></button>
+</div>
+<div style="height: 48px; display: flex; align-items: center; justify-content: space-between">
+<span id="lb-app" style="font-size: 15px; font-weight: 600; color: #333D4B">미션 승인</span>
+<button role="switch" aria-checked="{{appOn}}" aria-labelledby="lb-app" onClick="{{ appTog }}" style="width: 52px; height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center"><span style="width: 52px; height: 30px; border-radius: 15px; background: {{appBg}}; display: flex; align-items: center; padding: 0 3px; box-sizing: border-box; justify-content: {{appPos}}"><span style="width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF"></span></span></button>
+</div>
+<div style="height: 48px; display: flex; align-items: center; justify-content: space-between">
+<span id="lb-all" style="font-size: 15px; font-weight: 600; color: #333D4B">모든 반 보기</span>
+<button role="switch" aria-checked="{{allOn}}" aria-labelledby="lb-all" onClick="{{ allTog }}" style="width: 52px; height: 44px; padding: 0; border: none; background: none; display: flex; align-items: center"><span style="width: 52px; height: 30px; border-radius: 15px; background: {{allBg}}; display: flex; align-items: center; padding: 0 3px; box-sizing: border-box; justify-content: {{allPos}}"><span style="width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF"></span></span></button>
+</div>
+</div>
+</div>
+<div style="padding: 12px 16px 30px 16px">
+<button style="width: 100%; height: 52px; border-radius: 12px; border: none; background: #0B1FA6; color: #FFFFFF; font-size: 16px; font-weight: 700; letter-spacing: -0.3px">저장하기</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { level: '담임', classes: { '5학년 2반': true }, att: true, vis: true, app: true, all: false };
+}
+renderVals() {
+var self = this;
+var st = this.state;
+var preset = { '교사 기본': [false, false, false, false], '담임': [true, true, true, false], '부장': [true, true, true, true], '관리자': [true, true, true, true] };
+var levels = ['교사 기본', '담임', '부장', '관리자'].map(function (l) {
+var on = st.level === l;
+return { label: l, on: on ? 'true' : 'false', bg: on ? '#0B1FA6' : '#FFFFFF', fg: on ? '#FFFFFF' : '#4E5968', pick: function () { var p = preset[l]; self.setState({ level: l, att: p[0], vis: p[1], app: p[2], all: p[3] }); } };
+});
+var classes = ['5학년 1반', '5학년 2반', '6학년 1반'].map(function (c) {
+var on = !!st.classes[c];
+return { label: c, on: on ? 'true' : 'false', bg: on ? '#0B1FA6' : '#FFFFFF', fg: on ? '#FFFFFF' : '#4E5968', pick: function () { var n = Object.assign({}, self.state.classes); n[c] = !n[c]; self.setState({ classes: n }); } };
+});
+var out = { levels: levels, classes: classes };
+['att', 'vis', 'app', 'all'].forEach(function (k) {
+out[k + 'On'] = st[k] ? 'true' : 'false';
+out[k + 'Bg'] = st[k] ? '#0B1FA6' : '#8B95A1';
+out[k + 'Pos'] = st[k] ? 'flex-end' : 'flex-start';
+out[k + 'Tog'] = function () { var o = {}; o[k] = !self.state[k]; self.setState(o); };
+});
+return out;
+}
+}
+</script>
+</body>
+</html>

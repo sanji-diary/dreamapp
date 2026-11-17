@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Pretendard";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/PretendardVariable.woff2") format("woff2");
+}
+
+@theme {
+  --font-sans: "Pretendard", system-ui, -apple-system, sans-serif;
+  --color-ink: #191f28;
+  --color-ink2: #333d4b;
+  --color-sub: #4e5968;
+  --color-mute: #6b7684;
+  --color-faint: #8b95a1;
+  --color-line: #eef0f2;
+  --color-fill: #f0f3f7;
+  --color-navy: #0b1fa6;
+  --color-navy-tint: #eef1fb;
+  --color-blue: #1b64da;
+  --color-bar: #3182f6;
+  --color-danger: #b3261e;
+  --color-danger-tint: #fbe9e7;
+  --color-warn: #7a4a00;
+  --color-warn-tint: #fbf0dc;
+  --color-sky: #e4f3fb;
+  --color-ground: #eaeaa8;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #e9ecef;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* Tree scene animations (ported from the approved design mock-ups) */
+@keyframes sway { 0%, 100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+@keyframes settle { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.025, 0.975); } }
+@keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes seedDrop { 0% { transform: translateY(-430px); } 55% { transform: translateY(0); } 70% { transform: translateY(-34px); } 84% { transform: translateY(0); } 92% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
+@keyframes moundRise { 0% { transform: scale(0.6, 0); } 70% { transform: scale(1.06, 1.1); } 100% { transform: scale(1, 1); } }
+@keyframes charge { 0% { filter: brightness(1); transform: scale(1); } 55% { filter: brightness(1.5); transform: scale(0.97, 1.03); } 100% { filter: brightness(7); transform: scale(1.03); } }
+@keyframes reveal { 0% { filter: brightness(7); transform: scale(0.84); } 35% { filter: brightness(4); transform: scale(1.08); } 65% { filter: brightness(1.5); transform: scale(0.98); } 100% { filter: brightness(1); transform: scale(1); } }
+@keyframes squash { 0% { transform: scale(1, 1); } 30% { transform: scale(1.04, 0.965); } 62% { transform: scale(0.985, 1.02); } 100% { transform: scale(1, 1); } }
+@keyframes glowIn { 0% { opacity: 0; transform: scale(0.35); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes glowOut { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes ray { 0% { opacity: 0; transform: translateY(-40px) scale(0.4); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-175px) scale(1); } }
+@keyframes leafUp { 0% { opacity: 0; transform: translate(0, 0) rotate(0deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(14px, -170px) rotate(260deg); } }
+@keyframes cloudPop { 0% { opacity: 0; transform: scale(0.2); } 18% { opacity: 1; transform: scale(1.12); } 28% { transform: scale(1); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.9); } }
+@keyframes rainDrop { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(230px); } }
+@keyframes toast { 0% { opacity: 0; transform: translateY(10px); } 15% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-8px); } }
+@keyframes twinkle { 0%, 100% { opacity: 0.15; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes fall { 0% { opacity: 0; transform: translate(0, 0) rotate(0deg); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate(-50px, 215px) rotate(250deg); } }
+@keyframes fly1 { 0% { transform: translate(0, 0) rotate(-8deg); } 25% { transform: translate(50px, -36px) rotate(10deg); } 50% { transform: translate(104px, 4px) rotate(-6deg); } 75% { transform: translate(46px, 30px) rotate(8deg); } 100% { transform: translate(0, 0) rotate(-8deg); } }
+@keyframes fly2 { 0% { transform: translate(0, 0); } 25% { transform: translate(-34px, 22px); } 50% { transform: translate(-70px, -8px); } 75% { transform: translate(-30px, -30px); } 100% { transform: translate(0, 0); } }
+@keyframes flap { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.35); } }
+@keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes birdIn { 0% { transform: translate(150px, -90px); } 18% { transform: translate(0, 0); } 22% { transform: translate(0, -6px); } 26% { transform: translate(0, 0); } 74% { transform: translate(0, 0); } 78% { transform: translate(0, -6px); } 82% { transform: translate(0, 0); } 100% { transform: translate(-190px, -110px); } }
+@keyframes slideUp { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
+
+/* Soil rim drawn over the seed and the sprout so they sit inside the mound (140x68 mound image) */
+.rim-seed { -webkit-mask-image: radial-gradient(ellipse 37.8px 70.4px at 70px -25.5px, transparent 0, transparent 96%, #000 100%); mask-image: radial-gradient(ellipse 37.8px 70.4px at 70px -25.5px, transparent 0, transparent 96%, #000 100%); }
+.rim-sprout { -webkit-mask-image: radial-gradient(ellipse 26.6px 70.4px at 70px -22.8px, transparent 0, transparent 96%, #000 100%); mask-image: radial-gradient(ellipse 26.6px 70.4px at 70px -22.8px, transparent 0, transparent 96%, #000 100%); }
+
+.step-in { animation: slideUp 0.35s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
