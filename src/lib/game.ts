@@ -97,7 +97,9 @@ export async function missionsForChild(q: Queryable, childId: number, date: stri
       else if (m.repeat === "weekly" && week.length > 0) state = week.some((d) => d.status === "pending") ? "pending" : "done";
       else if (m.repeat === "daily") {
         const limit = m.weekly_limit ?? 7;
-        if (today.length > 0 || week.length >= limit) state = "done";
+        // Today's try may still be waiting for a teacher (a daily photo mission): that is not "done" yet.
+        if (today.some((d) => d.status === "pending")) state = "pending";
+        else if (today.length > 0 || week.length >= limit) state = "done";
       }
       return { ...m, state, drops_now: Math.min(m.drops, room), done_this_week: week.length };
     });
