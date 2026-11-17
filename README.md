@@ -55,5 +55,6 @@ npx tsc --noEmit
 | `APP_URL` | 앱 주소 (QR 카드와 카카오 로그인 돌아오는 주소에 사용) |
 | `KAKAO_REST_API_KEY` | 카카오 로그인 REST API 키 |
 | `KAKAO_CLIENT_SECRET` | 카카오 로그인 Client Secret (사용 설정한 경우) |
+| `ADMIN_INVITE_CODE` | 새 데이터베이스에서 첫 관리자가 들어올 때 한 번 쓰는 초대 코드 |
 
 `.env.example`을 `.env.local`로 복사해 채웁니다. 비밀 값은 저장소에 올리지 않습니다.
