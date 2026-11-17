@@ -1,3 +1,4 @@
+import { PhoneColumn } from "@/components/ui";
 import { getKid } from "@/lib/auth";
 
 /**
@@ -16,7 +17,7 @@ export default async function KidLayout({ children }: { children: React.ReactNod
   return (
     <>
       <link rel="manifest" href={href} crossOrigin="use-credentials" />
-      {children}
+      <PhoneColumn>{children}</PhoneColumn>
     </>
   );
 }

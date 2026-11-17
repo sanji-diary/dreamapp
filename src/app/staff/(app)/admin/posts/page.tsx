@@ -1,3 +1,4 @@
+import { ContentTabs } from "@/components/staff/AdminMenu";
 import { Empty, Field, Flash, H2, SmallButton, SmallLink, SubHeader, Switch, textareaClass } from "@/components/staff/ui";
 import { ConfirmButton, PhotoInput, PhotoZoom } from "@/components/staff/widgets";
 import { primaryButtonClass } from "@/components/ui";
@@ -17,6 +18,7 @@ export default async function PostsAdminPage({ searchParams }: PageProps<"/staff
   return (
     <>
       <SubHeader back="/staff/admin" backLabel="관리로 돌아가기" title="숲 소식" />
+      <ContentTabs active="posts" />
       <Flash ok={sp.ok} error={sp.error} />
       <section className="flex flex-col px-4">
         <H2 right={editing ? <SmallLink href="/staff/admin/posts" tone="gray" width={60}>새로 쓰기</SmallLink> : null}>{editing ? "소식 고치기" : "새 소식"}</H2>

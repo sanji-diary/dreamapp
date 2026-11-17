@@ -3,6 +3,11 @@ import type { ReactNode } from "react";
 
 /** Shared building blocks. Sizes follow the approved mock-ups: 72px rows, 46px circles, 30px pills. */
 
+/** Phone-width column: on a desktop the app sits centered like a phone screen. */
+export function PhoneColumn({ children }: { children: ReactNode }) {
+  return <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white shadow-[0_0_40px_rgba(25,31,40,0.06)]">{children}</div>;
+}
+
 export type IconName = "drop" | "can" | "bible" | "stamp" | "house" | "bubble" | "pray" | "persimmon" | "badge" | "pouch" | "cloud" | "butterfly" | "bird" | "bee" | "leaf";
 
 export function Icon({ name, size = 36, className = "" }: { name: IconName | string; size?: number; className?: string }) {

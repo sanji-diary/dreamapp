@@ -19,10 +19,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body>
-        {/* Phone-width column: on a desktop the app sits centered like a phone screen. */}
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white shadow-[0_0_40px_rgba(25,31,40,0.06)]">{children}</div>
-      </body>
+      {/* Each area frames itself: children's screens and the teacher sign-in sit in a phone-width column
+          (PhoneColumn); the teacher screens add a sidebar on wide screens (staff/(app)/layout.tsx). */}
+      <body>{children}</body>
     </html>
   );
 }

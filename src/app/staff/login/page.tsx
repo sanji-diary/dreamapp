@@ -30,7 +30,7 @@ export default async function StaffLoginPage({ searchParams }: PageProps<"/staff
   const staff = dev ? await db.query<{ id: number; name: string; role: Role }>("select id, name, role from staff where active order by id") : [];
 
   return (
-    <main className="flex grow flex-col px-4 pt-16 pb-8">
+    <main className="mx-auto flex w-full max-w-[480px] grow flex-col px-4 pt-16 pb-8 break-keep">
       <h1 className="m-0 text-[22px] leading-[30px] font-bold tracking-[-0.5px]">선생님 로그인</h1>
       <p className="mt-1.5 mb-0 text-[14px] leading-5 tracking-[-0.2px] text-mute">
         {invited ? `${invited} 선생님, 환영해요. 카카오로 한 번만 로그인하면 돼요.` : "꿈의숲키우기 교사용 화면이에요."}

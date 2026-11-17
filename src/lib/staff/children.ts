@@ -1,5 +1,5 @@
 import "server-only";
-import { canApprove, canReadVisits, canSeeChildDetail, canWriteVisits, detailScope } from "@/lib/authz";
+import { canApprove, canReadVisits, canSeeChildDetail, canWriteVisits, detailScope, worryCondition } from "@/lib/authz";
 import { db, one } from "@/lib/db";
 import { completeMission, dropBalance, getSettings, missionsForChild, pointBalance, type MissionForChild } from "@/lib/game";
 import { newToken } from "@/lib/pin";
@@ -48,6 +48,13 @@ export async function newJoinerCount(staff: Staff): Promise<number> {
   return r?.n ?? 0;
 }
 
+/** Of the new joiners, those who still have no class or no recorded consent form: something a teacher has to do. */
+export async function joinersToSettle(staff: Staff): Promise<number> {
+  if (!canSeeNewJoiners(staff)) return 0;
+  const r = await one<{ n: number }>(db, "select count(*)::int as n from children c where c.active and c.self_joined and (c.class_id is null or c.consent_on is null)");
+  return r?.n ?? 0;
+}
+
 /** Everyone sees names, photos and classes. Nothing else leaves this function for children outside the teacher's scope. */
 export async function listChildren(staff: Staff, opts: { q?: string; classId?: number | null; includeInactive?: boolean; onlyNew?: boolean } = {}): Promise<ChildListItem[]> {
   const includeInactive = opts.includeInactive === true && staff.role === "admin";
@@ -79,6 +86,90 @@ export async function listChildren(staff: Staff, opts: { q?: string; classId?: n
       selfJoined: canOpen && r.self_joined,
     };
   });
+}
+
+/* ---------- numbers on the class list ---------- */
+
+export interface ChildStat {
+  /** Tree level, 1 (seed) to 6 (fruit). */
+  level: number;
+  /** The most recent Sundays (up to four, oldest first) on which the child's class had attendance taken, with this child's mark. */
+  weeks: { date: string; status: string | null }[];
+  /** How many of those the child came (late counts). */
+  attended: number;
+  /** Absent this many recorded Sundays in a row; 0 when fewer than two (same rule as longAbsent). */
+  absentWeeks: number;
+  /** Drops earned from missions this week (what counts toward the weekly cap). */
+  drops: number;
+  points: number;
+  /** Unread worries from this child that THIS teacher may read. Always 0 for teachers the child did not choose. */
+  worries: number;
+  school: string | null;
+}
+
+/** Sundays looked back over to find the last four on which a class had attendance taken. */
+const ATTENDANCE_LOOKBACK_WEEKS = 26;
+
+/**
+ * Numbers for the class list and the profile header. Only children this teacher may see in detail
+ * get an entry (checked here against the database, not against what the caller passes);
+ * everyone else is simply missing from the map.
+ */
+export async function childStats(staff: Staff, ids: number[], today: string = todayKst()): Promise<Map<number, ChildStat>> {
+  const out = new Map<number, ChildStat>();
+  if (ids.length === 0) return out;
+  const rows = await db.query<{ id: number; class_id: number | null; school: string | null; school_class: string | null; active: boolean }>(
+    "select id, class_id, school, school_class, active from children where id = any($1::int[])",
+    [ids],
+  );
+  const mine = rows.filter((r) => canSeeChildDetail(staff, r.class_id) && (r.active || staff.role === "admin"));
+  if (mine.length === 0) return out;
+  const idList = mine.map((r) => r.id);
+  const classIds = [...new Set(mine.map((r) => r.class_id).filter((c): c is number => c !== null))];
+  const ws = weekStart(today);
+  const cond = worryCondition(staff, 3);
+  const [trees, att, classDates, drops, points, worries] = await Promise.all([
+    db.query<{ child_id: number; level: number }>("select child_id, level from trees where child_id = any($1::int[]) and harvested_at is null", [idList]),
+    db.query<{ child_id: number; date: string; status: string }>("select child_id, date, status from attendance where child_id = any($1::int[]) and date >= $2 and date <= $3", [idList, addDays(ws, -7 * 60), ws]),
+    db.query<{ class_id: number; date: string }>(
+      `select distinct c.class_id, a.date from attendance a join children c on c.id = a.child_id
+        where c.active and c.class_id = any($1::int[]) and a.date >= $2 and a.date <= $3`,
+      [classIds, addDays(ws, -7 * ATTENDANCE_LOOKBACK_WEEKS), ws],
+    ),
+    db.query<{ child_id: number; n: number }>("select child_id, coalesce(sum(delta),0)::int as n from drop_ledger where child_id = any($1::int[]) and week_start = $2 and ref_type = 'mission' group by child_id", [idList, ws]),
+    db.query<{ child_id: number; n: number }>("select child_id, coalesce(sum(delta),0)::int as n from point_ledger where child_id = any($1::int[]) group by child_id", [idList]),
+    // The same rule as the worry box: only what the child chose to show this teacher.
+    db.query<{ child_id: number; n: number }>(
+      `select w.child_id, count(*)::int as n from worries w
+        where w.deleted_at is null and w.child_id = any($2::int[]) and ${cond.sql}
+          and not exists (select 1 from worry_reads r where r.worry_id = w.id and r.staff_id = $1)
+        group by w.child_id`,
+      [staff.id, idList, ...cond.params],
+    ),
+  ]);
+  // Per class: the last four Sundays with any attendance, oldest first.
+  const sundays = new Map<number, string[]>();
+  for (const classId of classIds) {
+    const dates = classDates.filter((d) => d.class_id === classId && weekStart(d.date) === d.date).map((d) => d.date).sort().reverse().slice(0, 4).reverse();
+    sundays.set(classId, dates);
+  }
+  const num = (list: { child_id: number; n: number }[], id: number) => list.find((x) => x.child_id === id)?.n ?? 0;
+  for (const r of mine) {
+    const byDate = new Map(att.filter((a) => a.child_id === r.id).map((a) => [a.date, a.status]));
+    const weeks = (r.class_id === null ? [] : (sundays.get(r.class_id) ?? [])).map((date) => ({ date, status: byDate.get(date) ?? null }));
+    const streak = streakFrom(byDate, byDate.has(ws) ? ws : addDays(ws, -7));
+    out.set(r.id, {
+      level: trees.find((t) => t.child_id === r.id)?.level ?? 1,
+      weeks,
+      attended: weeks.filter((w) => w.status === "present" || w.status === "late").length,
+      absentWeeks: streak.kind === "absent" && streak.n >= 2 ? streak.n : 0,
+      drops: num(drops, r.id),
+      points: num(points, r.id),
+      worries: num(worries, r.id),
+      school: [r.school, r.school_class].filter(Boolean).join(" ") || null,
+    });
+  }
+  return out;
 }
 
 /* ---------- detail ---------- */
@@ -470,10 +561,10 @@ export async function proxyComplete(staff: Staff, childId: number, missionId: nu
 /* ---------- home screen ---------- */
 
 /** Children (within detail scope) absent two or more recorded weeks in a row, most recent week first. */
-export async function longAbsent(staff: Staff): Promise<{ id: number; name: string; class_name: string | null; weeks: number }[]> {
+export async function longAbsent(staff: Staff): Promise<{ id: number; name: string; class_id: number | null; class_name: string | null; weeks: number }[]> {
   const sc = scopeSql(detailScope(staff), "c.class_id", 1);
-  const kids = await db.query<{ id: number; name: string; class_name: string | null }>(
-    `select c.id, c.name, k.name as class_name from children c left join classes k on k.id = c.class_id where c.active and ${sc.sql} order by k.sort nulls last, c.name`,
+  const kids = await db.query<{ id: number; name: string; class_id: number | null; class_name: string | null }>(
+    `select c.id, c.name, c.class_id, k.name as class_name from children c left join classes k on k.id = c.class_id where c.active and ${sc.sql} order by k.sort nulls last, c.name`,
     sc.params,
   );
   if (kids.length === 0) return [];

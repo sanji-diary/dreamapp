@@ -93,7 +93,7 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/staff/
           {reports.length === 0 ? <Empty>신고된 댓글이 없어요.</Empty> : null}
         </section>
 
-        {canSeeWorryBox(staff) && unread > 0 ? (
+        {canSeeWorryBox(staff) ? (
           <section className="flex flex-col">
             <SectionTitle>고민함</SectionTitle>
             <div className="flex min-h-[72px] items-center gap-[13px]">
@@ -101,10 +101,10 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/staff/
                 <Icon name="bubble" />
               </Circle>
               <div className="flex min-w-0 grow flex-col gap-px">
-                <div className="text-[17px] leading-[23px] font-bold tracking-[-0.4px] text-ink2">새 고민 {unread}건</div>
-                <div className="truncate text-[13px] leading-[18px] tracking-[-0.2px] text-sub">아이가 보여 주기로 했어요</div>
+                <div className="text-[17px] leading-[23px] font-bold tracking-[-0.4px] text-ink2">{unread > 0 ? `새 고민 ${unread}건` : "새 고민이 없어요"}</div>
+                <div className="truncate text-[13px] leading-[18px] tracking-[-0.2px] text-sub">{unread > 0 ? "아이가 보여 주기로 했어요" : "지난 고민과 답장을 볼 수 있어요"}</div>
               </div>
-              <SmallLink href="/staff/worries" width={60}>
+              <SmallLink href="/staff/worries" width={60} tone={unread > 0 ? "navy" : "gray"}>
                 열기
               </SmallLink>
             </div>

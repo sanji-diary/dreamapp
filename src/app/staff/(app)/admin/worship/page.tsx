@@ -1,3 +1,4 @@
+import { ContentTabs } from "@/components/staff/AdminMenu";
 import { Flash, H2, SubHeader, TextField } from "@/components/staff/ui";
 import { WorshipItems } from "@/components/staff/WorshipItems";
 import { AutoForm, ConfirmButton } from "@/components/staff/widgets";
@@ -21,6 +22,7 @@ export default async function WorshipAdminPage({ searchParams }: PageProps<"/sta
   return (
     <>
       <SubHeader back="/staff/admin" backLabel="관리로 돌아가기" title="예배 순서" />
+      <ContentTabs active="worship" />
       <Flash ok={sp.ok} error={sp.error} />
       <div className="flex flex-col gap-2 px-4 pt-1">
         <p className="m-0 text-[14px] leading-5 text-mute">

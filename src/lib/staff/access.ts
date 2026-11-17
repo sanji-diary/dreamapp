@@ -1,4 +1,4 @@
-import { detailScope } from "@/lib/authz";
+import { canWriteVisits, detailScope } from "@/lib/authz";
 import type { Queryable } from "@/lib/db";
 import type { Staff } from "@/lib/types";
 
@@ -29,7 +29,7 @@ export function canSeeWorryBox(s: Staff): boolean {
   return s.role === "admin" || s.can_read_pastor_worries || (s.role === "homeroom" && s.class_ids.length > 0);
 }
 
-/** Which bottom tabs a teacher gets. Tabs they cannot use at all are hidden (pages still check on their own). */
+/** Which menu items a teacher gets. Items they cannot use at all are hidden (pages still check on their own). */
 export function staffTabs(s: Staff) {
   return {
     attendance: hasScope(attendanceScope(s)),
@@ -37,6 +37,32 @@ export function staffTabs(s: Staff) {
     approvals: true, // every teacher may handle reported comments
     worries: canSeeWorryBox(s),
     admin: s.role === "admin",
+  };
+}
+
+/**
+ * The fifth tab of the phone tab bar (after 홈, 우리 반, +, 할 일).
+ * Teachers who see every class get 더보기. A teacher who takes attendance for their own class
+ * gets 출석 there instead and reaches "내 정보" from the round button on the home screen.
+ * Everyone else (교사 기본) keeps 더보기.
+ */
+export function fifthTab(s: Staff): "more" | "attendance" {
+  if (detailScope(s) === null) return "more";
+  return hasScope(attendanceScope(s)) ? "attendance" : "more";
+}
+
+/** True when there is at least one class this teacher may write visit notes for. */
+export function canWriteAnyVisits(s: Staff): boolean {
+  return s.role === "admin" || s.class_ids.some((id) => canWriteVisits(s, id));
+}
+
+/** What the "+" sheet offers. A row is left out when the teacher may not do it. */
+export function quickActions(s: Staff, festivalOpen: boolean) {
+  return {
+    attendance: hasScope(attendanceScope(s)),
+    visit: canWriteAnyVisits(s),
+    proxy: hasScope(approveScope(s)),
+    festival: festivalOpen,
   };
 }
 

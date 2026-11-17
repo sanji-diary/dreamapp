@@ -151,7 +151,7 @@ export function AttendanceBoard({ date, kids }: { date: string; kids: RosterKid[
           );
         })}
       </ul>
-      <div className="sticky bottom-[76px] z-10 bg-white px-4 pt-2.5 pb-2.5">
+      <div className="sticky bottom-[76px] z-10 bg-white px-4 pt-2.5 pb-2.5 lg:bottom-0">
         {message ? (
           <p role={message.error ? "alert" : "status"} className={`m-0 pb-2 text-center text-[13px] font-semibold ${message.error ? "text-danger" : "text-navy"}`}>
             {message.text}

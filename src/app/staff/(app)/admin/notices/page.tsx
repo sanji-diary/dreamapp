@@ -1,3 +1,4 @@
+import { ContentTabs } from "@/components/staff/AdminMenu";
 import { Empty, Field, Flash, H2, SmallLink, SubHeader, Switch, TextField, textareaClass } from "@/components/staff/ui";
 import { ConfirmButton } from "@/components/staff/widgets";
 import { Tag, primaryButtonClass } from "@/components/ui";
@@ -16,6 +17,7 @@ export default async function NoticesAdminPage({ searchParams }: PageProps<"/sta
   return (
     <>
       <SubHeader back="/staff/admin" backLabel="관리로 돌아가기" title="공지" />
+      <ContentTabs active="notices" />
       <Flash ok={sp.ok} error={sp.error} />
       <section className="flex flex-col px-4">
         <H2 right={editing ? <SmallLink href="/staff/admin/notices" tone="gray" width={60}>새로 쓰기</SmallLink> : null}>{editing ? "공지 고치기" : "새 공지"}</H2>

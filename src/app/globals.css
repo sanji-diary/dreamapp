@@ -27,6 +27,13 @@
   --color-warn-tint: #fbf0dc;
   --color-sky: #e4f3fb;
   --color-ground: #eaeaa8;
+  /* Teacher screens (design-reference/admin-design.html) */
+  --color-blue-tint: #e8f1fd;
+  --color-count: #e5343b;
+  --color-track: #e5e8eb;
+  --color-sky-deep: #dcedfb;
+  --color-ground-deep: #e3e394;
+  --color-hill: #d3e6cd;
 }
 
 html,
@@ -84,6 +91,22 @@ select {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* Teacher screens use the whole width of the screen (unfolded phones, tablets, desktops).
+   Pages not yet redesigned for that stay in a readable column: centered on tablets, at the left
+   of the content area beside the sidebar. Redesigned pages opt out by rendering the kit's <Page>
+   (data-wide) as their root and choose their own width. */
+@media screen {
+  .staff-main:not(:has(> [data-wide])) { width: 100%; max-width: 640px; margin-inline: auto; }
+}
+@media screen and (min-width: 64rem) {
+  .staff-main:not(:has(> [data-wide])) { margin-inline: 0; }
+}
+
+/* The "+" sheet of the teacher tab bar slides up from the bottom. */
+@keyframes sheetUp { 0% { transform: translateY(100%); } 100% { transform: translateY(0); } }
+.quick-sheet[open] { animation: sheetUp 0.22s ease-out both; }
+.quick-sheet::backdrop { background: rgba(25, 31, 40, 0.48); }
 
 /* The birth-year wheel scrolls without showing a scrollbar. */
 .year-wheel { scrollbar-width: none; }

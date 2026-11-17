@@ -29,6 +29,15 @@ export function formatKoreanDate(date: string): string {
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${DAYS[d.getUTCDay()]}`;
 }
 
+/**
+ * '11월 3주차': the week is named after its Sunday, counted within that Sunday's month.
+ * A week that starts on November 29 is still '11월 5주차' on Wednesday, December 2.
+ */
+export function weekLabel(date: string = todayKst()): string {
+  const d = new Date(weekStart(date) + "T00:00:00Z");
+  return `${d.getUTCMonth() + 1}월 ${Math.floor((d.getUTCDate() - 1) / 7) + 1}주차`;
+}
+
 /** Korean age is not used; this is the international age in whole years. */
 export function ageOn(birth: string | null, on: string = todayKst()): number | null {
   if (!birth) return null;

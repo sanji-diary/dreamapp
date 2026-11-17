@@ -144,7 +144,7 @@ export async function visitAction(formData: FormData) {
   const staff = await requireStaff();
   const childId = toInt(formData.get("child_id"));
   if (childId === null) redirect("/staff/children");
-  const here = `/staff/children/${childId}`;
+  const here = `/staff/children/${childId}?tab=visits`;
   const op = clean(formData.get("op"), 10);
   const input = { visited_on: clean(formData.get("visited_on"), 10), method: clean(formData.get("method"), 12), content: clean(formData.get("content"), 4000) };
   const visitId = toInt(formData.get("visit_id"));
@@ -163,7 +163,7 @@ export async function proxyMissionAction(formData: FormData) {
   const missionId = toInt(formData.get("mission_id"));
   if (childId === null || missionId === null) redirect("/staff/children");
   const r = await proxyComplete(staff, childId, missionId);
-  finish(r, `/staff/children/${childId}`, r.ok ? `대신 입력했어요 · 물방울 ${r.drops}개, ${r.points}P` : undefined);
+  finish(r, `/staff/children/${childId}?tab=activity`, r.ok ? `대신 입력했어요 · 물방울 ${r.drops}개, ${r.points}P` : undefined);
 }
 
 /* ---------- approvals and comments ---------- */
