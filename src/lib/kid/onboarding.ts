@@ -75,7 +75,8 @@ export type SaveResult = { ok: true; childId: number } | { ok: false; reason: "n
 /**
  * Finishes the first-time setup for the child who holds this QR card.
  * Only works once: a card whose child already has a PIN cannot be re-registered by someone else.
- * A skipped class keeps the class the teacher chose. Parental consent does not block joining:
+ * A class a teacher already chose stays: the child's answer is used only when there is none, so a
+ * child cannot move themselves to another class. Parental consent does not block joining:
  * teachers track it on the profile ("동의서 확인 필요").
  */
 export async function saveOnboarding(token: string, input: OnboardingInput): Promise<SaveResult> {
@@ -89,7 +90,7 @@ export async function saveOnboarding(token: string, input: OnboardingInput): Pro
   const pinHash = await hashPin(d.pin);
   const saved = await db.tx(async (q) => {
     const rows = await q.query<{ id: number }>(
-      `update children set name = $2, gender = $3, birth_year = $4, school = $5, class_id = coalesce($6, class_id),
+      `update children set name = $2, gender = $3, birth_year = $4, school = $5, class_id = coalesce(class_id, $6),
          pin_hash = $7, pin_fail_count = 0, pin_locked_until = null, onboarded_at = now()
        where id = $1 and pin_hash is null returning id`,
       [child.id, d.name, d.gender, d.birthYear, d.school, d.classId, pinHash],
@@ -130,7 +131,7 @@ export async function selfRegister(code: string, input: OnboardingInput): Promis
     const waiting = await q.query<{ id: number }>("select id from children where active and name = $1 and pin_hash is null and onboarded_at is null", [d.name]);
     if (waiting.length === 1) {
       const rows = await q.query<{ id: number; qr_token: string }>(
-        `update children set gender = $2, birth_year = $3, school = $4, class_id = coalesce($5, class_id),
+        `update children set gender = $2, birth_year = $3, school = $4, class_id = coalesce(class_id, $5),
            pin_hash = $6, pin_fail_count = 0, pin_locked_until = null, onboarded_at = now(), self_joined = true
          where id = $1 and pin_hash is null and onboarded_at is null returning id, qr_token`,
         [waiting[0].id, d.gender, d.birthYear, d.school, d.classId, pinHash],

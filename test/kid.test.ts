@@ -100,12 +100,17 @@ describe("onboarding", () => {
     expect(await verifyPin("4821", (await one<{ pin_hash: string }>(db, "select pin_hash from children where id = $1", [s.newKid]))!.pin_hash)).toBe(true);
   });
 
-  it("refuses unknown cards and classes that do not exist; a chosen class is saved", async () => {
+  it("refuses unknown cards and classes that do not exist; a chosen class fills an empty one but never replaces the teacher's", async () => {
     expect(await saveOnboarding("nope", good)).toMatchObject({ ok: false, reason: "not_found" });
     expect(await saveOnboarding("card-new", { ...good, classId: 99999 })).toMatchObject({ ok: false, reason: "invalid", errors: { classId: expect.any(String) } });
     expect(await one(db, "select id from children where id = $1 and pin_hash is not null", [s.newKid])).toBeNull();
+    // The teacher put this child in a class: the child's own pick does not move them.
     expect(await saveOnboarding("card-new", { ...good, classId: s.otherClassId })).toMatchObject({ ok: true });
-    expect(await one(db, "select class_id from children where id = $1", [s.newKid])).toEqual({ class_id: s.otherClassId });
+    expect(await one(db, "select class_id from children where id = $1", [s.newKid])).toEqual({ class_id: s.classId });
+    // A card with no class yet takes the child's pick.
+    await db.query("insert into children (name, qr_token) values ('반없는아이', 'card-noclass')");
+    expect(await saveOnboarding("card-noclass", { ...good, name: "반없는아이", classId: s.otherClassId })).toMatchObject({ ok: true });
+    expect(await one(db, "select class_id from children where qr_token = 'card-noclass'")).toEqual({ class_id: s.otherClassId });
   });
 
   it("no longer waits for parental consent: a child without it joins, and can make a new PIN later", async () => {

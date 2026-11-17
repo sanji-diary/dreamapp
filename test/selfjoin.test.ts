@@ -85,10 +85,10 @@ describe("self-join with the shared QR", () => {
     expect(await kidLogin("pre-card", "4821")).toMatchObject({ ok: true });
   });
 
-  it("a class the child picks replaces the waiting record's class", async () => {
+  it("a class the teacher already set stays, even when the child picks another", async () => {
     const pre = (await db.query<{ id: number }>("insert into children (name, class_id, qr_token) values ('새친구', $1, 'pre-card') returning id", [s.A]))[0].id;
     expect(await selfRegister(s.code, { ...good, classId: s.B })).toMatchObject({ ok: true, childId: pre, claimed: true });
-    expect(await child(pre)).toMatchObject({ class_id: s.B });
+    expect(await child(pre)).toMatchObject({ class_id: s.A });
   });
 
   it("makes a new record when two waiting children share the name, or the namesake already started or left", async () => {

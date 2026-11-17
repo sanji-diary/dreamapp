@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { primaryButtonClass } from "@/components/ui";
 import { completeOnboardingAction, newPinAction, selfJoinAction } from "@/lib/kid/actions";
 import type { OnboardingErrors, OnboardingField } from "@/lib/kid/onboarding";
@@ -18,7 +18,6 @@ import { PinDots, PinKeys } from "./PinPad";
 type AskKey = "name" | "gender" | "birth" | "school" | "classId";
 type StepKey = AskKey | "pin" | "pin2";
 const ASK_STEPS: AskKey[] = ["name", "gender", "birth", "school", "classId"];
-const ALL_STEPS: StepKey[] = [...ASK_STEPS, "pin", "pin2"];
 const PIN_STEPS: StepKey[] = ["pin", "pin2"];
 
 export interface JoinPrefill {
@@ -85,7 +84,10 @@ function BackArrow() {
 }
 
 export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: Props) {
-  const steps = pinOnly ? PIN_STEPS : ALL_STEPS;
+  // A card whose teacher already chose the class does not ask for it: the teacher's class stays.
+  const classSet = entry.kind === "card" && prefill.classId !== null;
+  const askSteps = useMemo<AskKey[]>(() => (pinOnly ? [] : classSet ? ASK_STEPS.filter((k) => k !== "classId") : ASK_STEPS), [pinOnly, classSet]);
+  const steps = useMemo<StepKey[]>(() => [...askSteps, ...PIN_STEPS], [askSteps]);
   const pinIndex = steps.indexOf("pin");
   const [index, setIndex] = useState(0);
   /** The furthest question reached so far: answers before it are shown in the stack. */
@@ -254,7 +256,7 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
     classId: classId === null ? "잘 모르겠어요" : (classes.find((c) => c.id === classId)?.name ?? "잘 모르겠어요"),
   };
   // Newest first, like the stack of a bank sign-up form.
-  const earlier = ASK_STEPS.map((k, i) => ({ k, i }))
+  const earlier = askSteps.map((k, i) => ({ k, i }))
     .filter(({ i }) => i < reached && i !== index)
     .reverse();
 
