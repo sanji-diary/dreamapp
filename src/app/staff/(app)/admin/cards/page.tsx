@@ -26,7 +26,7 @@ const PRINT_CSS = `
   .qr-card img { width: 46mm !important; height: 46mm !important; }
   .qr-name { font-size: 20pt !important; line-height: 1.2 !important; }
   .qr-class { font-size: 11pt !important; }
-  .qr-help { font-size: 8.5pt !important; line-height: 1.35 !important; }
+  .qr-help { font-size: 8.5pt !important; line-height: 1.35 !important; word-break: keep-all; }
   .qr-brand { font-size: 9pt !important; }
 }
 `;

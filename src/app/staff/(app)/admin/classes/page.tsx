@@ -13,7 +13,7 @@ const smallInput = "h-11 min-w-0 rounded-[10px] border-[1.5px] border-[#D1D6DB] 
 
 function GradeSelect({ id, value }: { id: string; value: number | null }) {
   return (
-    <select id={id} name="grade" defaultValue={value ?? ""} aria-label="학년" className={`${smallInput} w-[84px] shrink-0 px-2`}>
+    <select id={id} name="grade" defaultValue={value ?? ""} aria-label="학년" className={`${smallInput} w-[96px] shrink-0 px-2`}>
       <option value="">학년 없음</option>
       {[1, 2, 3, 4, 5, 6].map((g) => (
         <option key={g} value={g}>
