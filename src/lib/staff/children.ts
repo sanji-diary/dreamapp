@@ -69,6 +69,7 @@ export interface ChildDetail {
   class_id: number | null;
   class_name: string | null;
   birth_date: string | null;
+  birth_year: number | null;
   age: number | null;
   gender: "M" | "F" | null;
   school: string | null;
@@ -112,13 +113,13 @@ export function canResetPin(staff: Staff, classId: number | null): boolean {
 /** Returns null when the child does not exist or the teacher may not see details. Callers show "not found" either way. */
 export async function getChildDetail(staff: Staff, id: number): Promise<ChildDetail | null> {
   const c = await one<{
-    id: number; name: string; class_id: number | null; class_name: string | null; birth_date: string | null; gender: "M" | "F" | null;
+    id: number; name: string; class_id: number | null; class_name: string | null; birth_date: string | null; birth_year: number | null; gender: "M" | "F" | null;
     school: string | null; school_class: string | null; address: string | null; phone: string | null; guardian_phone: string | null;
     photo_url: string | null; best_friend_id: number | null; best_friend_name: string | null; friend_name: string | null; friend_class: number | null;
     has_phone: boolean; has_pin: boolean; onboarded_at: Date | null; consent_on: string | null; photo_consent: boolean; memo: string | null; active: boolean;
   }>(
     db,
-    `select c.id, c.name, c.class_id, k.name as class_name, c.birth_date, c.gender, c.school, c.school_class, c.address, c.phone, c.guardian_phone,
+    `select c.id, c.name, c.class_id, k.name as class_name, c.birth_date, c.birth_year, c.gender, c.school, c.school_class, c.address, c.phone, c.guardian_phone,
             c.photo_url, c.best_friend_id, c.best_friend_name, f.name as friend_name, f.class_id as friend_class,
             c.has_phone, (c.pin_hash is not null) as has_pin, c.onboarded_at, c.consent_on, c.photo_consent, c.memo, c.active
        from children c left join classes k on k.id = c.class_id left join children f on f.id = c.best_friend_id
@@ -165,7 +166,9 @@ export async function getChildDetail(staff: Staff, id: number): Promise<ChildDet
     class_id: c.class_id,
     class_name: c.class_name,
     birth_date: c.birth_date,
-    age: ageOn(c.birth_date, today),
+    birth_year: c.birth_year,
+    // Children enter only their birth year when they join; use it until a teacher adds the full date.
+    age: ageOn(c.birth_date, today) ?? (c.birth_year ? Number(today.slice(0, 4)) - c.birth_year : null),
     gender: c.gender,
     school: c.school,
     school_class: c.school_class,
@@ -287,7 +290,7 @@ export async function updateChild(staff: Staff, id: number, input: ChildInput): 
   const v = n.v;
   await db.tx(async (q) => {
     await q.query(
-      `update children set name=$2, class_id=$3, birth_date=$4, gender=$5, school=$6, school_class=$7, address=$8, phone=$9, guardian_phone=$10,
+      `update children set name=$2, class_id=$3, birth_date=$4, birth_year=coalesce(extract(year from $4::date)::int, birth_year), gender=$5, school=$6, school_class=$7, address=$8, phone=$9, guardian_phone=$10,
               best_friend_id=$11, best_friend_name=$12, has_phone=$13, memo=$14, photo_url=coalesce($15, photo_url) where id=$1`,
       [id, v.name, classId, v.birth_date, v.gender, v.school, v.school_class, v.address, v.phone, v.guardian_phone, v.best_friend_id, v.best_friend_name, v.has_phone, v.memo, input.photo_url ?? null],
     );

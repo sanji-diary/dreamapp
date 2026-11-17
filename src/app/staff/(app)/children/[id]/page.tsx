@@ -94,7 +94,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/st
       ) : null}
 
       <section className="flex flex-col px-4 pt-2">
-        <InfoRow label="생년월일">{c.birth_date ? c.birth_date.replaceAll("-", ". ") : "-"}</InfoRow>
+        <InfoRow label="생년월일">{c.birth_date ? c.birth_date.replaceAll("-", ". ") : c.birth_year ? `${c.birth_year}년생` : "-"}</InfoRow>
         <InfoRow label="학교">{school || "-"}</InfoRow>
         <InfoRow label="주소">{c.address ?? "-"}</InfoRow>
         <InfoRow label="연락처">{c.phone ? <a href={`tel:${c.phone}`}>{c.phone}</a> : "-"}</InfoRow>

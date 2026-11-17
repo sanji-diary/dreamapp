@@ -99,8 +99,16 @@ describe("missions and drops", () => {
     await recordAttendance(s.teacherId, s.kidId, WS, "present");
     await recordAttendance(s.teacherId, s.kidId, WS, "late");
     expect(await dropBalance(db, s.kidId)).toBe(2);
+    // A mistaken tap is undone: the drops and points go back, and marking present again re-awards once.
     await recordAttendance(s.teacherId, s.kidId, WS, "absent");
+    expect(await dropBalance(db, s.kidId)).toBe(0);
+    expect(await pointBalance(db, s.kidId)).toBe(0);
+    await recordAttendance(s.teacherId, s.kidId, WS, "present", "늦잠");
     expect(await dropBalance(db, s.kidId)).toBe(2);
+    await recordAttendance(s.teacherId, s.kidId, WS, "late");
+    expect((await db.query<{ note: string }>("select note from attendance where child_id = $1", [s.kidId]))[0].note).toBe("늦잠");
+    await recordAttendance(s.teacherId, s.kidId, WS, null);
+    expect(await dropBalance(db, s.kidId)).toBe(0);
   });
 });
 

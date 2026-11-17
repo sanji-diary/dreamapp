@@ -20,10 +20,10 @@ export async function seedIfEmpty(q: Queryable) {
 
   const staff = await q.query<{ id: number; name: string }>(
     `insert into staff (name, role, can_attendance, can_visits, can_approve, can_view_all, can_read_pastor_worries, invite_code) values
-      ('김인성', 'admin', true, true, true, true, true, 'demo-admin'),
-      ('박지현', 'homeroom', true, true, true, false, false, 'demo-homeroom'),
-      ('이부장', 'head', true, true, true, true, false, 'demo-head'),
-      ('최기본', 'basic', false, false, false, false, false, 'demo-basic')
+      ('김인성', 'admin', true, true, true, true, true, null),
+      ('박지현', 'homeroom', true, true, true, false, false, null),
+      ('이부장', 'head', true, true, true, true, false, null),
+      ('최기본', 'basic', false, false, false, false, false, null)
      returning id, name`,
   );
   const sid = (name: string) => staff.find((s) => s.name === name)!.id;

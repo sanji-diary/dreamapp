@@ -38,11 +38,11 @@ export async function pointBalance(q: Queryable, childId: number): Promise<numbe
   return r?.n ?? 0;
 }
 
-/** Drops earned from missions in the given week. Only these count toward the weekly cap. */
+/** Drops earned from missions in the given week (corrections included). Only these count toward the weekly cap. */
 export async function weekDropsEarned(q: Queryable, childId: number, ws: string): Promise<number> {
   const r = await one<{ n: number }>(
     q,
-    "select coalesce(sum(delta),0)::int as n from drop_ledger where child_id = $1 and week_start = $2 and ref_type = 'mission' and delta > 0",
+    "select coalesce(sum(delta),0)::int as n from drop_ledger where child_id = $1 and week_start = $2 and ref_type = 'mission'",
     [childId, ws],
   );
   return r?.n ?? 0;
@@ -233,16 +233,46 @@ export async function harvestTree(childId: number): Promise<HarvestResult> {
   });
 }
 
-/** Saves attendance and, for present or late, completes this week's attendance mission. */
+/**
+ * Takes back what an attendance mission gave when the attendance turns out to be wrong
+ * (a mistaken tap). The ledgers stay append-only: the award is cancelled with opposite rows.
+ */
+async function revokeAttendanceAward(staffId: number, childId: number, date: string) {
+  await db.tx(async (q) => {
+    const rows = await q.query<{ id: number; drops_awarded: number; points_awarded: number; week_start: string }>(
+      `select mc.id, mc.drops_awarded, mc.points_awarded, mc.week_start
+         from mission_completions mc join missions m on m.id = mc.mission_id
+        where mc.child_id = $1 and mc.done_on = $2 and m.kind = 'attendance' and mc.status = 'approved'`,
+      [childId, date],
+    );
+    for (const c of rows) {
+      await q.query("update mission_completions set status = 'rejected', reviewed_by = $2, reviewed_at = now() where id = $1", [c.id, staffId]);
+      if (c.drops_awarded > 0) {
+        await q.query("insert into drop_ledger (child_id, delta, reason, ref_type, ref_id, week_start, staff_id) values ($1,$2,'출석 정정','mission',$3,$4,$5)", [childId, -c.drops_awarded, c.id, c.week_start, staffId]);
+      }
+      if (c.points_awarded > 0) {
+        await q.query("insert into point_ledger (child_id, delta, reason, ref_type, ref_id, staff_id) values ($1,$2,'출석 정정','mission',$3,$4)", [childId, -c.points_awarded, c.id, staffId]);
+      }
+    }
+  });
+}
+
+/**
+ * Saves attendance. Present or late completes this week's attendance mission; changing to
+ * absent or clearing the mark takes that award back. An omitted note keeps the existing one.
+ */
 export async function recordAttendance(staffId: number, childId: number, date: string, status: "present" | "late" | "absent" | null, note?: string) {
   if (status === null) {
     await db.query("delete from attendance where child_id = $1 and date = $2", [childId, date]);
+    await revokeAttendanceAward(staffId, childId, date);
     return;
   }
   await db.query(
     `insert into attendance (child_id, date, status, note, staff_id) values ($1,$2,$3,$4,$5)
-     on conflict (child_id, date) do update set status = excluded.status, note = excluded.note, staff_id = excluded.staff_id`,
-    [childId, date, status, note ?? null, staffId],
+     on conflict (child_id, date) do update set status = excluded.status, staff_id = excluded.staff_id,
+       note = case when $6::boolean then excluded.note else attendance.note end`,
+    [childId, date, status, note ?? null, staffId, note !== undefined],
   );
-  if (status !== "absent") await autoComplete(childId, "attendance", { byStaffId: staffId, date });
+  if (status === "absent") await revokeAttendanceAward(staffId, childId, date);
+  else await autoComplete(childId, "attendance", { byStaffId: staffId, date });
 }

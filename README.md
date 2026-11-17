@@ -57,4 +57,6 @@ npx tsc --noEmit
 | `KAKAO_CLIENT_SECRET` | 카카오 로그인 Client Secret (사용 설정한 경우) |
 | `ADMIN_INVITE_CODE` | 새 데이터베이스에서 첫 관리자가 들어올 때 한 번 쓰는 초대 코드 |
 
+카카오 개발자 사이트에는 Redirect URI로 `${APP_URL}/api/auth/kakao/callback`을 등록합니다.
+
 `.env.example`을 `.env.local`로 복사해 채웁니다. 비밀 값은 저장소에 올리지 않습니다.
