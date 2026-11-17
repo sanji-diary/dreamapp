@@ -6,6 +6,7 @@ process.env.DREAM_SEED = "off";
 import { db, resetDbForTests } from "@/lib/db";
 import { completeMission, dropBalance, harvestTree, missionsForChild, pointBalance, recordAttendance, reviewCompletion, waterTree } from "@/lib/game";
 import { canReadWorry, canSeeChildDetail, canWriteVisits, worryCondition } from "@/lib/authz";
+import { submitVerse } from "@/lib/kid/verse";
 import { weekStart } from "@/lib/time";
 import type { Staff } from "@/lib/types";
 
@@ -105,10 +106,17 @@ describe("missions and drops", () => {
     expect((await completeMission(s.kidId, m, { date: DATE })).ok).toBe(true);
   });
 
-  it("verse missions need the exact text", async () => {
+  it("verse missions count only when the server has compared the writing; a teacher may still enter one", async () => {
     const m = await s.add("말씀", "verse", 2, 15, "weekly", null, { verse: "여호와는 나의 목자시니" });
-    expect(await completeMission(s.kidId, m, { date: DATE, text: "여호와는 나의 목자" })).toMatchObject({ ok: false, reason: "invalid" });
-    expect(await completeMission(s.kidId, m, { date: DATE, text: "여호와는 나의 목자시니" })).toMatchObject({ ok: true, drops: 2 });
+    // The text a browser sends along proves nothing: without the server's own check the mission stays open.
+    expect(await completeMission(s.kidId, m, { date: DATE, text: "여호와는 나의 목자시니" })).toEqual({ ok: false, reason: "not_available" });
+    expect(await submitVerse(s.kidId, m, 0, "여호와는 나의 목자", DATE)).toMatchObject({ ok: false, reason: "mismatch", at: 10 });
+    expect(await dropBalance(db, s.kidId)).toBe(0);
+    expect(await submitVerse(s.kidId, m, 0, "여호와는 나의 목자시니", DATE)).toMatchObject({ ok: true, finished: true, drops: 2, points: 15 });
+    expect(await dropBalance(db, s.kidId)).toBe(2);
+
+    const kid2 = (await db.query<{ id: number }>("insert into children (name, class_id, qr_token) values ('폰없음', $1, 't2') returning id", [s.classId]))[0].id;
+    expect(await completeMission(kid2, m, { date: DATE, byStaffId: s.teacherId })).toMatchObject({ ok: true, status: "approved", drops: 2 });
   });
 
   it("marking attendance completes the attendance mission once", async () => {

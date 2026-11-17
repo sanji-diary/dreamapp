@@ -130,48 +130,63 @@ describe("QR missions", () => {
 });
 
 describe("QR self check-in for attendance", () => {
-  it("marks the child present today with no staff id and completes the attendance mission", async () => {
+  // Attendance belongs to Sunday worship: these scans happen on this week's Sunday (missions here run Sunday to Saturday).
+  const SUN = WS;
+
+  it("marks the child present that Sunday with no staff id and completes the attendance mission", async () => {
     const m = await s.add("attendance", { code: "att-code-001" });
-    const r = await scanQr(s.kid, "att-code-001");
+    const r = await scanQr(s.kid, "att-code-001", SUN);
     expect(r).toMatchObject({ ok: true, kind: "attendance" });
     const a = await one<{ status: string; staff_id: number | null; date: string }>(db, "select status, staff_id, date from attendance where child_id = $1", [s.kid]);
-    expect(a).toEqual({ status: "present", staff_id: null, date: TODAY });
+    expect(a).toEqual({ status: "present", staff_id: null, date: SUN });
     expect(await dropBalance(db, s.kid)).toBe(2);
     const c = await db.query<{ status: string; entered_by_staff_id: number | null }>("select status, entered_by_staff_id from mission_completions where mission_id = $1 and child_id = $2", [m, s.kid]);
     expect(c).toEqual([{ status: "approved", entered_by_staff_id: null }]);
 
-    expect(await scanQr(s.kid, "att-code-001")).toEqual({ ok: false, reason: "already" });
+    expect(await scanQr(s.kid, "att-code-001", SUN)).toEqual({ ok: false, reason: "already" });
     expect(await dropBalance(db, s.kid)).toBe(2);
     expect(await db.query("select id from attendance where child_id = $1", [s.kid])).toHaveLength(1);
   });
 
+  it("an attendance QR works on Sundays only; an ordinary QR mission works on any day", async () => {
+    await s.add("attendance", { code: "att-code-001" });
+    await s.add("qr", { code: "qr-code-0001" });
+    // Monday to Saturday of the same week: the mission is open, but it is not Sunday.
+    for (let i = 1; i <= 6; i++) expect(await scanQr(s.kid, "att-code-001", addDays(SUN, i))).toEqual({ ok: false, reason: "not_sunday" });
+    expect(await db.query("select id from attendance")).toHaveLength(0);
+    expect(await db.query("select id from mission_completions")).toHaveLength(0);
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    expect(await scanQr(s.kid, "qr-code-0001", addDays(SUN, 3))).toMatchObject({ ok: true, kind: "qr" });
+    expect(await scanQr(s.kid, "att-code-001", SUN)).toMatchObject({ ok: true, kind: "attendance" });
+  });
+
   it("does nothing outside the mission's dates", async () => {
-    await s.add("attendance", { code: "att-code-old", starts: addDays(TODAY, -7), ends: addDays(TODAY, -1) });
-    await s.add("attendance", { code: "att-code-new", starts: addDays(TODAY, 1), ends: addDays(TODAY, 1) });
-    expect(await scanQr(s.kid, "att-code-old")).toEqual({ ok: false, reason: "closed" });
-    expect(await scanQr(s.kid, "att-code-new")).toEqual({ ok: false, reason: "closed" });
-    // The same code on the mission's own day works.
-    expect(await scanQr(s.kid, "att-code-new", addDays(TODAY, 1))).toMatchObject({ ok: true });
-    expect(await db.query<{ date: string }>("select date from attendance where child_id = $1", [s.kid])).toEqual([{ date: addDays(TODAY, 1) }]);
+    await s.add("attendance", { code: "att-code-old", starts: addDays(SUN, -7), ends: addDays(SUN, -1) });
+    await s.add("attendance", { code: "att-code-new", starts: addDays(SUN, 7), ends: addDays(SUN, 7) });
+    expect(await scanQr(s.kid, "att-code-old", SUN)).toEqual({ ok: false, reason: "closed" });
+    expect(await scanQr(s.kid, "att-code-new", SUN)).toEqual({ ok: false, reason: "closed" });
+    // The same code on the mission's own Sunday works.
+    expect(await scanQr(s.kid, "att-code-new", addDays(SUN, 7))).toMatchObject({ ok: true });
+    expect(await db.query<{ date: string }>("select date from attendance where child_id = $1", [s.kid])).toEqual([{ date: addDays(SUN, 7) }]);
   });
 
   it("never overwrites a teacher's mark, and a later 'absent' correction takes the award back", async () => {
     await s.add("attendance", { code: "att-code-001" });
     // Teacher marked the friend absent: the scan is refused and nothing changes.
-    await recordAttendance(s.teacherId, s.friend, TODAY, "absent");
-    expect(await scanQr(s.friend, "att-code-001")).toEqual({ ok: false, reason: "ask_teacher" });
+    await recordAttendance(s.teacherId, s.friend, SUN, "absent");
+    expect(await scanQr(s.friend, "att-code-001", SUN)).toEqual({ ok: false, reason: "ask_teacher" });
     expect(await one(db, "select status, staff_id from attendance where child_id = $1", [s.friend])).toEqual({ status: "absent", staff_id: s.teacherId });
     expect(await dropBalance(db, s.friend)).toBe(0);
 
     // Teacher marked the other child late first (which already completes the mission): the mark stays 'late'.
-    await recordAttendance(s.teacherId, s.otherKid, TODAY, "late");
-    expect(await scanQr(s.otherKid, "att-code-001")).toEqual({ ok: false, reason: "already" });
+    await recordAttendance(s.teacherId, s.otherKid, SUN, "late");
+    expect(await scanQr(s.otherKid, "att-code-001", SUN)).toEqual({ ok: false, reason: "already" });
     expect(await one(db, "select status, staff_id from attendance where child_id = $1", [s.otherKid])).toEqual({ status: "late", staff_id: s.teacherId });
 
     // A self check-in that turns out wrong is corrected by the teacher like any other mark.
-    expect(await scanQr(s.kid, "att-code-001")).toMatchObject({ ok: true });
+    expect(await scanQr(s.kid, "att-code-001", SUN)).toMatchObject({ ok: true });
     expect(await dropBalance(db, s.kid)).toBe(2);
-    await recordAttendance(s.teacherId, s.kid, TODAY, "absent");
+    await recordAttendance(s.teacherId, s.kid, SUN, "absent");
     expect(await dropBalance(db, s.kid)).toBe(0);
     expect(await pointBalance(db, s.kid)).toBe(0);
   });
@@ -179,23 +194,23 @@ describe("QR self check-in for attendance", () => {
   it("a scan completes only the mission that owns the code, not another attendance mission open that day", async () => {
     // The usual weekly attendance mission (the teacher's roll call), and a one-day event with its own QR.
     const weekly = await s.add("attendance");
-    const event = await s.add("attendance", { code: "att-code-evt", starts: TODAY, ends: TODAY });
-    expect(await scanQr(s.kid, "att-code-evt")).toMatchObject({ ok: true, kind: "attendance" });
+    const event = await s.add("attendance", { code: "att-code-evt", starts: SUN, ends: SUN });
+    expect(await scanQr(s.kid, "att-code-evt", SUN)).toMatchObject({ ok: true, kind: "attendance" });
     expect(await db.query("select mission_id from mission_completions where child_id = $1", [s.kid])).toEqual([{ mission_id: event }]);
     expect(await dropBalance(db, s.kid)).toBe(2);
     expect(await pointBalance(db, s.kid)).toBe(10);
-    // The child is still marked present today, without a teacher.
-    expect(await one(db, "select status, staff_id, date from attendance where child_id = $1", [s.kid])).toEqual({ status: "present", staff_id: null, date: TODAY });
+    // The child is still marked present that day, without a teacher.
+    expect(await one(db, "select status, staff_id, date from attendance where child_id = $1", [s.kid])).toEqual({ status: "present", staff_id: null, date: SUN });
     // The weekly mission is left for the teacher's roll call, which completes it once as before.
-    await recordAttendance(s.teacherId, s.kid, TODAY, "present");
+    await recordAttendance(s.teacherId, s.kid, SUN, "present");
     expect(await db.query("select mission_id from mission_completions where child_id = $1 order by mission_id", [s.kid])).toEqual([{ mission_id: weekly }, { mission_id: event }]);
     expect(await dropBalance(db, s.kid)).toBe(4);
   });
 
   it("clearing a self check-in with no staff id also works (system correction)", async () => {
     await s.add("attendance", { code: "att-code-001" });
-    await scanQr(s.kid, "att-code-001");
-    await recordAttendance(null, s.kid, TODAY, null);
+    await scanQr(s.kid, "att-code-001", SUN);
+    await recordAttendance(null, s.kid, SUN, null);
     expect(await db.query("select id from attendance where child_id = $1", [s.kid])).toHaveLength(0);
     expect(await dropBalance(db, s.kid)).toBe(0);
   });
@@ -368,7 +383,7 @@ describe("admin: saving the new mission kinds", () => {
     await saveMission(s.admin, plain.id, input({ kind: "attendance", qr_self: true }));
     const attCode = (await getMission(s.admin, plain.id))?.qr_code;
     expect(isQrCode(attCode)).toBe(true);
-    expect(await scanQr(s.kid, attCode!)).toMatchObject({ ok: true, kind: "attendance" });
+    expect(await scanQr(s.kid, attCode!, WS)).toMatchObject({ ok: true, kind: "attendance" });
     await saveMission(s.admin, plain.id, input({ kind: "attendance", qr_self: false }));
     expect((await getMission(s.admin, plain.id))?.qr_code).toBeNull();
     // qr_self means nothing on other kinds.

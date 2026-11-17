@@ -16,10 +16,11 @@ vi.mock("next/headers", () => ({
 import { kidLogin } from "@/lib/auth";
 import { ROLE_PRESETS } from "@/lib/authz";
 import { db, one, resetDbForTests } from "@/lib/db";
-import { completeMission, dropBalance, getSettings, missionsForChild, pointBalance, recordAttendance, reviewCompletion, weekDropsEarned } from "@/lib/game";
+import { completeMission, dropBalance, getSettings, missionsForChild, pointBalance, recordAttendance, reviewCompletion, waterTree, weekDropsEarned, welcomeBackToday } from "@/lib/game";
+import { scanQr } from "@/lib/kid/qr";
 import { attendanceStreak, lockMinutes } from "@/lib/kid/queries";
 import { hashPin, PIN_LOCK_MINUTES, PIN_MAX_FAILS } from "@/lib/pin";
-import { attendanceRoster, streakFrom } from "@/lib/staff/attendance";
+import { attendanceRoster, saveAttendance, streakFrom } from "@/lib/staff/attendance";
 import { addDays, todayKst, weekEnd, weekStart } from "@/lib/time";
 import type { Staff } from "@/lib/types";
 
@@ -205,10 +206,229 @@ describe("a new week", () => {
   });
 });
 
-describe("a child who comes back after being away", () => {
-  // The settings table has 'welcome_back_drops' (2) and getSettings() reads it, but no code gives these drops
-  // and no rule says when a child counts as "back". Left as a to-do until the rule is decided (see the QA report).
-  it.todo("receives the welcome-back drops");
+describe("a child who comes back after being away (반가워 물방울)", () => {
+  // Sundays before the first one above. "The roll was taken" on a Sunday when anyone has a mark that day.
+  const D13 = "2026-12-13";
+  const D20 = "2026-12-20";
+  const D27 = "2026-12-27";
+  const SUN3 = "2027-01-17";
+  let friend: number;
+  const mark = (child: number, date: string, status: string) => db.query("insert into attendance (child_id, date, status) values ($1,$2,$3)", [child, date, status]);
+  const welcomeRows = (child: number = s.kid) => db.query<{ delta: number; week_start: string }>("select delta, week_start from drop_ledger where child_id = $1 and ref_type = 'welcome' order by id", [child]);
+  /** The roll was taken on these Sundays (the friend was there); the child has no mark on them. */
+  const rollTaken = async (...dates: string[]) => {
+    for (const d of dates) await mark(friend, d, "present");
+  };
+
+  beforeEach(async () => {
+    friend = (await db.query<{ id: number }>("insert into children (name, class_id, qr_token) values ('친구', $1, 'card-2') returning id", [s.classId]))[0].id;
+    // Both children were registered well before the Sundays used here.
+    await db.query("update children set created_at = '2026-11-01T10:00:00+09:00'");
+  });
+
+  it("receives the welcome-back drops after missing the two Sundays before, once", async () => {
+    await rollTaken(D20, D27);
+    // One Sunday marked absent, the other not marked at all: both are missed.
+    await mark(s.kid, D27, "absent");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(2);
+    expect(await welcomeRows()).toEqual([{ delta: 2, week_start: SUN1 }]);
+    expect((await getSettings()).welcomeBackDrops).toBe(2);
+    // A greeting, not a mission: nothing is counted toward the weekly cap.
+    expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(0);
+    expect(await pointBalance(db, s.kid)).toBe(0);
+
+    // Changing the mark to late and back gives nothing more.
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "late");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(2);
+    expect(await welcomeRows()).toHaveLength(1);
+
+    // The friend came both Sundays: no greeting. And the child, here last week, is not "back" the week after.
+    await recordAttendance(s.teacher.id, friend, SUN1, "present");
+    expect(await dropBalance(db, friend)).toBe(0);
+    await recordAttendance(s.teacher.id, s.kid, SUN2, "present");
+    expect(await dropBalance(db, s.kid)).toBe(2);
+  });
+
+  it("coming late counts as coming back, and the amount follows the setting", async () => {
+    await rollTaken(D20, D27);
+    await db.query("update settings set value = '3' where key = 'welcome_back_drops'");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "late");
+    expect(await welcomeRows()).toEqual([{ delta: 3, week_start: SUN1 }]);
+    // Switched off: nothing is given.
+    await db.query("update settings set value = '0' where key = 'welcome_back_drops'");
+    const other = (await db.query<{ id: number }>("insert into children (name, class_id, qr_token, created_at) values ('셋째', $1, 'card-3', '2026-11-01T10:00:00+09:00') returning id", [s.classId]))[0].id;
+    await recordAttendance(s.teacher.id, other, SUN1, "present");
+    expect(await welcomeRows(other)).toEqual([]);
+  });
+
+  it("is given beside the attendance mission and on top of a full weekly cap", async () => {
+    await s.add("주일 예배 출석", "attendance", 2, 20, "weekly");
+    const filler = await s.add("미션", "self", 6, 0, "daily");
+    await rollTaken(D20, D27);
+    // The week's 12 drops are already earned when the teacher fills in Sunday's roll.
+    await completeMission(s.kid, filler, { date: MON1 });
+    await completeMission(s.kid, filler, { date: TUE1 });
+    expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(12);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    // The attendance mission gives its points but no drops (the cap); the greeting is given all the same.
+    expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(12);
+    expect(await dropBalance(db, s.kid)).toBe(14);
+    expect(await pointBalance(db, s.kid)).toBe(20);
+
+    // With room under the cap both arrive: 2 for the mission, 2 for coming back. Only the mission's 2 count toward the cap.
+    const other = (await db.query<{ id: number }>("insert into children (name, class_id, qr_token, created_at) values ('셋째', $1, 'card-3', '2026-11-01T10:00:00+09:00') returning id", [s.classId]))[0].id;
+    await recordAttendance(s.teacher.id, other, SUN1, "late");
+    expect(await dropBalance(db, other)).toBe(4);
+    expect(await weekDropsEarned(db, other, SUN1)).toBe(2);
+    expect(await pointBalance(db, other)).toBe(20);
+  });
+
+  it("is not given to a child who came on one of the two Sundays", async () => {
+    await rollTaken(D20, D27);
+    await mark(s.kid, D20, "present");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeRows()).toEqual([]);
+    // Late on the more recent one is "came" too.
+    await db.query("delete from attendance where child_id = $1", [s.kid]);
+    await mark(s.kid, D27, "late");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeRows()).toEqual([]);
+    expect(await dropBalance(db, s.kid)).toBe(0);
+  });
+
+  it("is never given in the first weeks of the app: two earlier Sundays with a roll are needed", async () => {
+    // No roll was ever taken.
+    await recordAttendance(s.teacher.id, s.kid, D20, "present");
+    expect(await welcomeRows()).toEqual([]);
+    // One earlier Sunday with a roll (the child missed it).
+    await db.query("delete from attendance");
+    await rollTaken(D27);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeRows()).toEqual([]);
+    expect(await dropBalance(db, s.kid)).toBe(0);
+  });
+
+  it("is never given to a new child: only Sundays since the child was registered count", async () => {
+    await rollTaken(D13, D20, D27, SUN1, SUN2);
+    // Registered on Tuesday, December 29: the Sundays before that are not the child's to miss.
+    await db.query("update children set created_at = '2026-12-29T19:00:00+09:00' where id = $1", [s.kid]);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeRows()).toEqual([]);
+    // One Sunday later there is still only one Sunday behind the child.
+    await db.query("delete from attendance where child_id = $1", [s.kid]);
+    await recordAttendance(s.teacher.id, s.kid, SUN2, "present");
+    expect(await welcomeRows()).toEqual([]);
+    // Having really missed two Sundays since registering, the child is welcomed back like anyone else.
+    await db.query("delete from attendance where child_id = $1", [s.kid]);
+    await recordAttendance(s.teacher.id, s.kid, SUN3, "present");
+    expect(await welcomeRows()).toEqual([{ delta: 2, week_start: SUN3 }]);
+  });
+
+  it("the registration day is a Korea date, and a Sunday on that very day counts", async () => {
+    await rollTaken(D20, D27);
+    // 00:30 on Sunday, December 20 in Korea is still Saturday in UTC.
+    await db.query("update children set created_at = '2026-12-20T00:30:00+09:00' where id = $1", [s.kid]);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeRows()).toEqual([{ delta: 2, week_start: SUN1 }]);
+    // One day later and only December 27 is left: not enough.
+    const late = (await db.query<{ id: number }>("insert into children (name, class_id, qr_token, created_at) values ('늦게 온 친구', $1, 'card-3', '2026-12-21T00:30:00+09:00') returning id", [s.classId]))[0].id;
+    await recordAttendance(s.teacher.id, late, SUN1, "present");
+    expect(await welcomeRows(late)).toEqual([]);
+  });
+
+  it("a Sunday when no roll was taken is skipped, and marks on other days are not Sundays", async () => {
+    // Rolls on December 13 and 27; nothing at all on the 20th. The child missed both rolls.
+    await rollTaken(D13, D27);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeRows()).toEqual([{ delta: 2, week_start: SUN1 }]);
+
+    // Had the child been there on the 13th, the two Sundays looked at (27th and 13th) are not both missed.
+    await db.query("delete from attendance where child_id = $1", [s.kid]);
+    await db.query("delete from drop_ledger");
+    await mark(s.kid, D13, "present");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeRows()).toEqual([]);
+  });
+
+  it("weekday marks neither count as a Sunday roll nor bring the drops", async () => {
+    // One Sunday roll, and stray marks on a Wednesday and a Thursday.
+    await rollTaken(D27, "2026-12-23", "2026-12-24");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeRows()).toEqual([]);
+    // Two missed Sunday rolls, but the mark that brings the child "back" is on a Wednesday.
+    await db.query("delete from attendance where child_id = $1", [s.kid]);
+    await rollTaken(D20);
+    await recordAttendance(s.teacher.id, s.kid, "2026-12-30", "present");
+    expect(await welcomeRows()).toEqual([]);
+    expect(await dropBalance(db, s.kid)).toBe(0);
+  });
+
+  it("is taken back when the mark turns out wrong and given again when it is set again", async () => {
+    await rollTaken(D20, D27);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(2);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(2);
+    // Clearing the mark takes it back as well. The ledger only ever grows.
+    await recordAttendance(s.teacher.id, s.kid, SUN1, null);
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    expect((await welcomeRows()).map((r) => r.delta)).toEqual([2, -2, 2, -2]);
+    expect(await db.query("select staff_id from drop_ledger where delta < 0")).toEqual([{ staff_id: s.teacher.id }, { staff_id: s.teacher.id }]);
+  });
+
+  it("taking it back never goes below zero, and giving it again never adds up to more than once", async () => {
+    await rollTaken(D20, D27);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await waterTree(s.kid)).toMatchObject({ ok: true, drops: 1 });
+    // One drop is in the tree: only the one still held can be taken back.
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    // Set again: only the drop that was taken back is given again.
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(1);
+    expect((await welcomeRows()).map((r) => r.delta)).toEqual([2, -1, 1]);
+    // Both drops watered, then corrected: nothing to take, nothing given again.
+    await waterTree(s.kid);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    expect((await welcomeRows()).map((r) => r.delta)).toEqual([2, -1, 1]);
+  });
+
+  it("a QR self check-in on Sunday brings it too", async () => {
+    await db.query("insert into missions (title, kind, drops, points, repeat, starts_on, ends_on, qr_code) values ('주일 예배 출석','attendance',2,20,'weekly',$1,$2,'att-code-001')", [SUN1, SAT1]);
+    await rollTaken(D20, D27);
+    expect(await scanQr(s.kid, "att-code-001", SUN1)).toMatchObject({ ok: true, kind: "attendance" });
+    expect(await dropBalance(db, s.kid)).toBe(4);
+    expect(await welcomeRows()).toEqual([{ delta: 2, week_start: SUN1 }]);
+    expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(2);
+  });
+
+  it("the home screen is told about it on the day it was given, until the child waters or the day ends", async () => {
+    await rollTaken(D20, D27);
+    expect(await welcomeBackToday(db, s.kid)).toBe(0);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    // "Today" is the Korea day the drops were written, whatever Sunday they are for.
+    const row = await one<{ created_at: Date }>(db, "select created_at from drop_ledger where ref_type = 'welcome'");
+    const today = todayKst(new Date(row!.created_at));
+    expect(await welcomeBackToday(db, s.kid, today)).toBe(2);
+    expect(await welcomeBackToday(db, friend, today)).toBe(0);
+    // The day is over.
+    expect(await welcomeBackToday(db, s.kid, addDays(today, 1))).toBe(0);
+    expect(await welcomeBackToday(db, s.kid, addDays(today, -1))).toBe(0);
+    // Taken back by a correction: nothing to greet. Set again: greeted again.
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+    expect(await welcomeBackToday(db, s.kid, today)).toBe(0);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await welcomeBackToday(db, s.kid, today)).toBe(2);
+    // The child waters the tree: the usual lines take over.
+    await waterTree(s.kid);
+    expect(await welcomeBackToday(db, s.kid, today)).toBe(0);
+  });
 
   it("loses nothing while away: drops, points and the tree are as they were weeks later", async () => {
     const m = await s.add("기도", "self", 2, 10, "weekly", { ends: "2027-12-31" });
@@ -219,6 +439,130 @@ describe("a child who comes back after being away", () => {
     expect(await pointBalance(db, s.kid)).toBe(10);
     expect(await s.stateOn(m, later)).toMatchObject({ state: "available", drops_now: 2 });
     expect(await completeMission(s.kid, m, { date: later })).toMatchObject({ ok: true, drops: 2, points: 10 });
+  });
+});
+
+describe("correcting an attendance mark", () => {
+  const completions = () => db.query<{ status: string; drops_awarded: number }>("select status, drops_awarded from mission_completions where child_id = $1 order by id", [s.kid]);
+
+  it("takes back only the drops the child still has: the balance never goes below zero, the points go back in full", async () => {
+    await s.add("주일 예배 출석", "attendance", 2, 20, "weekly");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    // Both drops go into the tree before the teacher notices the wrong tap.
+    await waterTree(s.kid);
+    await waterTree(s.kid);
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    expect(await pointBalance(db, s.kid)).toBe(0);
+    expect(await db.query("select 1 from drop_ledger where delta < 0 and ref_type = 'mission'")).toEqual([]);
+
+    // Present after all: no drops were taken back, so none are given again; the points return.
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    expect(await pointBalance(db, s.kid)).toBe(20);
+    expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(2);
+    // The new completion stands for the 2 drops this attendance holds in all.
+    expect(await completions()).toEqual([{ status: "rejected", drops_awarded: 2 }, { status: "approved", drops_awarded: 2 }]);
+  });
+
+  it("an absent → present toggle gives back exactly what was taken, however often it happens", async () => {
+    await s.add("주일 예배 출석", "attendance", 2, 20, "weekly");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    await waterTree(s.kid);
+    for (let i = 0; i < 4; i++) {
+      // One drop is in the tree and stays there; the other goes back and forth.
+      await recordAttendance(s.teacher.id, s.kid, SUN1, i % 2 === 0 ? "absent" : null);
+      expect(await dropBalance(db, s.kid)).toBe(0);
+      expect(await pointBalance(db, s.kid)).toBe(0);
+      await recordAttendance(s.teacher.id, s.kid, SUN1, i % 2 === 0 ? "present" : "late");
+      expect(await dropBalance(db, s.kid)).toBe(1);
+      expect(await pointBalance(db, s.kid)).toBe(20);
+      // Never more than the mission's 2 drops for this one Sunday.
+      expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(2);
+    }
+    expect((await db.query<{ n: number }>("select coalesce(sum(delta),0)::int as n from drop_ledger where child_id = $1 and delta > 0 and ref_type = 'mission'", [s.kid]))[0].n).toBe(2 + 4);
+  });
+
+  it("with nothing watered, any number of toggles ends at the mission's drops", async () => {
+    await s.add("주일 예배 출석", "attendance", 2, 20, "weekly");
+    for (let i = 0; i < 3; i++) {
+      await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+      expect(await dropBalance(db, s.kid)).toBe(2);
+      await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+      expect(await dropBalance(db, s.kid)).toBe(0);
+    }
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "late");
+    expect(await dropBalance(db, s.kid)).toBe(2);
+    expect(await pointBalance(db, s.kid)).toBe(20);
+    expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(2);
+  });
+
+  it("drops that could not be taken back at first are taken once the child has some again", async () => {
+    await s.add("주일 예배 출석", "attendance", 2, 20, "weekly");
+    const other = await s.add("기도", "self", 3, 0, "weekly");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    await waterTree(s.kid);
+    await waterTree(s.kid);
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    // Three drops from another mission, then the mark is corrected to absent for good.
+    await completeMission(s.kid, other, { date: MON1 });
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+    expect(await dropBalance(db, s.kid)).toBe(1);
+    expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(3);
+    // And if it was right after all, the 2 drops come back once.
+    await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+    expect(await dropBalance(db, s.kid)).toBe(3);
+    expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(5);
+  });
+
+  it("the weekly cap still holds through corrections", async () => {
+    await s.add("주일 예배 출석", "attendance", 2, 20, "weekly");
+    const filler = await s.add("미션", "self", 5, 0, "daily");
+    const small = await s.add("작은 미션", "self", 1, 0, "weekly");
+    await completeMission(s.kid, filler, { date: MON1 });
+    await completeMission(s.kid, filler, { date: TUE1 });
+    await completeMission(s.kid, small, { date: TUE1 });
+    // 11 earned: the attendance mission can add only 1.
+    for (let i = 0; i < 3; i++) {
+      await recordAttendance(s.teacher.id, s.kid, SUN1, "present");
+      expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(12);
+      expect(await dropBalance(db, s.kid)).toBe(12);
+      await recordAttendance(s.teacher.id, s.kid, SUN1, "absent");
+      expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(11);
+    }
+  });
+});
+
+describe("attendance belongs to Sunday", () => {
+  // The teacher's screen refuses dates that have not come yet, so these days are counted back from the real today.
+  const SUN = weekStart(todayKst());
+
+  it("the teacher's screen records present, late and absent on Sundays only", async () => {
+    for (let back = 1; back <= 6; back++) {
+      for (const status of ["present", "late", "absent"] as const) {
+        expect(await saveAttendance(s.teacher, s.kid, addDays(SUN, -back), status)).toEqual({ ok: false, error: "출석은 주일에만 기록할 수 있어요" });
+      }
+    }
+    expect(await db.query("select 1 from attendance")).toEqual([]);
+    expect(await saveAttendance(s.teacher, s.kid, SUN, "present")).toEqual({ ok: true });
+    expect(await saveAttendance(s.teacher, s.kid, addDays(SUN, -7), "absent", "가족 여행")).toEqual({ ok: true });
+    expect(await db.query("select date, status from attendance order by date")).toEqual([{ date: addDays(SUN, -7), status: "absent" }, { date: SUN, status: "present" }]);
+  });
+
+  it("a mark that sits on another day can still be cleared, and its award goes back", async () => {
+    const wed = addDays(SUN, -4);
+    await s.add("주일 예배 출석", "attendance", 2, 20, "weekly", { starts: addDays(SUN, -7), ends: addDays(SUN, -1) });
+    // Saved before this rule existed (the library itself does not ask what day it is).
+    await recordAttendance(s.teacher.id, s.kid, wed, "present");
+    expect(await dropBalance(db, s.kid)).toBe(2);
+    expect(await saveAttendance(s.teacher, s.kid, wed, "late")).toMatchObject({ ok: false });
+    expect(await saveAttendance(s.teacher, s.kid, wed, null)).toEqual({ ok: true });
+    expect(await db.query("select 1 from attendance")).toEqual([]);
+    expect(await dropBalance(db, s.kid)).toBe(0);
+    expect(await pointBalance(db, s.kid)).toBe(0);
   });
 });
 

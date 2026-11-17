@@ -35,6 +35,9 @@ export interface CompletionView {
   points_awarded: number;
   title: string;
   kind: string;
+  /** What the mission itself gives, to tell "this mission has no drops" from "the weekly cap is reached". */
+  mission_drops: number;
+  mission_points: number;
 }
 
 /** One of the child's own completions, for the success screen. */
@@ -42,7 +45,7 @@ export async function completionForChild(childId: number, completionId: number):
   if (!Number.isInteger(completionId)) return null;
   return one<CompletionView>(
     db,
-    `select mc.id, mc.status, mc.drops_awarded, mc.points_awarded, m.title, m.kind
+    `select mc.id, mc.status, mc.drops_awarded, mc.points_awarded, m.title, m.kind, m.drops as mission_drops, m.points as mission_points
        from mission_completions mc join missions m on m.id = mc.mission_id where mc.id = $1 and mc.child_id = $2`,
     [completionId, childId],
   );
