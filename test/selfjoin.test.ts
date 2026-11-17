@@ -20,7 +20,7 @@ import { db, one, resetDbForTests } from "@/lib/db";
 import { birthYearChoices, defaultBirthYear, usualGrade } from "@/lib/kid/birth";
 import { rememberedFriends } from "@/lib/kid/friends";
 import { chromeIntentUrl, classifyInstallPlatform } from "@/lib/kid/install-platform";
-import { SELF_JOIN_HOURLY_LIMIT, selfRegister, validateOnboarding, type OnboardingInput } from "@/lib/kid/onboarding";
+import { nameAlreadyJoined, SELF_JOIN_HOURLY_LIMIT, selfRegister, validateOnboarding, type OnboardingInput } from "@/lib/kid/onboarding";
 import { ensureJoinCode, joinCodeOpen } from "@/lib/self-join";
 import { readSession, setSession } from "@/lib/session";
 
@@ -218,6 +218,34 @@ describe("the manifest address carries the card, for browsers that fetch it with
     expect((await (await manifestGet(manifestReq("no-such-card"))).json()).start_url).toBe("/");
     await db.query("update children set active = false where id = $1", [r.childId]);
     expect((await (await manifestGet(manifestReq(r.token))).json()).start_url).toBe("/");
+  });
+});
+
+describe("a returning child at the shared sign-up", () => {
+  it("is recognised by name once they have joined, so they are sent to their own card instead of joining twice", async () => {
+    const s = await setup();
+    expect(await nameAlreadyJoined(s.code, "새친구")).toBe(false);
+    const r = await selfRegister(s.code, good);
+    if (!r.ok) throw new Error("self-join failed");
+    expect(await nameAlreadyJoined(s.code, " 새친구 ")).toBe(true);
+    expect(await nameAlreadyJoined(s.code, "다른이름")).toBe(false);
+    // Only someone holding the current join code gets an answer.
+    expect(await nameAlreadyJoined("wrong-code", "새친구")).toBe(false);
+    // A child a teacher registered but who has not started is not "already joined": they are claimed instead.
+    await db.query("insert into children (name, qr_token) values ('기다리는아이', 'pre-wait')");
+    expect(await nameAlreadyJoined(s.code, "기다리는아이")).toBe(false);
+    // A child taken off the list does not count, and odd input is simply "no".
+    await db.query("update children set active = false where id = $1", [r.childId]);
+    expect(await nameAlreadyJoined(s.code, "새친구")).toBe(false);
+    expect(await nameAlreadyJoined(s.code, 5 as unknown as string)).toBe(false);
+  });
+
+  it("does not block a namesake: saying 'first time' still makes a new record", async () => {
+    const s = await setup();
+    const first = await selfRegister(s.code, good);
+    const second = await selfRegister(s.code, { ...good, pin: "1357", pin2: "1357" });
+    if (!first.ok || !second.ok) throw new Error("self-join failed");
+    expect(second.childId).not.toBe(first.childId);
   });
 });
 

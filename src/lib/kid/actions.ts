@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { completeMission, dropBalance, ensureTree, harvestTree, missionsForChild, waterTree } from "@/lib/game";
 import { saveUpload } from "@/lib/uploads";
 import { addComment, deleteComment, reportComment, toggleLike } from "./feed";
-import { saveNewPin, saveOnboarding, selfRegister, type OnboardingErrors, type OnboardingInput } from "./onboarding";
+import { nameAlreadyJoined, saveNewPin, saveOnboarding, selfRegister, type OnboardingErrors, type OnboardingInput } from "./onboarding";
 import { rememberedFriends } from "./friends";
 import { lockMinutes } from "./queries";
 import { afterSignInPath } from "./scan-cookie";
@@ -37,6 +37,11 @@ export async function selfJoinAction(code: string, input: OnboardingInput): Prom
   await setSession("kid", r.childId);
   await rememberCard(r.token);
   redirect("/welcome");
+}
+
+/** Asked after the name in the shared sign-up: has someone with this name already joined? */
+export async function nameJoinedAction(code: string, name: string): Promise<boolean> {
+  return nameAlreadyJoined(code, name);
 }
 
 export async function newPinAction(token: string, pin: string, pin2: string): Promise<JoinActionResult> {

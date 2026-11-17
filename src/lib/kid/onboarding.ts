@@ -168,6 +168,19 @@ export async function saveNewPin(token: string, pin: string, pin2: string): Prom
   return { ok: true, childId: rows[0].id };
 }
 
+/**
+ * Whether a child with this name has already finished joining. The shared sign-up asks this after
+ * the name, so a returning child is pointed to their own card instead of making a second record.
+ * It only answers for someone holding the current join code, and only yes or no.
+ * A namesake who really is new can still go on: the wizard asks, it does not block.
+ */
+export async function nameAlreadyJoined(code: string, name: unknown): Promise<boolean> {
+  if (!(await joinCodeOpen(typeof code === "string" ? code : ""))) return false;
+  const n = text(name);
+  if (n.length < 2 || n.length > 10) return false;
+  return (await one(db, "select 1 as x from children where active and onboarded_at is not null and name = $1 limit 1", [n])) !== null;
+}
+
 /** Church classes a child may pick in the wizard. Names only. */
 export async function classChoices(): Promise<{ id: number; name: string }[]> {
   return db.query<{ id: number; name: string }>("select id, name from classes where not archived order by sort, id");

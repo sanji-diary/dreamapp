@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { primaryButtonClass } from "@/components/ui";
-import { completeOnboardingAction, newPinAction, selfJoinAction } from "@/lib/kid/actions";
+import { completeOnboardingAction, nameJoinedAction, newPinAction, selfJoinAction } from "@/lib/kid/actions";
 import { birthYearChoices, defaultBirthYear, usualGrade } from "@/lib/kid/birth";
 import type { OnboardingErrors, OnboardingField } from "@/lib/kid/onboarding";
 import { PinDots, PinKeys } from "./PinPad";
@@ -77,6 +77,9 @@ const optionBase = "flex cursor-pointer items-center justify-center rounded-2xl 
 const optionOn = "border-navy bg-navy-tint text-navy";
 const optionOff = "border-[#D9DEE3] bg-white text-ink";
 
+/** The same tidying the server does, so the two agree on what the name is. */
+const cleanName = (v: string) => v.trim().replace(/\s+/g, " ");
+
 function BackArrow() {
   return (
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -107,6 +110,11 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
   const [fatal, setFatal] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  /** Shared sign-up: a child with this name already joined. "ask" = is that you? "stop" = how to get back in. */
+  const [returning, setReturning] = useState<"" | "ask" | "stop">("");
+  const [checking, setChecking] = useState(false);
+  /** The name the child already said is new, so the question is not asked twice. */
+  const newName = useRef("");
   const { height, keyboard } = useVisibleArea();
   const step = steps[index];
 
@@ -146,6 +154,24 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
     classId: true,
   };
   const clearError = (k: OnboardingField) => setErrors((e) => (e[k] ? { ...e, [k]: undefined } : e));
+
+  /**
+   * Shared sign-up only: before moving past the name, ask the server whether someone with this name
+   * already joined. If so the child is asked whether that is them, instead of quietly making a second record.
+   */
+  const confirmName = async () => {
+    const n = cleanName(name);
+    if (entry.kind !== "self" || newName.current === n) return advance(index);
+    setChecking(true);
+    try {
+      if (await nameJoinedAction(entry.code, n)) setReturning("ask");
+      else advance(index);
+    } catch {
+      advance(index); // a failed check never blocks joining
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const submit = useCallback(
     async (finalPin2: string) => {
@@ -250,6 +276,66 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
     );
   }
 
+  /* ---------- shared sign-up: someone with this name already joined ---------- */
+
+  if (returning) {
+    return (
+      <main className="flex flex-col overflow-hidden bg-white" style={{ height: height ?? "100dvh" }}>
+        <div className="flex h-[52px] shrink-0 items-center pt-[env(safe-area-inset-top)] pl-2">
+          <button type="button" aria-label="이름으로 돌아가기" onClick={() => setReturning("")} className="flex h-11 w-11 cursor-pointer items-center justify-center border-0 bg-transparent text-ink">
+            <BackArrow />
+          </button>
+        </div>
+        <div key={returning} className="step-in flex min-h-0 grow flex-col overflow-y-auto px-6 pt-3 pb-4">
+          {returning === "ask" ? (
+            <>
+              <h1 className="m-0 text-[26px] leading-[35px] font-bold tracking-[-0.6px] whitespace-pre-line">{"혹시 전에\n가입한 적 있어요?"}</h1>
+              <p className="m-0 mt-3 text-[16px] leading-6 text-sub">‘{name.trim()}’ 이름으로 이미 가입한 친구가 있어요.</p>
+              <div className="mt-7 flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    newName.current = cleanName(name);
+                    setReturning("");
+                    advance(index);
+                  }}
+                  className={`${optionBase} h-[68px] ${optionOff}`}
+                >
+                  아니요, 처음이에요
+                </button>
+                <button type="button" onClick={() => setReturning("stop")} className={`${optionBase} h-[68px] ${optionOff}`}>
+                  네, 가입했어요
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="m-0 text-[26px] leading-[35px] font-bold tracking-[-0.6px]">내 카드로 들어가요</h1>
+              <p className="m-0 mt-3 text-[16px] leading-6 text-sub">다시 가입하지 않아도 돼요. 내 나무는 그대로 있어요.</p>
+              <ul className="m-0 mt-7 flex list-none flex-col gap-2.5 p-0">
+                <li className="rounded-2xl bg-fill px-4 py-4">
+                  <p className="m-0 text-[15px] leading-[22px] font-bold text-ink2">전에 쓰던 휴대폰이 있으면</p>
+                  <p className="m-0 mt-1 text-[14px] leading-[21px] text-sub">그 휴대폰의 내 정보에서 ‘내 카드 보기’를 열고, 이 휴대폰 카메라로 찍어 주세요.</p>
+                </li>
+                <li className="rounded-2xl bg-fill px-4 py-4">
+                  <p className="m-0 text-[15px] leading-[22px] font-bold text-ink2">없으면</p>
+                  <p className="m-0 mt-1 text-[14px] leading-[21px] text-sub">선생님께 말해 주세요. 내 QR 카드를 다시 받을 수 있어요.</p>
+                </li>
+              </ul>
+            </>
+          )}
+        </div>
+        {returning === "stop" ? (
+          <div className="shrink-0 px-5 pb-[max(16px,env(safe-area-inset-bottom))]">
+            <button type="button" onClick={() => setReturning("")} className={`${primaryButtonClass} h-14 cursor-pointer rounded-2xl text-[17px]`}>
+              이름 다시 적기
+            </button>
+          </div>
+        ) : null}
+      </main>
+    );
+  }
+
   /* ---------- the white question screens ---------- */
 
   const answer: Record<AskKey, string> = {
@@ -276,7 +362,9 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
       id="step-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid[k]) advance(index);
+        if (!valid[k] || checking) return;
+        if (k === "name") void confirmName();
+        else advance(index);
       }}
       className="flex flex-col"
     >
@@ -467,7 +555,7 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
       {isText ? (
         // With the keyboard up the button is a full-width bar resting on it; otherwise a rounded button at the bottom.
         <div className={`shrink-0 ${keyboard ? "" : "px-5 pb-[max(16px,env(safe-area-inset-bottom))]"}`}>
-          <button type="submit" form="step-form" disabled={!valid[step]} className={`${primaryButtonClass} h-14 cursor-pointer text-[17px] ${keyboard ? "rounded-none" : "rounded-2xl"}`}>
+          <button type="submit" form="step-form" disabled={!valid[step] || checking} className={`${primaryButtonClass} h-14 cursor-pointer text-[17px] ${keyboard ? "rounded-none" : "rounded-2xl"}`}>
             확인
           </button>
         </div>
