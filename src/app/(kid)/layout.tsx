@@ -16,7 +16,8 @@ export default async function KidLayout({ children }: { children: React.ReactNod
   return (
     <>
       <link rel="manifest" href={href} crossOrigin="use-credentials" />
-      {children}
+      {/* Fills any screen, from a folded phone to a tablet. See .kid-shell in globals.css for how wide the content runs. */}
+      <div className="kid-shell flex w-full grow flex-col bg-white">{children}</div>
     </>
   );
 }

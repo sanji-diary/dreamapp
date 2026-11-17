@@ -20,8 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko">
       <body>
-        {/* Phone-width column: on a desktop the app sits centered like a phone screen. */}
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white shadow-[0_0_40px_rgba(25,31,40,0.06)]">{children}</div>
+        {/* Each area decides its own width: the children's screens in (kid)/layout.tsx, the teachers' in staff/. */}
+        <div className="flex min-h-dvh w-full flex-col bg-white">{children}</div>
       </body>
     </html>
   );

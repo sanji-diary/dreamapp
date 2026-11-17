@@ -30,6 +30,14 @@ interface Props {
   intro: boolean;
 }
 
+/**
+ * The two tiles in the card. On a narrow screen (a folded phone) the picture gives way first and the
+ * second line may wrap, so the words are never squeezed into one letter per line.
+ */
+const TILE = "flex h-[76px] items-center justify-between gap-1 rounded-2xl bg-[#F2F4F6] pr-2.5 pl-4";
+const TILE_TEXT = "flex min-w-min shrink flex-col gap-0.5";
+const TILE_ICON = "min-w-0 shrink-[100] object-contain";
+
 export function TreeHome(props: Props) {
   const { needs } = props;
   const [st, setSt] = useState({ level: props.level, given: props.given, drops: props.drops });
@@ -124,14 +132,14 @@ export function TreeHome(props: Props) {
     <div ref={containerRef} className="relative flex h-dvh flex-col overflow-hidden bg-ground">
       <TreeScene level={st.level} kind={kind} intro={intro} toast={toast} fit={fit} />
       <div className="pointer-events-none relative flex min-h-0 grow flex-col">
-        <div className="flex items-center justify-between px-5 pt-[max(14px,env(safe-area-inset-top))]">
+        <div className="kid-col flex items-center justify-between px-5 pt-[max(14px,env(safe-area-inset-top))]">
           <div className="text-[14px] font-semibold text-sub">{props.kidLabel}</div>
           <div className="flex h-[34px] items-center gap-1 rounded-[17px] bg-white pr-[13px] pl-2 text-[15px] font-bold tracking-[-0.2px]">
             <Icon name="persimmon" size={24} />
             <span aria-label={`내 포인트 ${formatPoints(props.points)}`}>{formatPoints(props.points)}</span>
           </div>
         </div>
-        <div className="flex items-start justify-between gap-3 px-5 pt-[18px] transition-opacity duration-300" style={{ opacity: wet || reveal ? 0 : 1 }}>
+        <div className="kid-col flex items-start justify-between gap-3 px-5 pt-[18px] transition-opacity duration-300" style={{ opacity: wet || reveal ? 0 : 1 }}>
           <h1 className="m-0 text-[25px] leading-[34px] font-bold tracking-[-0.6px] whitespace-pre-line">{headline}</h1>
           <Link
             href="/missions"
@@ -146,7 +154,7 @@ export function TreeHome(props: Props) {
           </Link>
         </div>
         <div className="grow" />
-        <div ref={cardRef} className="pointer-events-auto mx-4 mb-3 flex flex-col gap-3 rounded-3xl bg-white px-[18px] pt-5 pb-[18px] shadow-[0_8px_24px_rgba(25,31,40,0.08)]">
+        <div ref={cardRef} className="pointer-events-auto mx-auto mb-3 flex w-[calc(100%-32px)] max-w-[528px] flex-col gap-3 rounded-3xl bg-white px-[18px] pt-5 pb-[18px] shadow-[0_8px_24px_rgba(25,31,40,0.08)]">
           <div className="flex items-baseline justify-between">
             <div className="text-[17px] font-bold tracking-[-0.3px]">
               레벨 {st.level} {name}
@@ -180,28 +188,28 @@ export function TreeHome(props: Props) {
               ) : (
                 <>
                   {st.drops > 0 ? (
-                    <button type="button" onClick={water} className="flex h-[76px] cursor-pointer items-center justify-between rounded-2xl border-0 bg-[#F2F4F6] pr-2.5 pl-4 text-left text-ink">
-                      <span className="flex flex-col gap-0.5">
-                        <span className="text-[16px] font-bold tracking-[-0.3px]">물 주기</span>
-                        <span className="text-[13px] font-medium text-sub">물방울 {st.drops}개</span>
+                    <button type="button" onClick={water} className={`${TILE} cursor-pointer border-0 text-left text-ink`}>
+                      <span className={TILE_TEXT}>
+                        <span className="text-[16px] font-bold tracking-[-0.3px] whitespace-nowrap">물 주기</span>
+                        <span className="text-[13px] leading-[17px] font-medium break-keep text-sub">물방울 {st.drops}개</span>
                       </span>
-                      <Icon name="drop" size={46} />
+                      <Icon name="drop" size={46} className={TILE_ICON} />
                     </button>
                   ) : (
-                    <div className="flex h-[76px] items-center justify-between rounded-2xl bg-[#F2F4F6] pr-2.5 pl-4 text-mute">
-                      <span className="flex flex-col gap-0.5">
-                        <span className="text-[16px] font-bold tracking-[-0.3px]">물 주기</span>
-                        <span className="text-[13px] font-medium whitespace-nowrap">미션하면 받아요</span>
+                    <div className={`${TILE} text-mute`}>
+                      <span className={TILE_TEXT}>
+                        <span className="text-[16px] font-bold tracking-[-0.3px] whitespace-nowrap">물 주기</span>
+                        <span className="text-[13px] leading-[17px] font-medium break-keep">미션하면 받아요</span>
                       </span>
-                      <Icon name="drop" size={36} className="shrink-0 opacity-50 grayscale" />
+                      <Icon name="drop" size={36} className={`${TILE_ICON} opacity-50 grayscale`} />
                     </div>
                   )}
-                  <Link href="/missions" className="flex h-[76px] items-center justify-between rounded-2xl bg-[#F2F4F6] pr-2.5 pl-4 text-ink no-underline">
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-[16px] font-bold tracking-[-0.3px]">미션 하기</span>
-                      <span className="text-[13px] font-medium text-sub">{props.missionsLeft > 0 ? `${props.missionsLeft}개 남음` : "모두 했어요"}</span>
+                  <Link href="/missions" className={`${TILE} text-ink no-underline`}>
+                    <span className={TILE_TEXT}>
+                      <span className="text-[16px] font-bold tracking-[-0.3px] whitespace-nowrap">미션 하기</span>
+                      <span className="text-[13px] leading-[17px] font-medium break-keep text-sub">{props.missionsLeft > 0 ? `${props.missionsLeft}개 남음` : "모두 했어요"}</span>
                     </span>
-                    <Icon name="bible" size={48} />
+                    <Icon name="bible" size={48} className={TILE_ICON} />
                   </Link>
                 </>
               )}

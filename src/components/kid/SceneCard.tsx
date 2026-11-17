@@ -12,12 +12,14 @@ export function SceneCard({ level, intro = false, top, bottom, headerBottom = 15
   const bottomRef = useRef<HTMLDivElement>(null);
   const fit = useSceneFit(containerRef, bottomRef, headerBottom);
   return (
-    <main ref={containerRef} className="relative flex h-dvh flex-col overflow-hidden bg-ground">
+    <main ref={containerRef} data-bleed className="relative flex h-dvh flex-col overflow-hidden bg-ground">
       <TreeScene level={level} intro={intro} fit={fit} />
       <div className="relative flex min-h-0 grow flex-col">
-        {top}
+        <div className="kid-col">{top}</div>
         <div className="grow" />
-        <div ref={bottomRef}>{bottom}</div>
+        <div ref={bottomRef} className="kid-col">
+          {bottom}
+        </div>
       </div>
     </main>
   );
