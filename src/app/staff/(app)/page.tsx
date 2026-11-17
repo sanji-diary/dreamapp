@@ -100,8 +100,8 @@ function PastRows({ week, past, wide = false }: { week: WeekRef; past: Totals; w
       <ListRow
         compact={wide}
         left={<ClayIcon name="stamp" size={size} onWhite={wide} />}
-        title={past.recorded > 0 ? `출석 ${past.recorded}명 중 ${past.present}명` : "출석 기록이 없어요"}
-        sub={`${formatKoreanDate(week.start)}`}
+        title={past.recorded > 0 ? `출석 ${past.present}명` : "출석 기록이 없어요"}
+        sub={`${formatKoreanDate(week.start)}${past.recorded > 0 ? ` · ${past.recorded}명 체크했어요` : ""}`}
       />
       <ListRow compact={wide} left={<ClayIcon name="drop" size={size} onWhite={wide} />} title={`물방울 ${past.drops}개`} sub="그 주에 미션으로 모았어요" />
       <ListRow compact={wide} left={<ClayIcon name="bible" size={size} onWhite={wide} />} title={`미션 ${past.approved}건 완료`} sub="확인까지 끝난 미션이에요" />
