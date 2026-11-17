@@ -20,7 +20,7 @@ export default async function HarvestDonePage() {
   const [mine, forest, settings] = await Promise.all([harvestedCount(kid.id), classForestCount(kid.class_id), getSettings()]);
   if (mine === 0) redirect("/home");
   return (
-    <main className="flex min-h-dvh flex-col bg-sky">
+    <main data-bleed className="flex min-h-dvh flex-col bg-sky">
       <div className="step-in flex grow flex-col items-center justify-center gap-2 px-6 text-center">
         <div aria-hidden="true" className="relative mb-3 flex h-[136px] w-[136px] items-center justify-center rounded-full bg-white shadow-[0_8px_24px_rgba(25,31,40,0.08)]">
           <Icon name="persimmon" size={92} className="[animation:hover_2.4s_ease-in-out_infinite]" />
@@ -40,7 +40,7 @@ export default async function HarvestDonePage() {
           지금까지 키운 나무 {mine}그루
         </p>
       </div>
-      <div className="px-5 pt-3 pb-[max(28px,env(safe-area-inset-bottom))]">
+      <div className="kid-col px-5 pt-3 pb-[max(28px,env(safe-area-inset-bottom))]">
         <Link href="/home?new=1" className={`${primaryButtonClass} h-[54px] rounded-[14px] text-[17px] no-underline`}>
           새 씨앗 심으러 가기
         </Link>

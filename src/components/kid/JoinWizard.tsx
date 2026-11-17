@@ -251,7 +251,7 @@ export function JoinWizard({ entry, today, classes, prefill, pinOnly = false }: 
     const first = step === "pin";
     const note = first ? (errors.pin ?? pinNote) : saving ? "잠시만 기다려 주세요…" : (fatal || errors.pin2 || "");
     return (
-      <main className="flex flex-col overflow-hidden bg-ink text-white" style={{ height: height ?? "100dvh" }}>
+      <main data-bleed className="flex flex-col overflow-hidden bg-ink text-white" style={{ height: height ?? "100dvh" }}>
         <div className="flex h-[52px] shrink-0 items-center pt-[env(safe-area-inset-top)] pl-2">
           {index > 0 ? (
             <button type="button" aria-label="이전으로" disabled={saving} onClick={back} className="flex h-11 w-11 cursor-pointer items-center justify-center border-0 bg-transparent text-white">

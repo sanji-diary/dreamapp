@@ -29,7 +29,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
   if (can.festival && festival) actions.push({ href: "/staff/festival", icon: "pouch", title: "달란트 결제", sub: `${festival.name} 진행 중` });
 
   return (
-    <div className="flex min-h-dvh w-full flex-col bg-white lg:flex-row print:block print:min-h-0">
+    <div className="flex min-h-dvh w-full grow flex-col bg-white lg:flex-row print:block print:min-h-0">
       <Sidebar staff={staff} nav={nav} badges={badges} />
       <div className="flex min-w-0 grow flex-col print:block">
         <div className="flex grow flex-col lg:mx-auto lg:w-full lg:max-w-[1100px] lg:px-3 lg:pt-2.5 lg:pb-6 print:block print:max-w-none print:p-0">

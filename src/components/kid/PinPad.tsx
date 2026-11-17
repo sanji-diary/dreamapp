@@ -35,7 +35,7 @@ export function PinKeys({ onDigit, onDelete, disabled = false, dark = false }: {
 
   const key = dark ? KEY_DARK : KEY;
   return (
-    <div className="grid grid-cols-3 px-5">
+    <div className="mx-auto grid w-full max-w-[420px] grid-cols-3 px-5">
       {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
         <button key={d} type="button" disabled={disabled} onClick={() => onDigit(d)} className={key}>
           {d}

@@ -3,5 +3,5 @@
  * screen (no phone-width column with gray bands), with the form in a centered column.
  */
 export default function StaffLoginLayout({ children }: LayoutProps<"/staff/login">) {
-  return <div className="flex min-h-dvh w-full flex-col bg-white">{children}</div>;
+  return <div className="flex min-h-dvh w-full grow flex-col bg-white">{children}</div>;
 }

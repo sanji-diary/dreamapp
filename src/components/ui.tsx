@@ -3,11 +3,6 @@ import type { ReactNode } from "react";
 
 /** Shared building blocks. Sizes follow the approved mock-ups: 72px rows, 46px circles, 30px pills. */
 
-/** Phone-width column: on a desktop the app sits centered like a phone screen. */
-export function PhoneColumn({ children }: { children: ReactNode }) {
-  return <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white shadow-[0_0_40px_rgba(25,31,40,0.06)]">{children}</div>;
-}
-
 export type IconName = "drop" | "can" | "bible" | "stamp" | "house" | "bubble" | "pray" | "persimmon" | "badge" | "pouch" | "cloud" | "butterfly" | "bird" | "bee" | "leaf";
 
 export function Icon({ name, size = 36, className = "" }: { name: IconName | string; size?: number; className?: string }) {
@@ -105,11 +100,12 @@ export function Row({
     <div className={`flex min-h-[72px] items-center gap-[13px] py-2 ${last ? "" : "border-b border-line"}`}>
       {left}
       <div className="flex min-w-0 grow flex-col gap-px">
-        <div className="flex items-baseline gap-1.5">
-          <span className="truncate text-[17px] leading-[23px] font-bold tracking-[-0.4px] text-ink2">{title}</span>
+        {/* On a narrow screen the title wraps and the tags drop to the next line, rather than being cut to "가정예…". */}
+        <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+          <span className="min-w-0 text-[17px] leading-[23px] font-bold tracking-[-0.4px] break-keep text-ink2 [overflow-wrap:anywhere]">{title}</span>
           {extra}
         </div>
-        {sub ? <div className={`truncate text-[13px] leading-[18px] tracking-[-0.2px] ${subTone === "danger" ? "text-danger" : "text-sub"}`}>{sub}</div> : null}
+        {sub ? <div className={`text-[13px] leading-[18px] tracking-[-0.2px] break-keep [overflow-wrap:anywhere] ${subTone === "danger" ? "text-danger" : "text-sub"}`}>{sub}</div> : null}
       </div>
       {right}
     </div>
@@ -131,7 +127,7 @@ const KID_TABS = [
 
 export function KidTabBar({ active }: { active: string }) {
   return (
-    <nav aria-label="메뉴" className="sticky bottom-0 z-20 grid h-[76px] shrink-0 grid-cols-5 border-t border-line bg-white px-2 pt-2 pb-[18px]">
+    <nav aria-label="메뉴" className="sticky bottom-0 z-20 grid h-[76px] w-full shrink-0 grid-cols-5 border-t border-line bg-white px-[max(8px,calc(50%-280px))] pt-2 pb-[18px]">
       {KID_TABS.map((t) => {
         const on = active === t.href;
         return (
