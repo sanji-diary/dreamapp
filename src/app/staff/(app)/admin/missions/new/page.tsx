@@ -14,11 +14,14 @@ export default async function NewMissionPage({ searchParams }: PageProps<"/staff
   const error = typeof sp.error === "string" ? sp.error : undefined;
   // "+ 미션 만들기" on another week's list starts the form on that week (?w=).
   const week = typeof sp.w === "string" ? sp.w : undefined;
+  // "+ 만들기" on the plan screen starts a fixed or rotating mission (?mode=).
+  const mode = sp.mode === "fixed" || sp.mode === "pool" ? sp.mode : "dated";
+  const initial = { ...defaultMissionInput(week), mode, repeat: "weekly" };
   return (
     <Page narrow>
-      <PageHeader back="/staff/admin/missions" backLabel="미션 목록으로 돌아가기" title="미션 만들기" />
+      <PageHeader back={mode === "dated" ? "/staff/admin/missions" : `/staff/admin/missions#${mode === "fixed" ? "fixed" : "rotation"}`} backLabel="미션 목록으로 돌아가기" title="미션 만들기" />
       <FlashNote error={sp.error} />
-      <MissionForm id={null} initial={defaultMissionInput(week)} thisWeek={weekStart()} error={error} {...options} />
+      <MissionForm id={null} initial={initial} thisWeek={weekStart()} error={error} {...options} />
     </Page>
   );
 }

@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { missionSaveAction } from "@/lib/staff/actions-admin";
 import type { MissionInput } from "@/lib/staff/admin-missions";
+import type { Verse } from "@/lib/types";
 import { addDays, weekLabel, weekStart } from "@/lib/time";
-import { ChoiceChips, FieldGroup, FieldPair, HintText, NumberStepper, SaveBar, SubmitButton, SwitchRow, TextArea, TextInput, errorFor, inputBoxClass } from "./form-kit";
+import { ChoiceChips, FieldGroup, FieldPair, HintText, NumberStepper, SaveBar, SubmitButton, SwitchRow, TextInput, errorFor, inputBoxClass } from "./form-kit";
 import { QuizEditor } from "./QuizEditor";
+import { VerseEditor } from "./plan/VerseEditor";
 
 type Option = { value: string; label: string };
 
@@ -31,6 +33,7 @@ export function MissionForm({
   targets,
   games,
   thisWeek,
+  rotatingPerWeek,
   error,
 }: {
   id: number | null;
@@ -41,6 +44,8 @@ export function MissionForm({
   games: { id: string; title: string; description: string }[];
   /** The Sunday of the current week in Korea, for the week buttons. */
   thisWeek: string;
+  /** The setting: how many rotating missions come out each week, for the hint under "순환". */
+  rotatingPerWeek: number;
   error?: string;
 }) {
   const [gameId, setGameId] = useState(initial.game_id ?? games[0]?.id ?? "");
@@ -53,6 +58,8 @@ export function MissionForm({
   const [target, setTarget] = useState(initial.target_class_id !== null ? `c${initial.target_class_id}` : initial.target_grade !== null ? `g${initial.target_grade}` : "all");
   const [starts, setStarts] = useState(initial.starts_on);
   const [ends, setEnds] = useState(initial.ends_on);
+  const [mode, setMode] = useState(initial.mode ?? "dated");
+  const ownVerses: Verse[] = initial.verses && initial.verses.length > 0 ? initial.verses : initial.verse_text ? [{ n: null, text: initial.verse_text }] : [];
 
   // Week buttons: this week and the two after it. They only fill the two date boxes below.
   const weeks = [0, 1, 2].map((i) => {
@@ -72,8 +79,14 @@ export function MissionForm({
       <ChoiceChips legend="어떻게 확인할까요?" name="kind" options={kinds} value={kind} onChange={setKind} error={errorFor(error, /확인 방법/)} />
       {kind === "verse" ? (
         <div className={panelClass}>
-          <TextArea label="따라 쓸 말씀" name="verse_text" id="m-verse" required maxLength={300} defaultValue={initial.verse_text ?? ""} error={errorFor(error, /말씀/)} />
-          <TextInput label="말씀 주소" name="verse_ref" id="m-ref" maxLength={40} defaultValue={initial.verse_ref ?? ""} placeholder="예: 시편 23편 1절" />
+          {mode === "fixed" ? (
+            <div className="flex flex-col gap-1">
+              <b className="text-[15px] tracking-[-0.02em]">매주 바뀌는 말씀이에요</b>
+              <span className="text-[13px] leading-[19px] text-mute">말씀은 미션 화면에서 주마다 넣어요. 말씀이 없는 주에는 아이에게 이 미션이 보이지 않아요.</span>
+            </div>
+          ) : (
+            <VerseEditor idPrefix="m-verse" initialRef={initial.verse_ref} initialVerses={ownVerses} error={errorFor(error, /말씀|절/)} />
+          )}
         </div>
       ) : null}
       {kind === "quiz" ? <QuizEditor initial={initial.quiz} initialPass={initial.quiz_pass} error={errorFor(error, /문제|통과 기준/)} /> : null}
@@ -114,10 +127,36 @@ export function MissionForm({
       ) : null}
 
       <FieldPair>
-        <NumberStepper label="물방울" name="drops" id="m-drops" value={drops} onChange={setDrops} step={1} min={0} max={5} unit="개" error={errorFor(error, /물방울/)} />
-        <NumberStepper label="포인트" name="points" id="m-points" value={points} onChange={setPoints} step={5} min={0} max={100} unit="P" error={errorFor(error, /포인트/)} />
+        <NumberStepper label="물방울" name="drops" id="m-drops" value={drops} onChange={setDrops} step={1} min={0} max={12} unit="개" error={errorFor(error, /물방울/)} hint={drops === 0 ? "물방울 없이 포인트만 줘요." : undefined} />
+        <NumberStepper label="포인트" name="points" id="m-points" value={points} onChange={setPoints} step={5} min={0} max={1000} unit="P" error={errorFor(error, /포인트/)} />
       </FieldPair>
 
+      <ChoiceChips
+        legend="언제 나오나요?"
+        name="mode"
+        options={[
+          { value: "fixed", label: "매주 고정" },
+          { value: "pool", label: "순환" },
+          { value: "dated", label: "기간 정하기" },
+        ]}
+        value={mode}
+        onChange={(v) => setMode(v as typeof mode)}
+        error={errorFor(error, /언제 여는지|돌아가는 순서/)}
+        hint={
+          mode === "fixed"
+            ? "매주 빠짐없이 나와요. 출석, 말씀 쓰기, 가정예배처럼 늘 하는 미션이에요."
+            : mode === "pool"
+              ? `보관함에 들어가요. 오래 안 나온 미션부터 한 주에 ${rotatingPerWeek}개씩 자동으로 나와요. 미션 화면의 ‘순환 미션’에서 그 주 것을 바꿀 수 있어요.`
+              : "정한 날짜에만 나와요."
+        }
+      />
+      {mode !== "dated" ? (
+        <>
+          <input type="hidden" name="starts_on" value={starts} />
+          <input type="hidden" name="ends_on" value={ends} />
+        </>
+      ) : null}
+      {mode === "dated" ? (
       <FieldGroup legend="언제" error={dateError} hint={whole ? `${weekLabel(starts)} (${sameMonth ? "" : `${Number(starts.slice(5, 7))}월 `}${dayOf(starts)}일 ~ ${sameMonth ? "" : `${Number(ends.slice(5, 7))}월 `}${dayOf(ends)}일) 주일부터 토요일까지예요.` : "주를 누르면 그 주 주일부터 토요일까지로 맞춰져요. 날짜를 직접 고쳐도 돼요."}>
         <div className="-my-[5px] flex flex-wrap gap-x-[7px]" role="group" aria-label="주로 고르기">
           {weeks.map((w) => {
@@ -146,6 +185,7 @@ export function MissionForm({
           <input aria-label="끝나는 날" name="ends_on" type="date" required value={ends} min={isDay(starts) ? starts : undefined} onChange={(e) => setEnds(e.target.value)} aria-invalid={dateError ? true : undefined} className={inputBoxClass(Boolean(dateError), true)} />
         </div>
       </FieldGroup>
+      ) : null}
 
       <ChoiceChips
         legend="몇 번 할 수 있나요?"
@@ -170,7 +210,7 @@ export function MissionForm({
           max={7}
           defaultValue={initial.weekly_limit ?? ""}
           placeholder="비우면 7번"
-          hint={`한 주에 최대 물방울 ${drops * 7}개까지 받을 수 있어요. 횟수를 정하면 그만큼만 받아요.`}
+          hint={drops === 0 ? "포인트만 주는 미션이에요. 횟수를 정하면 그만큼만 받아요." : `한 주에 최대 물방울 ${drops * 7}개까지 받을 수 있어요. 횟수를 정하면 그만큼만 받아요.`}
           error={errorFor(error, /횟수/)}
         />
       ) : null}
@@ -191,7 +231,7 @@ export function MissionForm({
         </div>
       </FieldGroup>
 
-      <SwitchRow name="is_challenge" defaultChecked={initial.is_challenge} label="이번 주 도전 미션" hint="아이 미션 목록 맨 위에 보여요" />
+      {mode === "dated" ? <SwitchRow name="is_challenge" defaultChecked={initial.is_challenge} label="이번 주 도전 미션" hint="아이 미션 목록 맨 위에 보여요" /> : null}
 
       <SaveBar>
         <SubmitButton>{id === null ? "미션 올리기" : "고친 내용 저장"}</SubmitButton>

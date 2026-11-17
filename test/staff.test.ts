@@ -5,7 +5,7 @@ process.env.DREAM_SEED = "off";
 
 import { ROLE_PRESETS } from "@/lib/authz";
 import { db, one, resetDbForTests } from "@/lib/db";
-import { completeMission, dropBalance, pointBalance } from "@/lib/game";
+import { completeMission, dropBalance, getSettings, pointBalance } from "@/lib/game";
 import { staffTabs } from "@/lib/staff/access";
 import { joinCodeOpen } from "@/lib/self-join";
 import { adjustPoints, attendanceCsv, balances, moveChildren, pointsCsv, reissueJoinCode, saveSettings, setSelfJoin, sharedJoin } from "@/lib/staff/admin-misc";
@@ -524,6 +524,17 @@ describe("admin: missions, points, settings, exports", () => {
     expect(await saveSettings(s.staff.admin, { ...good, weeklyDropCap: 0 })).toMatchObject({ ok: false });
     expect(await saveSettings(s.staff.admin, good)).toMatchObject({ ok: true });
     expect((await weeklyDropCheck(s.staff.admin))?.cap).toBe(10);
+  });
+
+  it("settings keep the welcome-back drops and the rotating count when they are left out, and check them when given", async () => {
+    const good = { weeklyDropCap: 12, levelNeeds: [2, 4, 6, 8, 10, 10], classGoal: 30, harvestBonusPoints: 50 };
+    expect(await saveSettings(s.staff.admin, { ...good, welcomeBackDrops: 6 })).toMatchObject({ ok: false });
+    expect(await saveSettings(s.staff.admin, { ...good, rotatingPerWeek: 11 })).toMatchObject({ ok: false });
+    expect(await saveSettings(s.staff.admin, { ...good, welcomeBackDrops: -1 })).toMatchObject({ ok: false });
+    expect(await saveSettings(s.staff.admin, { ...good, welcomeBackDrops: 0, rotatingPerWeek: 2 })).toMatchObject({ ok: true });
+    expect(await getSettings(db)).toMatchObject({ welcomeBackDrops: 0, rotatingPerWeek: 2 });
+    expect(await saveSettings(s.staff.admin, good)).toMatchObject({ ok: true });
+    expect(await getSettings(db)).toMatchObject({ welcomeBackDrops: 0, rotatingPerWeek: 2 });
   });
 
   it("only admins move children between classes", async () => {

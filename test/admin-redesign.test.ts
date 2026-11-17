@@ -6,7 +6,7 @@ process.env.DREAM_SEED = "off";
 import { ROLE_PRESETS } from "@/lib/authz";
 import { db, resetDbForTests } from "@/lib/db";
 import { completeMission } from "@/lib/game";
-import { copyWeek, defaultMissionInput, missionStats, missionWeeksFrom, saveMission, setMissionActive, setMissionChallenge, weekCopyPlan, weekMissions } from "@/lib/staff/admin-missions";
+import { copyWeek, defaultMissionInput, listFixedMissions, missionStats, missionWeeksFrom, saveMission, setMissionActive, setMissionChallenge, weekCopyPlan, weekMissions } from "@/lib/staff/admin-missions";
 import { listStaff, setStaffSwitch, SWITCH_KEYS } from "@/lib/staff/admin-staff";
 import { festivalLevels } from "@/lib/staff/festival";
 import { reviewSubmission } from "@/lib/staff/review";
@@ -104,6 +104,35 @@ describe("mission list by week", () => {
     // a week further on appears as soon as a mission is planned for it; older weeks are not listed
     await mission("먼 미래", addDays(THIS, 28));
     expect(await missionWeeksFrom(s.admin, THIS)).toEqual([THIS, NEXT, addDays(THIS, 28)]);
+  });
+
+  it("lists the fixed missions every week and the rotating ones in the weeks they are on; neither is copied or makes a week chip", async () => {
+    await db.query("insert into settings (key, value) values ('rotating_per_week', '1') on conflict (key) do update set value = excluded.value");
+    const fixed = await mission("주일 예배 출석", LAST, { mode: "fixed" });
+    const p1 = await mission("감사 일기", LAST, { mode: "pool" });
+    const p2 = await mission("친구 초대", LAST, { mode: "pool" });
+    const dated = await mission("이번 주", THIS);
+    // the rotating mission picked for this week, then the dated one; the fixed one although its dates are last week's
+    expect((await weekMissions(s.admin, THIS, TODAY))?.map((m) => m.id)).toEqual([fixed, p1, dated]);
+    // next week: the other rotating mission, as it would be picked
+    expect((await weekMissions(s.admin, NEXT, TODAY))?.map((m) => m.id)).toEqual([fixed, p2]);
+    // a switched-off fixed mission has no week to be shown in
+    await setMissionActive(s.admin, fixed, false);
+    expect((await weekMissions(s.admin, NEXT, TODAY))?.map((m) => m.id)).toEqual([p2]);
+    // only the dated mission makes a week chip or is copied
+    expect(await missionWeeksFrom(s.admin, LAST)).toEqual([THIS]);
+    await setMissionActive(s.admin, fixed, true);
+    expect((await weekCopyPlan(s.admin, NEXT))?.copy.map((m) => m.id)).toEqual([dated]);
+  });
+
+  it("lists every fixed mission for the mission screen, switched-off ones last, to admins only", async () => {
+    const a = await mission("주일 예배 출석", THIS, { mode: "fixed" });
+    const b = await mission("가정예배 드리기", THIS, { mode: "fixed" });
+    await mission("감사 일기", THIS, { mode: "pool" });
+    await mission("이번 주", THIS);
+    await setMissionActive(s.admin, a, false);
+    expect(await listFixedMissions(s.head)).toBeNull();
+    expect((await listFixedMissions(s.admin))?.map((m) => m.id)).toEqual([b, a]);
   });
 
   it("counts finished children per week and waiting submissions, for admins only", async () => {

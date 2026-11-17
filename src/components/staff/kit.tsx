@@ -234,7 +234,8 @@ export function Segmented({ items, label, onGray = false }: { items: { href: str
           prefetch={it.prefetch}
           scroll={it.scroll}
           aria-current={it.on ? "page" : undefined}
-          className={`flex h-[38px] items-center justify-center rounded-[9px] no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy lg:h-8 ${it.on ? "bg-white font-bold text-ink shadow-[0_1px_3px_rgba(25,31,40,0.1)]" : "text-mute"}`}
+          // Below lg the ::before stretches the tap area over the 3px of track above and below (44px in all); the tab still looks 38px.
+          className={`relative flex h-[38px] items-center justify-center rounded-[9px] before:absolute before:inset-x-0 before:-inset-y-[3px] before:content-[''] lg:before:hidden no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy lg:h-8 ${it.on ? "bg-white font-bold text-ink shadow-[0_1px_3px_rgba(25,31,40,0.1)]" : "text-mute"}`}
         >
           {it.label}
         </Link>

@@ -1,6 +1,7 @@
 import "server-only";
 import { db, one } from "@/lib/db";
 import { getSettings, type Settings } from "@/lib/game";
+import { ROTATING_MAX } from "@/lib/plan";
 import { ensureJoinCode, newJoinCode, selfJoinState } from "@/lib/self-join";
 import { addDays, todayKst, weekStart } from "@/lib/time";
 import type { Staff } from "@/lib/types";
@@ -352,13 +353,25 @@ export async function adminSettings(staff: Staff): Promise<Settings | null> {
   return admin(staff) ? getSettings(db) : null;
 }
 
-export async function saveSettings(staff: Staff, input: { weeklyDropCap: number; levelNeeds: number[]; classGoal: number; harvestBonusPoints: number }): Promise<Result> {
+/** The most welcome-back drops the settings screen allows. */
+export const WELCOME_BACK_MAX = 5;
+
+/**
+ * The settings screen. `welcomeBackDrops` and `rotatingPerWeek` may be left out (older callers);
+ * a value left out is not changed.
+ */
+export async function saveSettings(
+  staff: Staff,
+  input: { weeklyDropCap: number; levelNeeds: number[]; classGoal: number; harvestBonusPoints: number; welcomeBackDrops?: number; rotatingPerWeek?: number },
+): Promise<Result> {
   if (!admin(staff)) return deny;
   const int = (n: number, min: number, max: number) => Number.isInteger(n) && n >= min && n <= max;
   if (!int(input.weeklyDropCap, 1, 100)) return fail("주간 물방울 한도는 1에서 100 사이로 적어 주세요");
   if (input.levelNeeds.length !== 6 || !input.levelNeeds.every((n) => int(n, 1, 100))) return fail("단계별 물방울은 1에서 100 사이 숫자 여섯 개로 적어 주세요");
   if (!int(input.classGoal, 1, 10000)) return fail("반 목표는 1 이상으로 적어 주세요");
   if (!int(input.harvestBonusPoints, 0, 10000)) return fail("수확 보너스는 0 이상으로 적어 주세요");
+  if (input.welcomeBackDrops !== undefined && !int(input.welcomeBackDrops, 0, WELCOME_BACK_MAX)) return fail(`반가워 물방울은 0에서 ${WELCOME_BACK_MAX} 사이로 적어 주세요`);
+  if (input.rotatingPerWeek !== undefined && !int(input.rotatingPerWeek, 0, ROTATING_MAX)) return fail(`순환 미션 수는 0에서 ${ROTATING_MAX} 사이로 적어 주세요`);
   const before = await getSettings(db);
   const set = (key: string, value: unknown) =>
     db.query("insert into settings (key, value) values ($1, $2) on conflict (key) do update set value = excluded.value", [key, JSON.stringify(value)]);
@@ -366,6 +379,8 @@ export async function saveSettings(staff: Staff, input: { weeklyDropCap: number;
   await set("level_needs", input.levelNeeds);
   await set("class_goal", input.classGoal);
   await set("harvest_bonus_points", input.harvestBonusPoints);
+  if (input.welcomeBackDrops !== undefined) await set("welcome_back_drops", input.welcomeBackDrops);
+  if (input.rotatingPerWeek !== undefined) await set("rotating_per_week", input.rotatingPerWeek);
   await audit(db, staff.id, "settings_update", "settings", null, { before, after: input });
   return { ok: true };
 }

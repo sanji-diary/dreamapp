@@ -496,7 +496,7 @@ export default async function ChildrenPage({ searchParams }: PageProps<"/staff/c
       {v.f === "other" ? <p className="m-0 -my-1 text-[13px] text-mute">다른 반 아이는 이름과 반만 볼 수 있어요.</p> : null}
 
       {/* Below lg: cards. One across on a folded cover screen, two on a phone, three or four on an unfolded phone or a tablet. */}
-      <ul className="m-0 grid list-none grid-cols-2 gap-2.5 p-0 max-[329px]:grid-cols-1 sm:grid-cols-3 min-[840px]:grid-cols-4 lg:hidden">
+      <ul className="m-0 grid list-none grid-cols-2 gap-2.5 p-0 max-[329px]:grid-cols-1 min-[640px]:grid-cols-3 min-[840px]:grid-cols-4 lg:hidden">
         {shown.map((k) => (
           <KidCard key={k.id} k={k} st={stats.get(k.id)} cap={settings.weeklyDropCap} showClass={showClass} />
         ))}

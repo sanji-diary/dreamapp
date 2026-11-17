@@ -3,7 +3,8 @@ import { FieldGroup, FormSection, SaveBar, SubmitButton, TextInput, errorFor, fi
 import { FlashNote, Page } from "@/components/staff/kit";
 import { requireAdmin } from "@/lib/auth";
 import { settingsSaveAction } from "@/lib/staff/actions-admin";
-import { adminSettings } from "@/lib/staff/admin-misc";
+import { adminSettings, WELCOME_BACK_MAX } from "@/lib/staff/admin-misc";
+import { ROTATING_MAX } from "@/lib/plan";
 import { LEVEL_NAMES } from "@/lib/types";
 
 export const metadata = { title: "설정 · 꿈의숲키우기" };
@@ -34,7 +35,35 @@ export default async function SettingsPage({ searchParams }: PageProps<"/staff/a
             hint="미션으로 한 주에 모을 수 있는 물방울 수예요. 미션 화면에서 이번 주 합계와 견주어 볼 수 있어요."
             error={errorFor(sp.error, /주간 물방울/)}
           />
+          <TextInput
+            label="반가워 물방울"
+            name="welcome_back_drops"
+            id="set-welcome"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={WELCOME_BACK_MAX}
+            required
+            defaultValue={s.welcomeBackDrops}
+            hint={`두 주일을 이어서 빠졌다가 다시 온 아이에게 주는 물방울이에요. 한 주 한도와 따로 세요. 0에서 ${WELCOME_BACK_MAX}개, 0이면 주지 않아요.`}
+            error={errorFor(sp.error, /반가워/)}
+          />
           <TextInput label="반 목표 물방울" name="class_goal" id="set-goal" type="number" inputMode="numeric" min={1} max={10000} required defaultValue={s.classGoal} hint="반 아이들이 함께 모으는 목표 물방울 수예요." error={errorFor(sp.error, /반 목표/)} />
+        </FormSection>
+        <FormSection title="미션">
+          <TextInput
+            label="한 주에 나오는 순환 미션"
+            name="rotating_per_week"
+            id="set-rotating"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={ROTATING_MAX}
+            required
+            defaultValue={s.rotatingPerWeek}
+            hint={`보관함에서 오래 안 나온 미션부터 매주 이만큼 나와요(0에서 ${ROTATING_MAX}개). 이미 정해진 주는 그대로예요.`}
+            error={errorFor(sp.error, /순환 미션/)}
+          />
         </FormSection>
         <FormSection title="나무">
           <FieldGroup legend="나무 단계별로 필요한 물방울" error={levelError} hint={`지금은 나무 한 그루에 물방울 ${total}개가 필요해요. 바꾸면 자라는 중인 나무에도 바로 적용돼요.`}>

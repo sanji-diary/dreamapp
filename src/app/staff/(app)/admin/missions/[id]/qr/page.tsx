@@ -40,7 +40,8 @@ export default async function MissionQrPage({ params }: PageProps<"/staff/admin/
   if (!m || !m.qr_code || (m.kind !== "qr" && m.kind !== "attendance")) notFound();
   const url = `${await publicOrigin()}/q/${m.qr_code}`;
   const svg = await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
-  const period = m.starts_on === m.ends_on ? formatKoreanDate(m.starts_on) : `${formatKoreanDate(m.starts_on)} - ${formatKoreanDate(m.ends_on)}`;
+  // A fixed or rotating mission has no dates of its own: the poster says how it comes instead.
+  const period = m.mode === "fixed" ? "매주 나와요" : m.mode === "pool" ? "순환 미션이에요" : m.starts_on === m.ends_on ? formatKoreanDate(m.starts_on) : `${formatKoreanDate(m.starts_on)} - ${formatKoreanDate(m.ends_on)}`;
 
   return (
     <Page narrow>
@@ -65,7 +66,7 @@ export default async function MissionQrPage({ params }: PageProps<"/staff/admin/
         <span className="qr-poster-small text-[12px] leading-[18px] text-mute">처음이라면 먼저 내 QR 카드를 찍고 비밀번호를 눌러요.</span>
         <span className="text-[11px] break-all text-mute print:hidden">{url}</span>
       </div>
-      <Small className="print:hidden">미션마다 QR이 달라요. 다음 주로 복사한 미션은 새 QR을 인쇄해 주세요.</Small>
+      <Small className="print:hidden">{m.mode === "dated" ? "미션마다 QR이 달라요. 다음 주로 복사한 미션은 새 QR을 인쇄해 주세요." : "이 QR은 매주 그대로 쓸 수 있어요."}</Small>
     </Page>
   );
 }

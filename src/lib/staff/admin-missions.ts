@@ -218,11 +218,27 @@ export async function setMissionChallenge(staff: Staff, id: number, on: boolean)
   return rows.length > 0 ? { ok: true } : fail("미션을 찾을 수 없어요");
 }
 
-/** Every mission whose period touches the week that starts on `week` (a Sunday), taken-down ones included. Challenge missions first. */
-export async function weekMissions(staff: Staff, week: string): Promise<Mission[] | null> {
+/**
+ * The missions of the week that starts on `week` (a Sunday), as the list screen shows them: the fixed
+ * missions and the week's rotating ones (both only while switched on: they have no dates to show them
+ * by), then every dated mission whose period touches the week, taken-down ones included, challenges first.
+ */
+export async function weekMissions(staff: Staff, week: string, today: string = todayKst()): Promise<Mission[] | null> {
   if (staff.role !== "admin") return null;
   if (!isDate(week)) return [];
-  return db.query<Mission>("select * from missions where starts_on <= $2 and ends_on >= $1 order by is_challenge desc, active desc, starts_on, id", [week, addDays(week, 6)]);
+  const [rotation, all] = await Promise.all([
+    rotationFor(db, weekStart(week), today),
+    db.query<Mission>("select * from missions where (mode = 'dated' and starts_on <= $2 and ends_on >= $1) or (mode <> 'dated' and active) order by is_challenge desc, active desc, starts_on, id", [week, addDays(week, 6)]),
+  ]);
+  const fixed = all.filter((m) => m.mode === "fixed");
+  const pool = rotation.map((id) => all.find((m) => m.id === id && m.mode === "pool")).filter((m): m is Mission => m !== undefined);
+  return [...fixed, ...pool, ...all.filter((m) => m.mode === "dated")];
+}
+
+/** Every fixed mission, switched-off ones too (after the ones that are on), for the 고정 미션 part of the mission screen. */
+export async function listFixedMissions(staff: Staff): Promise<Mission[] | null> {
+  if (staff.role !== "admin") return null;
+  return db.query<Mission>("select * from missions where mode = 'fixed' order by active desc, id");
 }
 
 /** The Sundays of the weeks that have a mission, from the week of `from` on (at most `limit` of them). For the week chips. */
@@ -230,7 +246,7 @@ export async function missionWeeksFrom(staff: Staff, from: string, limit = 8): P
   if (staff.role !== "admin") return null;
   if (!isDate(from)) return [];
   const first = weekStart(from);
-  const rows = await db.query<{ starts_on: string; ends_on: string }>("select starts_on, ends_on from missions where ends_on >= $1", [first]);
+  const rows = await db.query<{ starts_on: string; ends_on: string }>("select starts_on, ends_on from missions where mode = 'dated' and ends_on >= $1", [first]);
   const weeks = new Set<string>();
   for (const r of rows) {
     // A long mission counts for every week it runs in, up to the limit.
@@ -297,8 +313,9 @@ export async function weekCopyPlan(staff: Staff, toWeek: string): Promise<{ from
   if (staff.role !== "admin") return null;
   if (!isDate(toWeek) || weekStart(toWeek) !== toWeek) return null;
   const from = addDays(toWeek, -7);
-  const source = await db.query<Mission>("select * from missions where active and starts_on >= $1 and ends_on <= $2 order by is_challenge desc, id", [from, addDays(from, 6)]);
-  const there = await db.query<Mission>("select * from missions where starts_on >= $1 and ends_on <= $2", [toWeek, addDays(toWeek, 6)]);
+  // Fixed and rotating missions come every week by themselves: only dated ones are copied.
+  const source = await db.query<Mission>("select * from missions where active and mode = 'dated' and starts_on >= $1 and ends_on <= $2 order by is_challenge desc, id", [from, addDays(from, 6)]);
+  const there = await db.query<Mission>("select * from missions where mode = 'dated' and starts_on >= $1 and ends_on <= $2", [toWeek, addDays(toWeek, 6)]);
   const twin = (m: Mission) => there.some((t) => t.title === m.title && t.kind === m.kind && sameTarget(t, m) && t.starts_on === addDays(m.starts_on, 7) && t.ends_on === addDays(m.ends_on, 7));
   return { from, copy: source.filter((m) => !twin(m)), already: source.filter(twin) };
 }

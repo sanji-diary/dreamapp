@@ -8,7 +8,9 @@ import { saveUpload } from "@/lib/uploads";
 import { adjustPoints, archiveClass, copyPreviousWorship, deleteNotice, deletePost, moveChildren, moveClass, reissueJoinCode, saveClass, saveNotice, savePost, saveSettings, saveWorship, setSelfJoin } from "./admin-misc";
 import { weekStart } from "@/lib/time";
 import { copyWeek, duplicateToNextWeek, getMission, saveMission, setMissionActive, setMissionChallenge } from "./admin-missions";
+import { clearWeekVerses, createDefaultFixedMissions, resetWeekRotation, saveWeekVerses, setRotatingPerWeek, setWeekRotation } from "./admin-plan";
 import { createStaff, getStaffRow, renewInvite, setStaffSwitch, updateStaff } from "./admin-staff";
+import type { Verse } from "@/lib/types";
 import { clean, cleanOrNull, fail, isDate, toInt, type Result } from "./util";
 
 /**
@@ -16,8 +18,11 @@ import { clean, cleanOrNull, fail, isDate, toInt, type Result } from "./util";
  * functions they call check the role again.
  */
 
+/** Adds one query value to a path, before its #place if it has one. */
 function withParam(path: string, key: string, value: string): string {
-  return `${path}${path.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
+  const at = path.indexOf("#");
+  const [base, hash] = at < 0 ? [path, ""] : [path.slice(0, at), path.slice(at)];
+  return `${base}${base.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}${hash}`;
 }
 
 function finish(r: Result, path: string, okMessage?: string, errorPath: string = path): never {
@@ -27,6 +32,17 @@ function finish(r: Result, path: string, okMessage?: string, errorPath: string =
 }
 
 const on = (formData: FormData, key: string) => formData.get(key) === "on";
+
+/** The verses the verse editor posts as JSON. Anything unreadable becomes an empty list, which the check then refuses. */
+function readVersesJson(raw: FormDataEntryValue | null): Verse[] {
+  if (typeof raw !== "string" || raw.length > 20000) return [];
+  try {
+    const v: unknown = JSON.parse(raw);
+    return Array.isArray(v) ? (v as Verse[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 /* ---------- missions ---------- */
 
@@ -54,10 +70,13 @@ export async function missionSaveAction(formData: FormData) {
     quiz: readQuizJson(formData.get("quiz")),
     quiz_pass: toInt(formData.get("quiz_pass")),
     game_id: cleanOrNull(formData.get("game_id"), 40),
+    mode: formData.has("mode") ? clean(formData.get("mode"), 8) : undefined,
+    verses: formData.has("verses") ? readVersesJson(formData.get("verses")) : undefined,
   });
-  // Back to the list, on the week the mission starts in and with the mission open.
+  // Back to the list, on the week the mission starts in and with the mission open; a fixed or rotating one goes to the plan.
   const starts = clean(formData.get("starts_on"), 10);
-  const list = r.ok && isDate(starts) ? missionsPath(weekStart(starts), r.id) : MISSIONS;
+  const mode = clean(formData.get("mode"), 8);
+  const list = !r.ok ? MISSIONS : mode === "fixed" || mode === "pool" ? missionsPath(null, r.id) : isDate(starts) ? missionsPath(weekStart(starts), r.id) : MISSIONS;
   finish(r, list, id === null ? "미션을 올렸어요" : "미션을 고쳤어요", id === null ? `${MISSIONS}/new` : `${MISSIONS}/${id}`);
 }
 
@@ -98,6 +117,66 @@ export async function missionCopyWeekAction(formData: FormData) {
   const here = missionsPath(to, null);
   const r = await copyWeek(staff, to);
   finish(r, here, r.ok ? `미션 ${r.copied}개를 복사했어요${r.skipped > 0 ? `. 이미 있던 ${r.skipped}개는 그대로 두었어요` : ""}` : undefined);
+}
+
+/* ---------- the mission plan (on the mission screen) ---------- */
+
+/** The mission screen on one week (a Sunday), scrolled to one of its parts. */
+function planPath(week: unknown, part: "fixed" | "rotation" | "dated" = "rotation"): string {
+  return `${missionsPath(isDate(week) ? weekStart(week) : null, null)}#${part}`;
+}
+
+/** "고정 미션 4개 만들기": the four missions every week starts with. Pressing it twice makes nothing new. */
+export async function planCreateFixedAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const week = clean(formData.get("w"), 10);
+  const r = await createDefaultFixedMissions(staff);
+  finish(r, planPath(week, "fixed"), r.ok ? (r.created > 0 ? `고정 미션 ${r.created}개를 만들었어요. 이번 주 말씀을 넣어 주세요` : "고정 미션이 이미 있어요") : undefined);
+}
+
+/** The rotating missions of one week, chosen by hand: the boxes ticked, in the order of the list. */
+export async function planRotationAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const week = clean(formData.get("w"), 10);
+  const ids = formData.getAll("mission_ids").map((v) => toInt(v)).filter((n): n is number => n !== null);
+  finish(await setWeekRotation(staff, week, ids), planPath(week), ids.length > 0 ? `이 주 순환 미션을 ${ids.length}개로 정했어요` : "이 주에는 순환 미션을 내지 않아요");
+}
+
+/** Back to the automatic pick for one week. */
+export async function planRotationResetAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const week = clean(formData.get("w"), 10);
+  finish(await resetWeekRotation(staff, week), planPath(week), "이 주 순환 미션을 자동으로 되돌렸어요");
+}
+
+/** How many rotating missions come out each week, from the mission screen. */
+export async function planPerWeekAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const week = clean(formData.get("w"), 10);
+  const n = toInt(formData.get("per_week")) ?? -1;
+  finish(await setRotatingPerWeek(staff, n), planPath(week), `이제 한 주에 순환 미션이 ${n}개씩 나와요`);
+}
+
+function versesPath(id: number, week: unknown): string {
+  return `${MISSIONS}/${id}/verses${isDate(week) ? `?w=${weekStart(week)}` : ""}`;
+}
+
+/** One week's verses of "이번 주 말씀 쓰기", from the verse editor. */
+export async function weekVersesSaveAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const id = toInt(formData.get("id"));
+  if (id === null) redirect(MISSIONS);
+  const week = clean(formData.get("w"), 10);
+  const r = await saveWeekVerses(staff, id, week, { ref: cleanOrNull(formData.get("verse_ref"), 40), verses: readVersesJson(formData.get("verses")) });
+  finish(r, versesPath(id, week), "이 주 말씀을 저장했어요");
+}
+
+export async function weekVersesClearAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const id = toInt(formData.get("id"));
+  if (id === null) redirect(MISSIONS);
+  const week = clean(formData.get("w"), 10);
+  finish(await clearWeekVerses(staff, id, week), versesPath(id, week), "이 주 말씀을 지웠어요");
 }
 
 /* ---------- teachers ---------- */
@@ -276,6 +355,8 @@ export async function settingsSaveAction(formData: FormData) {
     levelNeeds: [1, 2, 3, 4, 5, 6].map((i) => n(`level_${i}`)),
     classGoal: n("class_goal"),
     harvestBonusPoints: n("harvest_bonus_points"),
+    welcomeBackDrops: n("welcome_back_drops"),
+    rotatingPerWeek: n("rotating_per_week"),
   });
   finish(r, "/staff/admin/settings", "설정을 저장했어요");
 }
