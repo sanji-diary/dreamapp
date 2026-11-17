@@ -50,3 +50,4 @@ next-env.d.ts
 
 # screenshots written by tools/checks
 /tools/checks/out/
+/tools/sim/out/

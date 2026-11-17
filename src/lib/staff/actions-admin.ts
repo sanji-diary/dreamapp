@@ -115,7 +115,9 @@ export async function missionCopyWeekAction(formData: FormData) {
   const staff = await requireAdmin();
   const to = clean(formData.get("to"), 10);
   const here = missionsPath(to, null);
-  const r = await copyWeek(staff, to);
+  // The screen sends the ticked missions (pick=1); without it everything in the plan is copied.
+  const only = formData.has("pick") ? formData.getAll("mission_ids").map((x) => toInt(x)).filter((n): n is number => n !== null) : undefined;
+  const r = await copyWeek(staff, to, undefined, only);
   finish(r, here, r.ok ? `미션 ${r.copied}개를 복사했어요${r.skipped > 0 ? `. 이미 있던 ${r.skipped}개는 그대로 두었어요` : ""}` : undefined);
 }
 

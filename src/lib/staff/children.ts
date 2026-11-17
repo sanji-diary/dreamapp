@@ -1,7 +1,7 @@
 import "server-only";
 import { canApprove, canReadVisits, canSeeChildDetail, canWriteVisits, detailScope, worryCondition } from "@/lib/authz";
 import { db, one } from "@/lib/db";
-import { completeMission, dropBalance, getSettings, missionsForChild, pointBalance, type MissionForChild } from "@/lib/game";
+import { completeMission, dropBalance, getSettings, harvestTree, missionsForChild, pointBalance, waterTree, type MissionForChild } from "@/lib/game";
 import { newToken } from "@/lib/pin";
 import { addDays, ageOn, todayKst, weekStart } from "@/lib/time";
 import type { Staff } from "@/lib/types";
@@ -577,6 +577,46 @@ export async function proxyComplete(staff: Staff, childId: number, missionId: nu
   const r = await completeMission(childId, missionId, { byStaffId: staff.id });
   if (!r.ok) return fail(r.reason === "already_done" ? "이미 한 미션이에요" : "미션을 찾을 수 없어요");
   return { ok: true, drops: r.drops, points: r.points };
+}
+
+/**
+ * Waters the tree for a child who has no phone, with every drop the child has (the same steps the
+ * child's own taps would take). It stops when the fruit is ripe: harvesting is a separate press.
+ * Only for children marked "휴대폰 없음": a child with a phone waters the tree alone.
+ */
+export async function proxyWater(staff: Staff, childId: number): Promise<Result<{ given: number; level: number; ripe: boolean }>> {
+  const child = await one<{ class_id: number | null; has_phone: boolean }>(db, "select class_id, has_phone from children where id = $1 and active", [childId]);
+  if (!child || !canApprove(staff, child.class_id)) return deny;
+  if (child.has_phone) return fail("휴대폰이 있는 아이는 직접 물을 줘요");
+  let given = 0;
+  let level = 1;
+  let ripe = false;
+  // One drop at a time, as the child would: each step is its own locked transaction.
+  for (let i = 0; i < 500; i++) {
+    const r = await waterTree(childId);
+    if (!r.ok) {
+      if (r.reason === "ripe") ripe = true;
+      break;
+    }
+    given++;
+    level = r.tree.level;
+    ripe = r.ripe;
+    if (r.ripe) break;
+  }
+  if (given === 0) return fail(ripe ? "열매가 다 익었어요. 먼저 수확해 주세요" : "줄 물방울이 없어요");
+  await audit(db, staff.id, "child_water_proxy", "child", childId, { given });
+  return { ok: true, given, level, ripe };
+}
+
+/** Harvests the ripe fruit for a child who has no phone (see proxyWater). */
+export async function proxyHarvest(staff: Staff, childId: number): Promise<Result<{ bonus: number }>> {
+  const child = await one<{ class_id: number | null; has_phone: boolean }>(db, "select class_id, has_phone from children where id = $1 and active", [childId]);
+  if (!child || !canApprove(staff, child.class_id)) return deny;
+  if (child.has_phone) return fail("휴대폰이 있는 아이는 직접 수확해요");
+  const r = await harvestTree(childId);
+  if (!r.ok) return fail("아직 열매가 익지 않았어요");
+  await audit(db, staff.id, "child_harvest_proxy", "child", childId);
+  return { ok: true, bonus: r.bonus };
 }
 
 /* ---------- home screen ---------- */

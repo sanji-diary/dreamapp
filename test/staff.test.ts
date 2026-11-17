@@ -12,9 +12,10 @@ import { adjustPoints, attendanceCsv, balances, moveChildren, pointsCsv, reissue
 import { duplicateToNextWeek, listMissions, saveMission, weeklyDropCheck, defaultMissionInput } from "@/lib/staff/admin-missions";
 import { createStaff, listStaff, updateStaff } from "@/lib/staff/admin-staff";
 import { attendanceClasses, attendanceRoster, saveAttendance, streakFrom } from "@/lib/staff/attendance";
-import { addVisit, createChild, deleteVisit, getChildDetail, listChildren, longAbsent, newJoinerCount, proxyComplete, proxyMissions, reissueCard, resetPin, setChildActive, setConsent, updateChild, updateVisit } from "@/lib/staff/children";
+import { addVisit, createChild, deleteVisit, getChildDetail, listChildren, longAbsent, newJoinerCount, proxyComplete, proxyHarvest, proxyMissions, proxyWater, reissueCard, resetPin, setChildActive, setConsent, updateChild, updateVisit } from "@/lib/staff/children";
 import { resolveKakaoStaff } from "@/lib/staff/kakao";
-import { dismissReports, hideComment, listWorries, openWorry, pendingCompletions, replyWorry, reportedComments, reviewSubmission, unreadWorryCount } from "@/lib/staff/review";
+import { homeData } from "@/lib/staff/home";
+import { dismissReports, hideComment, listWorries, openWorry, overduePending, pendingCompletions, replyWorry, reportedComments, reviewSubmission, unreadWorryCount } from "@/lib/staff/review";
 import { todayKst, weekStart, addDays } from "@/lib/time";
 import type { Role, Staff } from "@/lib/types";
 
@@ -59,6 +60,64 @@ async function setup() {
 let s: Awaited<ReturnType<typeof setup>>;
 beforeEach(async () => {
   s = await setup();
+});
+
+describe("a teacher waters the tree of a child without a phone", () => {
+  const give = (childId: number, n: number) => db.query("insert into drop_ledger (child_id, delta, reason, ref_type) values ($1,$2,'시험','manual')", [childId, n]);
+
+  it("uses every drop, one level step at a time, and only for children without a phone", async () => {
+    await give(s.kidA, 7);
+    // a child with a phone waters alone
+    expect(await proxyWater(s.staff.homeroom, s.kidA)).toMatchObject({ ok: false });
+    expect(await dropBalance(db, s.kidA)).toBe(7);
+    await db.query("update children set has_phone = false where id = $1", [s.kidA]);
+    // not this teacher's class, and a teacher who may not confirm missions
+    expect(await proxyWater(s.staff.other, s.kidA)).toMatchObject({ ok: false });
+    expect(await proxyWater(s.staff.basic, s.kidA)).toMatchObject({ ok: false });
+    expect(await dropBalance(db, s.kidA)).toBe(7);
+    // 2 drops finish level 1, 4 finish level 2, one is left for level 3
+    expect(await proxyWater(s.staff.homeroom, s.kidA)).toEqual({ ok: true, given: 7, level: 3, ripe: false });
+    expect(await dropBalance(db, s.kidA)).toBe(0);
+    expect(await one(db, "select level, given from trees where child_id = $1 and harvested_at is null", [s.kidA])).toMatchObject({ level: 3, given: 1 });
+    // nothing left to give
+    expect(await proxyWater(s.staff.homeroom, s.kidA)).toMatchObject({ ok: false });
+    expect(await one(db, "select count(*)::int as n from audit_log where action = 'child_water_proxy'")).toMatchObject({ n: 1 });
+  });
+
+  it("stops at the ripe fruit, and the harvest is a separate step", async () => {
+    await db.query("update children set has_phone = false where id = $1", [s.kidA]);
+    await give(s.kidA, 45);
+    expect(await proxyHarvest(s.staff.homeroom, s.kidA)).toMatchObject({ ok: false });
+    // a tree takes 40 drops; the other 5 stay with the child
+    expect(await proxyWater(s.staff.homeroom, s.kidA)).toEqual({ ok: true, given: 40, level: 6, ripe: true });
+    expect(await dropBalance(db, s.kidA)).toBe(5);
+    expect(await proxyWater(s.staff.homeroom, s.kidA)).toMatchObject({ ok: false });
+    expect(await proxyHarvest(s.staff.other, s.kidA)).toMatchObject({ ok: false });
+    expect(await proxyHarvest(s.staff.homeroom, s.kidA)).toEqual({ ok: true, bonus: 50 });
+    expect(await pointBalance(db, s.kidA)).toBe(50);
+    // the new tree takes the drops that were left
+    expect(await proxyWater(s.staff.homeroom, s.kidA)).toEqual({ ok: true, given: 5, level: 2, ripe: false });
+  });
+});
+
+describe("submissions that wait too long", () => {
+  it("counts what has waited three days or more, within what the teacher may confirm", async () => {
+    const m = (await db.query<{ id: number }>("insert into missions (title, kind, drops, points, repeat, starts_on, ends_on) values ('사진', 'photo', 1, 5, 'weekly', $1, $2) returning id", [addDays(WS, -7), addDays(WS, 6)]))[0].id;
+    const wait = (childId: number, doneOn: string) =>
+      db.query("insert into mission_completions (mission_id, child_id, status, done_on, week_start) values ($1,$2,'pending',$3,$4)", [m, childId, doneOn, weekStart(doneOn)]);
+    await wait(s.kidA, addDays(TODAY, -2)); // two days: not yet
+    expect(await overduePending(s.staff.head, TODAY)).toEqual({ count: 0, oldest: null, classes: [] });
+    await wait(s.kidB, addDays(TODAY, -3));
+    expect(await overduePending(s.staff.head, TODAY)).toEqual({ count: 1, oldest: addDays(TODAY, -3), classes: ["6학년 1반"] });
+    expect(await overduePending(s.staff.admin, TODAY)).toMatchObject({ count: 1 });
+    // a homeroom teacher sees only the own class; a basic teacher confirms nothing
+    expect(await overduePending(s.staff.homeroom, TODAY)).toMatchObject({ count: 0 });
+    expect(await overduePending(s.staff.other, TODAY)).toMatchObject({ count: 1 });
+    expect(await overduePending(s.staff.basic, TODAY)).toMatchObject({ count: 0 });
+    // the home screen of a teacher who sees every class carries it
+    expect((await homeData(s.staff.head, { today: TODAY })).overdue.count).toBe(1);
+    expect((await homeData(s.staff.other, { today: TODAY })).overdue.count).toBe(0);
+  });
 });
 
 describe("children: list and detail", () => {

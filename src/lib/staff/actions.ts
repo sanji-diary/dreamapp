@@ -8,7 +8,7 @@ import { requireStaff, setSession, signOut } from "@/lib/auth";
 import { db, one } from "@/lib/db";
 import { saveUpload } from "@/lib/uploads";
 import { saveAttendance, type AttStatus } from "./attendance";
-import { addVisit, createChild, deleteVisit, getChildDetail, proxyComplete, reissueCard, resetPin, setChildActive, setConsent, updateChild, updateVisit, type ChildInput } from "./children";
+import { addVisit, createChild, deleteVisit, getChildDetail, proxyComplete, proxyHarvest, proxyWater, reissueCard, resetPin, setChildActive, setConsent, updateChild, updateVisit, type ChildInput } from "./children";
 import { INVITE_COOKIE, STATE_COOKIE, authorizeUrl, devLoginAllowed, kakaoConfigured } from "./kakao";
 import { publicOrigin } from "./origin";
 import { dismissReports, hideComment, replyWorry, reviewSubmission } from "./review";
@@ -164,6 +164,20 @@ export async function proxyMissionAction(formData: FormData) {
   if (childId === null || missionId === null) redirect("/staff/children");
   const r = await proxyComplete(staff, childId, missionId);
   finish(r, `/staff/children/${childId}?tab=activity`, r.ok ? `대신 입력했어요 · 물방울 ${r.drops}개, ${r.points}P` : undefined);
+}
+
+/** "대신 물 주기" and "대신 수확하기" on the profile of a child without a phone. */
+export async function proxyTreeAction(formData: FormData) {
+  const staff = await requireStaff();
+  const childId = toInt(formData.get("child_id"));
+  if (childId === null) redirect("/staff/children");
+  const here = `/staff/children/${childId}?tab=activity`;
+  if (formData.get("op") === "harvest") {
+    const r = await proxyHarvest(staff, childId);
+    finish(r, here, r.ok ? `열매를 대신 수확했어요 · 보너스 ${r.bonus}P` : undefined);
+  }
+  const r = await proxyWater(staff, childId);
+  finish(r, here, r.ok ? `물방울 ${r.given}개를 나무에 줬어요${r.ripe ? ". 열매가 다 익었어요" : ""}` : undefined);
 }
 
 /* ---------- approvals and comments ---------- */

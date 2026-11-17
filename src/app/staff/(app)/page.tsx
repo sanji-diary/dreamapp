@@ -4,6 +4,7 @@ import { BarLink, Box, ClayIcon, EmptyNote, Kpi, LineIcon, List, ListRow, Page, 
 import { requireStaff } from "@/lib/auth";
 import { recentNotices, type NoticeRow } from "@/lib/staff/admin-misc";
 import { forestLevel, homeData, pickTrees, type HomeData, type Totals, type WeekRef } from "@/lib/staff/home";
+import { OVERDUE_DAYS } from "@/lib/staff/review";
 import { shortDate } from "@/lib/staff/util";
 import { openEvent } from "@/lib/talents";
 import { formatKoreanDate, todayKst, weekLabel } from "@/lib/time";
@@ -37,6 +38,17 @@ function todos(d: HomeData, isSunday: boolean): Todo[] {
     const texts = d.pending.total - d.pending.photos;
     const parts = [d.pending.photos > 0 ? `사진 ${d.pending.photos}` : null, texts > 0 ? `글 ${texts}` : null].filter(Boolean);
     out.push({ key: "missions", icon: "bible", title: `미션 확인 ${d.pending.total}건`, sub: `${parts.join(" · ")} · 확인하면 물방울이 가요`, href: "/staff/approvals", action: "확인", wideOnly: true });
+  }
+  if (d.overdue.count > 0 && d.overdue.oldest) {
+    // Shown on phones too: the "미션 확인" tile says how many wait, not how long.
+    out.push({
+      key: "overdue",
+      icon: "bible",
+      title: `${d.overdue.count}건이 ${OVERDUE_DAYS}일 넘게 확인을 기다려요`,
+      sub: `${d.overdue.classes.slice(0, 2).join(" · ")}${d.overdue.classes.length > 2 ? ` 외 ${d.overdue.classes.length - 2}반` : ""} · ${shortDate(d.overdue.oldest)}부터 · 대신 확인할 수 있어요`,
+      href: "/staff/approvals",
+      action: "확인",
+    });
   }
   if (d.worries.length > 0) {
     const names = [...new Set(d.worries.map((w) => w.child_name))];

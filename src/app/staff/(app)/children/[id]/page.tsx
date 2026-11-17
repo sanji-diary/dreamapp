@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Chevron, ClayIcon, CtaLink, EmptyNote, FlashNote, InfoField, List, ListRow, Notice, Page, PageHeader, PillButton, PillLink, PillNote, RoundLink, SectionHead, Segmented, StatTile, Tag, TreeAvatar, pillClass } from "@/components/staff/kit";
+import { Chevron, ClayIcon, CtaLink, EmptyNote, FlashNote, InfoField, List, ListRow, Notice, Page, PageHeader, PillButton, PillLink, PillNote, RoundLink, SectionHead, Segmented, StatTile, Tag, TreeAvatar, ctaClass, pillClass } from "@/components/staff/kit";
 import { selectClass, textareaClass } from "@/components/staff/ui";
 import { ConfirmButton } from "@/components/staff/widgets";
 import { inputClass, labelClass } from "@/components/ui";
 import { requireStaff } from "@/lib/auth";
-import { childOpAction, proxyMissionAction, visitAction } from "@/lib/staff/actions";
+import { childOpAction, proxyMissionAction, proxyTreeAction, visitAction } from "@/lib/staff/actions";
 import { childStats, getChildDetail, proxyMissions, type ChildDetail, type ProxyMission, type VisitRow } from "@/lib/staff/children";
 import { shortDate, toInt } from "@/lib/staff/util";
 import { todayKst } from "@/lib/time";
@@ -267,6 +267,30 @@ function ActivityTab({ c, missions, here, allWritings }: { c: ChildDetail; missi
           <StatTile value={`${c.tree.given} / ${c.tree.need}`} label="이 단계에 준 물" />
           <StatTile value={`${c.drops}개`} label="남은 물방울" />
         </div>
+        {/* A child without a phone cannot water the tree: the teacher does it with the child's drops. */}
+        {c.can.proxy && c.active && !c.has_phone ? (
+          c.tree.level >= 6 && c.tree.given >= c.tree.need ? (
+            <form action={proxyTreeAction} className="flex flex-col gap-1.5">
+              <input type="hidden" name="child_id" value={c.id} />
+              <input type="hidden" name="op" value="harvest" />
+              <button type="submit" className={ctaClass("navy")}>
+                열매 대신 수확하기
+              </button>
+              <p className="m-0 text-[13px] leading-[19px] text-mute">열매가 다 익었어요. 아이와 함께 눌러 주세요.</p>
+            </form>
+          ) : c.drops > 0 ? (
+            <form action={proxyTreeAction} className="flex flex-col gap-1.5">
+              <input type="hidden" name="child_id" value={c.id} />
+              <input type="hidden" name="op" value="water" />
+              <button type="submit" className={ctaClass("navy")}>
+                물방울 {c.drops}개 대신 주기
+              </button>
+              <p className="m-0 text-[13px] leading-[19px] text-mute">휴대폰이 없는 아이예요. 남은 물방울을 선생님이 나무에 줄 수 있어요.</p>
+            </form>
+          ) : (
+            <p className="m-0 text-[13px] leading-[19px] text-mute">휴대폰이 없는 아이예요. 물방울이 생기면 여기서 대신 나무에 줄 수 있어요.</p>
+          )
+        ) : null}
       </section>
 
       <section className="flex flex-col" id="writing">

@@ -323,15 +323,20 @@ export async function weekCopyPlan(staff: Staff, toWeek: string): Promise<{ from
 /**
  * Copies the missions of the week before `toWeek` into it with duplicateToNextWeek, one by one
  * (each copy gets its own QR code). Only this week and later weeks can be filled: a past week is history.
+ * With `only`, just those of the plan's missions are copied (the admin chooses on the screen, so
+ * a one-day event of last week is not carried along).
  */
-export async function copyWeek(staff: Staff, toWeek: string, today: string = todayKst()): Promise<Result<{ copied: number; skipped: number }>> {
+export async function copyWeek(staff: Staff, toWeek: string, today: string = todayKst(), only?: number[]): Promise<Result<{ copied: number; skipped: number }>> {
   if (staff.role !== "admin") return deny;
   const plan = await weekCopyPlan(staff, toWeek);
   if (!plan) return fail("주를 다시 골라 주세요");
   if (toWeek < weekStart(today)) return fail("지난 주에는 복사할 수 없어요");
   if (plan.copy.length === 0) return fail(plan.already.length > 0 ? "이미 모두 복사되어 있어요" : "복사할 미션이 없어요");
+  // `only`: the missions the admin ticked. Ids that are not in the plan (already copied, another week) are ignored.
+  const chosen = only === undefined ? plan.copy : plan.copy.filter((m) => only.includes(m.id));
+  if (chosen.length === 0) return fail("복사할 미션에 표시해 주세요");
   let copied = 0;
-  for (const m of plan.copy) {
+  for (const m of chosen) {
     const r = await duplicateToNextWeek(staff, m.id);
     if (!r.ok) return r;
     copied++;

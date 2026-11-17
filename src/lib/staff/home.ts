@@ -7,7 +7,7 @@ import type { Staff, WorryAudience } from "@/lib/types";
 import { attendanceScope, hasScope, scopeSql } from "./access";
 import { uncheckedCount } from "./attendance";
 import { joinersToSettle, longAbsent } from "./children";
-import { pendingCompletions, reportedComments } from "./review";
+import { overduePending, pendingCompletions, reportedComments, type Overdue } from "./review";
 import { isDate } from "./util";
 
 /**
@@ -220,6 +220,8 @@ export interface HomeData {
   participants: { joined: number; did: number };
   /** Mission submissions waiting for this teacher. */
   pending: { total: number; photos: number };
+  /** For teachers who see every class: submissions that have waited three days or more (a homeroom teacher has not looked). */
+  overdue: Overdue;
   /** Reported comments (any teacher may handle them). */
   reports: number;
   /** Unread worries addressed to this teacher. */
@@ -235,19 +237,22 @@ export interface HomeData {
   past: Totals | null;
 }
 
+const NO_OVERDUE: Overdue = { count: 0, oldest: null, classes: [] };
+
 export async function homeData(staff: Staff, opts: { week?: unknown; today?: string } = {}): Promise<HomeData> {
   const today = opts.today ?? todayKst();
   const thisWeek = weekStart(today);
   const week = resolveWeek(opts.week, today);
   const kind = homeKind(staff);
   const canAttend = hasScope(attendanceScope(staff));
-  const [settings, classes, before, kids, participants, pending, reports, worries, absent, joiners, unchecked, past] = await Promise.all([
+  const [settings, classes, before, kids, participants, pending, overdue, reports, worries, absent, joiners, unchecked, past] = await Promise.all([
     getSettings(),
     classStats(staff, thisWeek),
     classStats(staff, addDays(thisWeek, -7)),
     scopeTrees(staff),
     participation(staff, thisWeek),
     pendingCompletions(staff),
+    kind === "all" ? overduePending(staff, today) : NO_OVERDUE,
     reportedComments(staff),
     unreadWorries(staff),
     longAbsent(staff),
@@ -269,6 +274,7 @@ export async function homeData(staff: Staff, opts: { week?: unknown; today?: str
     kidTrees: kind === "class" ? kids : [],
     participants,
     pending: { total: pending.length, photos: pending.filter((p) => p.photo_url).length },
+    overdue,
     reports: reports.length,
     worries,
     absent: absent.map((k) => ({ id: k.id, name: k.name, class_name: k.class_name, weeks: k.weeks, canWriteVisit: canWriteVisits(staff, k.class_id) })),

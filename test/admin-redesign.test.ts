@@ -226,6 +226,19 @@ describe("copying a week of missions", () => {
     expect((await db.query("select 1 from missions where starts_on = $1", [THIS])).length).toBe(4);
   });
 
+  it("copies only the missions that were ticked", async () => {
+    const whole = await mission("감사 일기", LAST);
+    const oneDay = await mission("수요 기도회", LAST, { kind: "qr", starts_on: addDays(LAST, 3), ends_on: addDays(LAST, 3), repeat: "once" });
+    // nothing ticked, or only ids that are not in the plan
+    expect(await copyWeek(s.admin, THIS, TODAY, [])).toEqual({ ok: false, error: "복사할 미션에 표시해 주세요" });
+    expect(await copyWeek(s.admin, THIS, TODAY, [9999])).toMatchObject({ ok: false });
+    expect(await copyWeek(s.admin, THIS, TODAY, [whole, 9999])).toEqual({ ok: true, copied: 1, skipped: 0 });
+    expect((await weekMissions(s.admin, THIS, TODAY))?.map((m) => m.title)).toEqual(["감사 일기"]);
+    // the one-day mission is still offered, and can be copied later
+    expect((await weekCopyPlan(s.admin, THIS))?.copy.map((m) => m.id)).toEqual([oneDay]);
+    expect(await copyWeek(s.admin, THIS, TODAY, [oneDay])).toEqual({ ok: true, copied: 1, skipped: 1 });
+  });
+
   it("fills this week and later weeks only, and needs a Sunday", async () => {
     await mission("출석", addDays(LAST, -7));
     await mission("출석", THIS);

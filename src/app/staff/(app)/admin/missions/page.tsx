@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { AdminHeader, AdminPage, BarButton, RowLink, rowClass, rowItemClass, splitClass, tableClass, tdClass, thClass } from "@/components/staff/admin-kit";
 import { Checkbox, SwitchSubmit, selectBoxClass } from "@/components/staff/form-kit";
+import { PoolPicker } from "@/components/staff/plan/PoolPicker";
 import { BarLink, Box, Card, Chevron, Chip, Chips, ClayIcon, EmptyNote, FlashNote, InfoField, Notice, RoundLink, SectionHead, Tag, barButtonClass } from "@/components/staff/kit";
 import { ConfirmButton } from "@/components/staff/widgets";
 import { requireAdmin } from "@/lib/auth";
@@ -356,13 +357,18 @@ function verseNote(v: WeekVerses | null | undefined): ReactNode {
   return `${v?.ref ?? "말씀"} · ${n}절`;
 }
 
-/** One rotating mission in the pool picker: a checkbox with when it was last on. */
+/** When a rotating mission was last on: "마지막 11월 2주차", or that it never was. */
+function lastUsedText(m: PoolMission, thisWeek: string): string {
+  return m.last_used ? `마지막 ${weekLabel(m.last_used)}${m.last_used === thisWeek ? "(이번 주)" : ""}` : "아직 안 나왔어요";
+}
+
+/** One rotating mission in the pool of a week that can no longer be changed. */
 function poolLabel(m: PoolMission, thisWeek: string): ReactNode {
   return (
     <span className="flex min-w-0 flex-col">
       <span className="break-keep">{m.title}</span>
       <span className="text-[12.5px] font-medium text-mute">
-        {rewardText(m)} · {m.last_used ? `마지막 ${weekLabel(m.last_used)}${m.last_used === thisWeek ? "(이번 주)" : ""}` : "아직 안 나왔어요"}
+        {rewardText(m)} · {lastUsedText(m, thisWeek)}
       </span>
     </span>
   );
@@ -407,20 +413,62 @@ export default async function MissionsAdminPage({ searchParams }: PageProps<"/st
   const open = v.id !== null ? (all.find((m) => m.id === v.id) ?? null) : null;
   const newHref = past || week === thisWeek ? `${BASE}/new` : `${BASE}/new?w=${week}`;
 
+  // Copying dated missions from the week before: the admin ticks which ones. One-day and other
+  // short missions (an event of that week) start unticked.
   const copyFrom = copyPlan && copyPlan.copy.length > 0 ? copyPlan.from : null;
   const copyLabel = copyFrom === null ? "" : copyFrom === addDays(thisWeek, -7) ? "지난주 기간 미션 복사" : copyFrom === thisWeek ? "이번 주 기간 미션 복사" : `${weekLabel(copyFrom)} 기간 미션 복사`;
   const copyForm =
     copyPlan && copyFrom !== null ? (
-      <form action={missionCopyWeekAction} className="flex">
-        <input type="hidden" name="to" value={week} />
-        <ConfirmButton
-          message={`${weekLabel(copyFrom)} 기간 미션 ${copyPlan.copy.length}개를 ${weekLabel(week)}로 복사할까요?${copyPlan.already.length > 0 ? `\n이미 있는 ${copyPlan.already.length}개는 그대로 둬요.` : ""}\n고정 미션과 순환 미션은 복사하지 않아도 매주 나와요.`}
-          className={barButtonClass("ghost")}
-        >
-          {copyLabel}
-        </ConfirmButton>
-      </form>
+      <details className="group rounded-[20px] bg-fill">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-[20px] px-4 text-[14px] font-bold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy [&::-webkit-details-marker]:hidden">
+          <span className="grow">
+            {copyLabel} ({copyPlan.copy.length}개)
+          </span>
+          <span className="transition-transform group-open:rotate-90">
+            <Chevron />
+          </span>
+        </summary>
+        <form action={missionCopyWeekAction} className="flex flex-col gap-2.5 px-4 pb-4 max-[339px]:px-3">
+          <input type="hidden" name="to" value={week} />
+          <input type="hidden" name="pick" value="1" />
+          <fieldset className="m-0 flex min-w-0 flex-col border-0 p-0">
+            <legend className="mb-1 p-0 text-[13px] leading-[19px] text-sub">{weekLabel(week)}에도 낼 미션에 표시해 주세요. 고정 미션과 순환 미션은 복사하지 않아도 매주 나와요.</legend>
+            <ul className="m-0 list-none p-0">
+              {copyPlan.copy.map((m) => {
+                const wholeWeek = m.starts_on === copyFrom && m.ends_on === addDays(copyFrom, 6);
+                return (
+                  <li key={m.id} className="border-b border-track py-1 last:border-b-0">
+                    <Checkbox
+                      name="mission_ids"
+                      value={m.id}
+                      defaultChecked={wholeWeek}
+                      label={
+                        <span className="flex min-w-0 flex-col">
+                          <span className="break-keep">{m.title}</span>
+                          <span className="text-[12.5px] font-medium text-mute">
+                            {rewardText(m)}
+                            {wholeWeek ? "" : ` · ${periodText(m)}에만 있던 미션`}
+                          </span>
+                        </span>
+                      }
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </fieldset>
+          {copyPlan.already.length > 0 ? <p className="m-0 text-[12.5px] leading-[18px] text-mute">이미 복사된 {copyPlan.already.length}개는 여기에 나오지 않아요.</p> : null}
+          <div className="flex">
+            <BarButton tone="solid">표시한 미션 복사하기</BarButton>
+          </div>
+        </form>
+      </details>
     ) : null;
+
+  // For the pool picker: what a child can get this week without the rotating missions.
+  const countedElsewhere = [...fixedAll.filter((m) => m.active), ...dated.filter((m) => m.active)];
+  const otherDrops = countedElsewhere.reduce((sum, m) => sum + weeklyDrops(m), 0);
+  const targeted = [...countedElsewhere, ...pool].some((m) => m.target_class_id !== null || m.target_grade !== null);
 
   const listProps = { open, v, stats, past, target, today };
   const rotationNote = !plan
@@ -498,23 +546,16 @@ export default async function MissionsAdminPage({ searchParams }: PageProps<"/st
               {plan.editable ? (
                 <form action={planRotationAction} className="flex flex-col gap-2.5">
                   <input type="hidden" name="w" value={week} />
-                  <fieldset className="m-0 flex min-w-0 flex-col border-0 p-0">
-                    <legend className="mb-1 p-0 text-[13px] leading-[19px] text-sub">{when}에 낼 미션에 표시하고 아래 버튼을 눌러 주세요.</legend>
-                    <ul className="m-0 list-none p-0">
-                      {pool
-                        .filter((m) => m.active)
-                        .map((m) => (
-                          <li key={m.id} className="flex min-w-0 items-center gap-2 border-b border-track py-1 last:border-b-0">
-                            <div className="min-w-0 grow">
-                              <Checkbox name="mission_ids" value={m.id} defaultChecked={rotating.some((r) => r.id === m.id)} label={poolLabel(m, thisWeek)} />
-                            </div>
-                            <Link href={href(v, { id: m.id }, "rotation")} aria-label={`${m.title} 자세히`} className="flex h-11 shrink-0 items-center px-1 text-[13px] font-semibold text-navy no-underline">
-                              자세히
-                            </Link>
-                          </li>
-                        ))}
-                    </ul>
-                  </fieldset>
+                  <PoolPicker
+                    legend={`${when}에 낼 미션에 표시하고 아래 버튼을 눌러 주세요.`}
+                    choices={pool
+                      .filter((m) => m.active)
+                      .map((m) => ({ id: m.id, title: m.title, sub: `${rewardText(m)} · ${lastUsedText(m, thisWeek)}`, drops: weeklyDrops(m), href: href(v, { id: m.id }, "rotation") }))}
+                    chosen={rotating.map((m) => m.id)}
+                    other={otherDrops}
+                    cap={check?.cap ?? 12}
+                    targeted={targeted}
+                  />
                   <div className="flex">
                     <BarButton tone="solid">{when} 미션으로 정하기</BarButton>
                   </div>
@@ -572,7 +613,7 @@ export default async function MissionsAdminPage({ searchParams }: PageProps<"/st
         <SectionHead note="정한 날짜에만 나와요" right={<BarLink href={newHref}>+ 추가</BarLink>}>
           <span id="dated-title">기간 미션</span>
         </SectionHead>
-        {copyForm ? <div className="flex">{copyForm}</div> : null}
+        {copyForm}
         <MissionList {...listProps} list={dated} part="dated" note={(m) => (m.starts_on === weekStart(m.starts_on) && m.ends_on === addDays(m.starts_on, 6) ? null : periodText(m))} empty="이 주에는 기간 미션이 없어요." />
       </section>
     </>

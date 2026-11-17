@@ -2,6 +2,7 @@ import "server-only";
 import { canApprove, canModerateComments, canReadWorry, canSeeChildDetail, worryCondition } from "@/lib/authz";
 import { db, one } from "@/lib/db";
 import { reviewCompletion } from "@/lib/game";
+import { addDays, todayKst } from "@/lib/time";
 import type { Staff, WorryAudience } from "@/lib/types";
 import { approveScope, audit, canSeeWorryBox, hasScope, scopeSql } from "./access";
 import { clean, deny, fail, kstDate, type Result } from "./util";
@@ -44,6 +45,37 @@ export async function pendingCompletions(staff: Staff): Promise<PendingItem[]> {
       order by mc.created_at, mc.id`,
     sc.params,
   );
+}
+
+/** A submission is overdue when it has waited this many days or more. */
+export const OVERDUE_DAYS = 3;
+
+export interface Overdue {
+  count: number;
+  /** The day the oldest of them was sent in; null when there are none. */
+  oldest: string | null;
+  /** The classes they belong to, in class order. */
+  classes: string[];
+}
+
+/**
+ * Mission submissions (within what this teacher may confirm) that have waited OVERDUE_DAYS or more.
+ * A child gets nothing until someone confirms, so teachers who see every class are shown these on
+ * the home screen and can confirm in the homeroom teacher's place.
+ */
+export async function overduePending(staff: Staff, today: string = todayKst()): Promise<Overdue> {
+  const sc = scopeSql(approveScope(staff), "c.class_id", 2);
+  const rows = await db.query<{ done_on: string; class_name: string | null; sort: number | null }>(
+    `select mc.done_on, k.name as class_name, k.sort
+       from mission_completions mc
+       join children c on c.id = mc.child_id and c.active
+       left join classes k on k.id = c.class_id
+      where mc.status = 'pending' and mc.done_on <= $1 and ${sc.sql}
+      order by mc.done_on, mc.id`,
+    [addDays(today, -OVERDUE_DAYS), ...sc.params],
+  );
+  const classes = [...new Map(rows.filter((r) => r.class_name !== null).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)).map((r) => [r.class_name as string, true])).keys()];
+  return { count: rows.length, oldest: rows[0]?.done_on ?? null, classes };
 }
 
 export async function pendingCount(staff: Staff): Promise<number> {
