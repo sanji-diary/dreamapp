@@ -56,20 +56,65 @@ export async function seedIfEmpty(q: Queryable) {
     await q.query("insert into trees (child_id, seq, level, given) values ($1, 1, $2, $3)", [rows[0].id, onboarded ? Math.min(5, 1 + (i % 5)) : 1, onboarded ? i % 2 : 0]);
   }
 
+  // The mission plan: four fixed missions on every week, a pool of rotating missions of which
+  // three are on this week, and one dated mission. A child can earn exactly 12 drops this week
+  // (fixed 2 + 2 + 3, rotating 1 + 1 + 2, dated 1); the daily reading gives points only.
+  const fixed: [string, string, string, string, number, number, string][] = [
+    ["주일 예배 출석", "선생님이 출석을 확인해요", "attendance", "stamp", 20, 2, "weekly"],
+    ["이번 주 말씀 쓰기", "이번 주 말씀을 따라 써요", "verse", "bible", 15, 2, "weekly"],
+    ["가정예배 드리기", "예배 사진 한 장 올리기", "photo", "house", 30, 3, "weekly"],
+    ["오늘의 말씀 읽기", "오늘 말씀을 읽고 눌러요", "self", "bible", 2, 0, "daily"],
+  ];
+  const fixedIds: Record<string, number> = {};
+  for (const [title, description, kind, icon, points, drops, repeat] of fixed) {
+    const rows = await q.query<{ id: number }>(
+      "insert into missions (title, description, kind, icon, points, drops, repeat, starts_on, ends_on, mode, created_by) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'fixed',$10) returning id",
+      [title, description, kind, icon, points, drops, repeat, ws, we, sid("김인성")],
+    );
+    fixedIds[title] = rows[0].id;
+  }
+  // This week's verses for "이번 주 말씀 쓰기": two verses, written one at a time.
+  await q.query("insert into mission_weeks (mission_id, week_start, verse_ref, verses, updated_by) values ($1,$2,$3,$4::jsonb,$5)", [
+    fixedIds["이번 주 말씀 쓰기"],
+    ws,
+    "시편 23:1-2",
+    JSON.stringify([
+      { n: "1", text: "여호와는 나의 목자시니 내게 부족함이 없으리로다" },
+      { n: "2", text: "그가 나를 푸른 풀밭에 누이시며 쉴 만한 물 가로 인도하시는도다" },
+    ]),
+    sid("김인성"),
+  ]);
+
+  const pool: [string, string, string, string, number, number][] = [
+    ["내 고민 적기", "읽을 사람은 내가 골라요", "worry", "bubble", 10, 1],
+    ["숲 소식에 댓글 달기", "이번 주 소식에 한마디", "comment", "badge", 5, 1],
+    ["성경 암송 확인받기", "선생님 앞에서 외워 봐요", "teacher", "pray", 20, 2],
+    ["가족을 위해 기도하기", "가족 한 사람을 위해 기도해요", "self", "pray", 5, 1],
+  ];
+  const poolIds: number[] = [];
+  for (let i = 0; i < pool.length; i++) {
+    const [title, description, kind, icon, points, drops] = pool[i];
+    const rows = await q.query<{ id: number }>(
+      "insert into missions (title, description, kind, icon, points, drops, repeat, starts_on, ends_on, mode, pool_order, created_by) values ($1,$2,$3,$4,$5,$6,'weekly',$7,$8,'pool',$9,$10) returning id",
+      [title, description, kind, icon, points, drops, ws, we, i + 1, sid("김인성")],
+    );
+    poolIds.push(rows[0].id);
+  }
+  // This week's rotation, as the automatic pick would have made it: the first three of the pool.
+  await q.query("insert into rotation_weeks (week_start, mission_ids, manual) values ($1, $2::int[], false)", [ws, poolIds.slice(0, 3)]);
+
   await q.query(
-    `insert into missions (title, description, kind, icon, verse_text, verse_ref, qr_code, points, drops, repeat, weekly_limit, starts_on, ends_on, is_challenge, created_by) values
-      ('주일 예배 출석', '선생님이 출석을 확인해요', 'attendance', 'stamp', null, null, null, 20, 2, 'weekly', null, $1, $2, false, $3),
-      ('이번 주 말씀 쓰기', '시편 23편 1절 따라 쓰기', 'verse', 'bible', '여호와는 나의 목자시니 내게 부족함이 없으리로다', '시편 23편 1절', null, 15, 2, 'weekly', null, $1, $2, false, $3),
-      ('가정예배 드리기', '예배 사진 한 장 올리기', 'photo', 'house', null, null, null, 30, 3, 'weekly', null, $1, $2, true, $3),
-      ('내 고민 적기', '읽을 사람은 내가 골라요', 'worry', 'bubble', null, null, null, 10, 1, 'weekly', null, $1, $2, false, $3),
-      ('숲 소식에 댓글 달기', '이번 주 소식에 한마디', 'comment', 'badge', null, null, null, 5, 1, 'weekly', null, $1, $2, false, $3),
-      ('가족을 위해 기도하기', '하루에 한 번 할 수 있어요', 'self', 'pray', null, null, null, 5, 1, 'daily', 3, $1, $2, false, $3)`,
+    `insert into missions (title, description, kind, icon, points, drops, repeat, starts_on, ends_on, is_challenge, created_by)
+     values ('감사한 일 한 가지 적기', '이번 주에 감사했던 일을 적어요', 'text', 'persimmon', 10, 1, 'weekly', $1, $2, true, $3)`,
     [ws, we, sid("김인성")],
   );
 
+  // The children have been coming for a while (the welcome-back drops only look at Sundays since a child was registered).
+  await q.query("update children set created_at = now() - interval '56 days'");
   for (const name of ["김하준", "이서윤", "최지우"]) {
-    await q.query("insert into attendance (child_id, date, status, staff_id) values ($1,$2,'present',$3)", [ids[name], ws, sid("박지현")]);
+    await q.query("insert into attendance (child_id, date, status, staff_id) values ($1,$2,'present',$3),($1,$4,'present',$3),($1,$5,'present',$3)", [ids[name], ws, sid("박지현"), addDays(ws, -7), addDays(ws, -14)]);
   }
+  // 정시우 missed the last two Sundays; 강하은 has no mark for three (marking her present this Sunday gives the welcome-back drops).
   await q.query("insert into attendance (child_id, date, status, staff_id) values ($1,$2,'absent',$3),($1,$4,'absent',$3)", [ids["정시우"], ws, sid("박지현"), addDays(ws, -7)]);
   await q.query("insert into drop_ledger (child_id, delta, reason, ref_type, week_start) values ($1, 4, '시작 물방울 (예시)', 'seed', $2)", [ids["김하준"], addDays(ws, -7)]);
   await q.query("insert into point_ledger (child_id, delta, reason, ref_type) values ($1, 120, '지난 활동 (예시)', 'seed')", [ids["김하준"]]);

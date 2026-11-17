@@ -26,6 +26,8 @@ interface Props {
   drops: number;
   needs: number[];
   missionsLeft: number;
+  /** Welcome-back drops given today and not watered with yet (0 otherwise): greeted in the headline. */
+  welcomeDrops: number;
   /** Play the seed drop: the child just got a new seed. */
   intro: boolean;
 }
@@ -45,6 +47,7 @@ export function TreeHome(props: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<"" | "water" | "level">("");
   const [intro, setIntro] = useState(props.intro);
+  const [watered, setWatered] = useState(false);
   const [error, setError] = useState("");
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -83,7 +86,8 @@ export function TreeHome(props: Props) {
         setError("물을 주지 못했어요. 잠시 뒤에 다시 해 주세요.");
       } else {
         setSt({ level: result.level, given: result.given, drops: result.drops });
-        if (!result.ok) setMsg("");
+        if (result.ok) setWatered(true);
+        else setMsg("");
       }
       setKind("");
       setBusy(false);
@@ -123,7 +127,9 @@ export function TreeHome(props: Props) {
       .finally(settle);
   }
 
-  const headline = ripe ? "열매가 다 익었어요!\n이제 수확할 수 있어요" : msg === "level" ? "레벨업!\n몰라보게 자라났어요" : msg === "water" ? "물 주기 완료!\n왠지 튼튼해 보여요" : LINES[st.level - 1];
+  // The greeting stays until the child waters (then the usual lines take over) or the day ends (the server stops sending it).
+  const welcome = props.welcomeDrops > 0 && msg === "" && !watered ? `다시 만나서 반가워요!\n물방울 ${props.welcomeDrops}개를 받았어요` : "";
+  const headline = ripe ? "열매가 다 익었어요!\n이제 수확할 수 있어요" : msg === "level" ? "레벨업!\n몰라보게 자라났어요" : msg === "water" ? "물 주기 완료!\n왠지 튼튼해 보여요" : welcome || LINES[st.level - 1];
   const nextText = ripe ? "다 자랐어요. 열매를 수확해 보세요" : st.level >= 6 ? `다 익을 때까지 물방울 ${left}개` : `${LEVEL_NAMES[st.level]}까지 물방울 ${left}개`;
   const toast = reveal ? `${euro(name)} 레벨업!` : "물방울 1개를 줬어요";
   const missionsLabel = props.missionsLeft > 0 ? `이번 주 미션 ${props.missionsLeft}개 보기` : "이번 주 미션 보기";
@@ -140,7 +146,8 @@ export function TreeHome(props: Props) {
           </div>
         </div>
         <div className="kid-col flex items-start justify-between gap-3 px-5 pt-[18px] transition-opacity duration-300" style={{ opacity: wet || reveal ? 0 : 1 }}>
-          <h1 className="m-0 text-[25px] leading-[34px] font-bold tracking-[-0.6px] whitespace-pre-line">{headline}</h1>
+          {/* Words stay whole on a folded phone, where the headline shares the row with the mission button. */}
+          <h1 className="m-0 text-[25px] leading-[34px] font-bold tracking-[-0.6px] break-keep whitespace-pre-line">{headline}</h1>
           <Link
             href="/missions"
             aria-label={missionsLabel}

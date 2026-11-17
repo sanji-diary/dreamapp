@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { completeMissionAction, photoMissionAction, worryAction, type MissionActionResult } from "@/lib/kid/actions";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { completeMissionAction, photoMissionAction, requestCheckAction, verseAction, worryAction, type MissionActionResult } from "@/lib/kid/actions";
+import { normalizeVerse, verseLabel } from "@/lib/verse";
 
 /** The interactive part of each mission screen. A finished mission redirects to the success screen on the server. */
 
@@ -69,7 +70,11 @@ export function TextMission({ missionId, reward }: { missionId: number; reward: 
           placeholder="생각나는 대로 적어 보세요"
           className="h-[180px] resize-none rounded-[14px] border-[1.5px] border-[#D1D6DB] bg-white p-3.5 text-[16px] leading-6 text-ink outline-none focus:border-navy"
         />
-        <span className="self-end text-[13px] text-sub">{text.length} / 500자</span>
+        <div className="flex items-start justify-between gap-3 text-[13px] leading-[18px] text-sub">
+          {/* The text is credited at once, and a teacher may read it later: the child is told before writing. */}
+          <span className="break-keep">쓴 글은 선생님이 읽을 수 있어요.</span>
+          <span className="shrink-0">{text.length} / 500자</span>
+        </div>
       </div>
       <div className="grow" />
       <Bottom error={error}>
@@ -81,23 +86,99 @@ export function TextMission({ missionId, reward }: { missionId: number; reward: 
   );
 }
 
-export function VerseMission({ missionId, verse, reward }: { missionId: number; verse: string; reward: string }) {
+/** A 교사 확인 mission: the child cannot finish it alone, but can tell the teacher it is done. */
+export function TeacherCheckMission({ missionId }: { missionId: number }) {
   const { pending, error, run } = useSubmit();
+  return (
+    <>
+      <div className="grow" />
+      <Bottom error={error}>
+        <button type="button" disabled={pending} onClick={() => run(() => requestCheckAction(missionId))} className={bottomButton}>
+          {pending ? "보내는 중…" : "선생님께 확인 요청하기"}
+        </button>
+      </Bottom>
+    </>
+  );
+}
+
+/**
+ * 말씀 쓰기, one verse at a time.
+ *
+ * `verses` arrive already normalized (src/lib/verse.ts), and what the child types is normalized the
+ * same way before it is compared, so the marks here and the server's check agree. The marks while
+ * typing are only a help: every verse is checked again on the server, which also remembers how far
+ * the child has come (`startAt`) and completes the mission after the last verse.
+ */
+export function VerseMission({ missionId, verses, startAt, reward }: { missionId: number; verses: { n: string | null; text: string }[]; startAt: number; reward: string }) {
+  const total = verses.length;
+  const [index, setIndex] = useState(Math.min(Math.max(0, startAt), total - 1));
   const [text, setText] = useState("");
+  const [pending, start] = useTransition();
+  const [error, setError] = useState("");
+  // Where the server said the writing first differs (only when it disagrees with the marks below).
+  const [serverMark, setServerMark] = useState<number | null>(null);
+  const [movedOn, setMovedOn] = useState(false);
+  const input = useRef<HTMLTextAreaElement>(null);
+
+  const verse = verses[index].text;
+  const label = verseLabel(verses[index]);
+  const last = index === total - 1;
+  const typed = normalizeVerse(text);
   let n = 0;
-  while (n < text.length && n < verse.length && text[n] === verse[n]) n++;
-  const typed = text.trimEnd();
-  const done = typed === verse;
+  while (n < typed.length && n < verse.length && typed[n] === verse[n]) n++;
+  if (serverMark !== null) n = Math.min(n, serverMark);
+  const done = typed === verse && serverMark === null;
   const overflow = n === verse.length && typed.length > verse.length;
-  const bad = !overflow && text.length > n ? verse.slice(n, Math.min(verse.length, text.length)) : "";
+  const bad = !overflow && typed.length > n ? verse.slice(n, Math.min(verse.length, typed.length)) : "";
   // While a Korean syllable is still being composed the last character never matches yet, so it is not called wrong.
-  const composing = bad.length === 1;
+  const composing = bad.length === 1 && serverMark === null;
+  const wrong = (bad !== "" && !composing) || overflow || serverMark !== null;
   const pct = Math.round((n / verse.length) * 100);
-  const wrong = (bad !== "" && !composing) || overflow;
+
+  let hint = "띄어쓰기와 문장부호도 똑같이 써요";
+  if (overflow) hint = "끝에 더 쓴 글자를 지워 주세요";
+  else if (wrong) hint = "여기부터 달라요. 다시 확인해 볼까요?";
+  else if (done) hint = last ? "다 썼어요!" : "잘 썼어요!";
+  else if (typed === "" && movedOn) hint = "잘 썼어요! 다음 말씀이에요";
+  else if (typed === "" && index > 0) hint = "잘하고 있어요. 이어서 써 볼까요?";
+
+  function submit() {
+    setError("");
+    start(async () => {
+      try {
+        const r = await verseAction(missionId, index, typed);
+        if (r.ok) {
+          // Not the last verse: move on to wherever the server says the child is.
+          setIndex(Math.min(r.done, total - 1));
+          setText("");
+          setMovedOn(true);
+          input.current?.focus();
+        } else if (typeof r.at === "number") {
+          // The place is marked in the verse above and the line under the box says so; no second message.
+          setServerMark(r.at);
+        } else {
+          setError(r.message);
+        }
+      } catch {
+        setError("연결이 잠시 끊겼어요. 다시 해 주세요.");
+      }
+    });
+  }
+
   return (
     <>
       <div className="mx-5 mt-[18px] rounded-2xl bg-fill px-[18px] py-5">
-        <p className="m-0 text-[21px] leading-[34px] font-bold tracking-[-0.4px]">
+        {label || total > 1 ? (
+          <div className="mb-1.5 flex items-center justify-between gap-2 text-[13px] font-bold">
+            <span className="text-blue">{label}</span>
+            {total > 1 ? (
+              <span className="shrink-0 text-sub" aria-label={`말씀 ${total}개 중 ${index + 1}번째`}>
+                {index + 1} / {total}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        <p className="m-0 text-[21px] leading-[34px] font-bold tracking-[-0.4px] break-keep [overflow-wrap:anywhere]">
           <span className="text-navy">{verse.slice(0, n)}</span>
           <span className={composing ? "text-ink2" : "text-danger underline"}>{bad}</span>
           <span className="text-mute">{verse.slice(n + bad.length)}</span>
@@ -109,19 +190,24 @@ export function VerseMission({ missionId, verse, reward }: { missionId: number; 
         </label>
         <textarea
           id="verse-input"
+          ref={input}
           value={text}
-          onChange={(e) => setText(e.target.value.replace(/\n/g, ""))}
+          onChange={(e) => {
+            setText(e.target.value.replace(/\n/g, ""));
+            setServerMark(null);
+            setError("");
+          }}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
           placeholder={`${verse.slice(0, 7)}…`}
           className="h-[120px] resize-none rounded-[14px] border-[1.5px] border-[#D1D6DB] bg-white p-3.5 text-[17px] leading-[26px] text-ink outline-none focus:border-navy"
         />
-        <div className="mt-1 flex items-center justify-between">
-          <span aria-live="polite" className={`text-[13px] ${wrong ? "text-danger" : "text-sub"}`}>
-            {overflow ? "끝에 더 쓴 글자를 지워 주세요" : wrong ? "빨간 글자부터 다시 써 보세요" : done ? "다 썼어요!" : "띄어쓰기도 똑같이 써요"}
+        <div className="mt-1 flex items-start justify-between gap-3">
+          <span aria-live="polite" className={`text-[13px] leading-[18px] break-keep ${wrong ? "font-semibold text-danger" : "text-sub"}`}>
+            {hint}
           </span>
-          <span className="text-[13px] font-bold text-ink2">
+          <span className="shrink-0 text-[13px] leading-[18px] font-bold text-ink2">
             {n} / {verse.length}자
           </span>
         </div>
@@ -131,8 +217,8 @@ export function VerseMission({ missionId, verse, reward }: { missionId: number; 
       </div>
       <div className="grow" />
       <Bottom error={error}>
-        <button type="button" disabled={!done || pending} onClick={() => run(() => completeMissionAction(missionId, typed))} className={bottomButton}>
-          {pending ? "보내는 중…" : done ? reward : "끝까지 쓰면 받을 수 있어요"}
+        <button type="button" disabled={!done || pending} onClick={submit} className={bottomButton}>
+          {pending ? "확인하는 중…" : done ? (last ? reward : "다음 말씀 쓰기") : last ? "끝까지 쓰면 받을 수 있어요" : "끝까지 쓰면 다음 말씀으로 가요"}
         </button>
       </Bottom>
     </>
@@ -164,7 +250,7 @@ async function shrinkPhoto(file: File): Promise<File> {
 
 const pickClass = "flex h-12 cursor-pointer items-center justify-center rounded-xl bg-navy-tint text-[15px] font-bold text-navy focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-navy";
 
-export function PhotoMission({ missionId }: { missionId: number }) {
+export function PhotoMission({ missionId, hasDrops = true }: { missionId: number; hasDrops?: boolean }) {
   const { pending, error, run, setError } = useSubmit();
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
@@ -218,7 +304,7 @@ export function PhotoMission({ missionId }: { missionId: number }) {
             <input id="mission-photo-album" type="file" accept="image/*" className="sr-only" onChange={(e) => void pick(e.target.files?.[0])} />
           </label>
         </div>
-        <p className="m-0 text-[13px] leading-[19px] text-sub">사진은 선생님만 볼 수 있어요. 선생님이 확인하면 물방울을 받아요.</p>
+        <p className="m-0 text-[13px] leading-[19px] break-keep text-sub">사진은 선생님만 볼 수 있어요. {hasDrops ? "선생님이 확인하면 물방울을 받아요." : "선생님이 확인하면 완료돼요."}</p>
       </div>
       <div className="grow" />
       <Bottom error={error}>

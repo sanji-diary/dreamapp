@@ -12,6 +12,7 @@ import { nameAlreadyJoined, saveNewPin, saveOnboarding, selfRegister, type Onboa
 import { rememberedFriends } from "./friends";
 import { lockMinutes } from "./queries";
 import { afterSignInPath } from "./scan-cookie";
+import { submitVerse } from "./verse";
 import { deleteWorry, submitWorry } from "./worries";
 
 /**
@@ -113,17 +114,50 @@ const FAIL: Record<string, string> = {
   invalid: "내용을 다시 확인해 주세요",
 };
 
-/** Missions a child finishes alone. Other kinds need a photo, a teacher, or happen elsewhere in the app. */
-const SELF_SERVE = ["self", "text", "verse"];
+/** Missions a child finishes with one tap or a few words. Other kinds have their own action, need a teacher, or happen elsewhere in the app. */
+const SELF_SERVE = ["self", "text"];
 
 export async function completeMissionAction(missionId: number, text?: string): Promise<MissionActionResult> {
   const kid = await requireKid();
   const m = (await missionsForChild(db, kid.id)).find((x) => x.id === missionId);
   if (!m || !SELF_SERVE.includes(m.kind)) return { ok: false, message: FAIL.not_found };
   const body = typeof text === "string" ? text.slice(0, 2000) : undefined;
-  if (m.kind === "verse" && (body ?? "").trim() !== (m.verse_text ?? "").trim()) return { ok: false, message: "말씀과 똑같이 써야 해요. 다시 확인해 볼까요?" };
   const r = await completeMission(kid.id, m.id, { text: m.kind === "self" ? undefined : body });
   if (!r.ok) return { ok: false, message: m.kind === "text" && r.reason === "invalid" ? "한 글자 이상 적어 주세요" : FAIL[r.reason] };
+  revalidatePath("/missions");
+  redirect(`/missions/done/${r.completionId}`);
+}
+
+export type VerseActionResult =
+  /** That verse was right; `done` of `total` verses are written now. */
+  | { ok: true; done: number; total: number }
+  /** `at`: where the writing first differs from verse number `done` (an index into the verse as shown). */
+  | { ok: false; message: string; at?: number; done?: number };
+
+/**
+ * 말씀 쓰기: checks one verse the child wrote. After the last verse the mission is completed on the
+ * server and the child is sent to the success screen. A wrong try costs nothing and can be repeated.
+ */
+export async function verseAction(missionId: number, index: number, text: string): Promise<VerseActionResult> {
+  const kid = await requireKid();
+  const r = await submitVerse(kid.id, Number(missionId), Number(index), text);
+  if (!r.ok) {
+    if (r.reason === "mismatch") return { ok: false, message: "여기부터 달라요. 다시 확인해 볼까요?", at: r.at, done: r.done };
+    return { ok: false, message: FAIL[r.reason] };
+  }
+  if (!r.finished) return { ok: true, done: r.done, total: r.total };
+  revalidatePath("/missions");
+  redirect(`/missions/done/${r.completionId}`);
+}
+
+/** 교사 확인 미션: the child says "I did it, please check". It waits in the teacher's list until a teacher decides. */
+export async function requestCheckAction(missionId: number): Promise<MissionActionResult> {
+  const kid = await requireKid();
+  const m = (await missionsForChild(db, kid.id)).find((x) => x.id === missionId);
+  if (!m || m.kind !== "teacher") return { ok: false, message: FAIL.not_found };
+  if (m.state === "pending") return { ok: false, message: "이미 선생님께 요청했어요" };
+  const r = await completeMission(kid.id, m.id);
+  if (!r.ok) return { ok: false, message: FAIL[r.reason] };
   revalidatePath("/missions");
   redirect(`/missions/done/${r.completionId}`);
 }

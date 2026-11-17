@@ -17,6 +17,10 @@ export function weekStart(date: string = todayKst()): string {
   return addDays(date, -d.getUTCDay());
 }
 
+export function isSunday(date: string): boolean {
+  return new Date(date + "T00:00:00Z").getUTCDay() === 0;
+}
+
 export function weekEnd(date: string = todayKst()): string {
   return addDays(weekStart(date), 6);
 }

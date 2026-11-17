@@ -2,7 +2,7 @@ import "server-only";
 import { canTakeAttendance } from "@/lib/authz";
 import { db, one } from "@/lib/db";
 import { recordAttendance } from "@/lib/game";
-import { addDays, todayKst, weekStart } from "@/lib/time";
+import { addDays, isSunday, todayKst, weekStart } from "@/lib/time";
 import type { Staff } from "@/lib/types";
 import { attendanceScope, listClasses, scopeSql, type ClassRow } from "./access";
 import { clean, deny, fail, isDate, type Result } from "./util";
@@ -76,6 +76,8 @@ export async function saveAttendance(staff: Staff, childId: number, date: string
   if (!isDate(date)) return fail("날짜가 올바르지 않아요");
   if (date > todayKst()) return fail("아직 오지 않은 날짜예요");
   if (status !== null && !["present", "late", "absent"].includes(status)) return fail("출석 상태가 올바르지 않아요");
+  // Attendance is for Sunday worship. A mark that slipped onto another day can still be cleared.
+  if (status !== null && !isSunday(date)) return fail("출석은 주일에만 기록할 수 있어요");
   const child = await one<{ class_id: number | null }>(db, "select class_id from children where id = $1 and active", [childId]);
   if (!child || !canTakeAttendance(staff, child.class_id)) return deny;
   await recordAttendance(staff.id, childId, date, status, status === "absent" ? clean(note, 200) || undefined : undefined);

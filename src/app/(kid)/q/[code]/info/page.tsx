@@ -8,6 +8,7 @@ export const metadata = { title: "QR 미션 · 꿈의숲키우기" };
 const NOTES: Record<string, { icon: string; title: string; lines: string[] }> = {
   already: { icon: "stamp", title: "이미 했어요", lines: ["이 QR 미션은 벌써 마쳤어요.", "물방울은 처음 찍었을 때 잘 들어갔어요."] },
   closed: { icon: "cloud", title: "지금은 열려 있지 않아요", lines: ["이 QR은 정해진 날에만 찍을 수 있어요.", "언제 찍는지 선생님께 물어봐 주세요."] },
+  not_sunday: { icon: "stamp", title: "출석 QR은 주일에 찍을 수 있어요", lines: ["주일 예배에 와서 다시 찍어 주세요.", "그날 선생님이 출석을 확인해 줘도 물방울이 들어와요."] },
   not_yours: { icon: "cloud", title: "다른 반 친구들의 미션이에요", lines: ["이 QR은 다른 친구들을 위한 거예요.", "내 미션은 미션 목록에서 볼 수 있어요."] },
   ask_teacher: { icon: "pray", title: "선생님께 말해 주세요", lines: ["오늘 출석이 다르게 적혀 있어요.", "선생님께 왔다고 말하면 바로 고쳐 주세요."] },
   unknown: { icon: "cloud", title: "QR을 다시 찍어 볼까요?", lines: ["이 QR로는 미션을 찾지 못했어요.", "교회에 붙어 있는 QR을 다시 찍어 보고, 계속 안 되면 선생님께 보여 주세요."] },
@@ -23,9 +24,9 @@ export default async function ScanInfoPage({ searchParams }: { searchParams: Pro
         <div aria-hidden="true" className="mb-3 flex h-[112px] w-[112px] items-center justify-center rounded-full bg-fill">
           <Icon name={note.icon} size={72} />
         </div>
-        <h1 className="m-0 text-[26px] leading-[35px] font-bold tracking-[-0.6px]">{note.title}</h1>
+        <h1 className="m-0 text-[26px] leading-[35px] font-bold tracking-[-0.6px] break-keep">{note.title}</h1>
         {note.lines.map((l) => (
-          <p key={l} className="m-0 text-[15px] leading-[22px] text-sub">
+          <p key={l} className="m-0 text-[15px] leading-[22px] break-keep text-sub">
             {l}
           </p>
         ))}
