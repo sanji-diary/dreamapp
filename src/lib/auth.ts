@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { db, one } from "./db";
 import { clearSession, readSession, setSession } from "./session";
@@ -41,11 +42,12 @@ export async function kidLogin(token: string, pin: string): Promise<KidLoginResu
   return { ok: true, childId: row.id };
 }
 
-export async function getKid(): Promise<Child | null> {
+/** Cached per request: layouts, pages and actions in one request share a single lookup. */
+export const getKid = cache(async (): Promise<Child | null> => {
   const id = await readSession("kid");
   if (!id) return null;
   return one<Child>(db, `select ${CHILD_COLS} from children where id = $1 and active`, [id]);
-}
+});
 
 export async function requireKid(): Promise<Child> {
   const kid = await getKid();
@@ -54,18 +56,18 @@ export async function requireKid(): Promise<Child> {
   return kid;
 }
 
-export async function getStaff(): Promise<Staff | null> {
+/** Cached per request, and read in one query (the teacher and their classes together). */
+export const getStaff = cache(async (): Promise<Staff | null> => {
   const id = await readSession("staff");
   if (!id) return null;
-  const s = await one<Omit<Staff, "class_ids">>(
+  return one<Staff>(
     db,
-    "select id, name, role, can_attendance, can_visits, can_approve, can_view_all, can_read_pastor_worries, active from staff where id = $1 and active",
+    `select s.id, s.name, s.role, s.can_attendance, s.can_visits, s.can_approve, s.can_view_all, s.can_read_pastor_worries, s.active,
+            coalesce((select array_agg(sc.class_id) from staff_classes sc where sc.staff_id = s.id), '{}') as class_ids
+       from staff s where s.id = $1 and s.active`,
     [id],
   );
-  if (!s) return null;
-  const rows = await db.query<{ class_id: number }>("select class_id from staff_classes where staff_id = $1", [id]);
-  return { ...s, class_ids: rows.map((r) => r.class_id) };
-}
+});
 
 export async function requireStaff(): Promise<Staff> {
   const s = await getStaff();

@@ -34,6 +34,11 @@ function MissionRow({ m, target, last, past }: { m: Mission; target: string; las
       </Link>
       <form action={missionOpAction} className="flex justify-end gap-[5px]">
         <input type="hidden" name="id" value={m.id} />
+        {m.qr_code ? (
+          <SmallLink href={`/staff/admin/missions/${m.id}/qr`} tone="gray" width={60}>
+            QR 인쇄
+          </SmallLink>
+        ) : null}
         <SmallLink href={`/staff/admin/missions/${m.id}`} tone="gray">
           수정
         </SmallLink>

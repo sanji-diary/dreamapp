@@ -2,11 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PhotoMission, SelfMission, TextMission, VerseMission, WorryForm } from "@/components/kid/MissionForms";
 import { MissionNote, MissionShell } from "@/components/kid/MissionShell";
+import { QuizMission } from "@/components/kid/QuizMission";
 import { primaryButtonClass } from "@/components/ui";
 import { requireKid } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { missionsForChild, type MissionForChild } from "@/lib/game";
+import { GamePlayer } from "@/games/GamePlayer";
+import { findGame } from "@/games/registry";
 import { audienceChoices } from "@/lib/kid/audience";
+import { issueGameToken } from "@/lib/kid/game-proof";
+import { parseQuiz, passNeed, publicQuiz } from "@/lib/quiz";
 
 export const metadata = { title: "미션 · 꿈의숲키우기" };
 
@@ -109,14 +114,17 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
     case "attendance":
       return (
         <MissionShell reward={reward} title={m.title} sub={capNote ?? m.description}>
-          <MissionNote icon={m.icon} lines={["주일 예배에 오면 돼요", "선생님이 출석을 확인하면 물방울이 자동으로 들어와요."]} />
+          <MissionNote
+            icon={m.icon}
+            lines={m.qr_code ? ["주일 예배에 와서 QR을 찍어 주세요", "교회에 붙어 있는 출석 QR을 휴대폰 카메라로 찍으면 돼요. 선생님이 출석을 확인해 줘도 물방울이 들어와요."] : ["주일 예배에 오면 돼요", "선생님이 출석을 확인하면 물방울이 자동으로 들어와요."]}
+          />
           <BackToList />
         </MissionShell>
       );
     case "qr":
       return (
         <MissionShell reward={reward} title={m.title} sub={capNote ?? m.description}>
-          <MissionNote icon={m.icon} lines={["선생님이 확인해 주는 미션이에요", "교회에서 선생님께 말하면 완료로 바꿔 주세요."]} />
+          <MissionNote icon={m.icon} lines={["QR을 찍으면 완료돼요", "교회에 붙어 있는 QR을 휴대폰 카메라로 찍어 주세요."]} />
           <BackToList />
         </MissionShell>
       );
@@ -127,8 +135,23 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
           <BackToList />
         </MissionShell>
       );
+    case "quiz": {
+      // Only the questions and choices go to the browser; the answers stay on the server.
+      const quiz = parseQuiz(m.quiz);
+      if (quiz.length === 0) break;
+      return <QuizMission missionId={m.id} title={m.title} description={capNote ?? m.description} reward={reward} rewardButton={rewardButton(m)} questions={publicQuiz(quiz)} need={passNeed(quiz.length, m.quiz_pass)} />;
+    }
+    case "game": {
+      const game = findGame(m.game_id);
+      if (!game) break;
+      return (
+        <MissionShell reward={reward} title={m.title} sub={capNote ?? (m.description || game.description)}>
+          <GamePlayer missionId={m.id} gameId={game.id} token={await issueGameToken(kid.id, m.id, game.id)} />
+        </MissionShell>
+      );
+    }
   }
-  // quiz, game and anything not ready yet
+  // a quiz without questions, a game that no longer exists, and anything not ready yet
   return (
     <MissionShell reward={reward} title={m.title} sub={m.description}>
       <MissionNote icon={m.icon} lines={["준비 중이에요", "조금만 기다려 주세요. 곧 할 수 있게 만들고 있어요."]} />

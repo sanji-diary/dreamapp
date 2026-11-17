@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
+import { readQuizJson } from "@/lib/quiz";
 import { saveUpload } from "@/lib/uploads";
 import { adjustPoints, archiveClass, copyPreviousWorship, deleteNotice, deletePost, moveChildren, moveClass, saveClass, saveNotice, savePost, saveSettings, saveWorship } from "./admin-misc";
 import { duplicateToNextWeek, saveMission, setMissionActive } from "./admin-missions";
@@ -48,6 +49,10 @@ export async function missionSaveAction(formData: FormData) {
     starts_on: clean(formData.get("starts_on"), 10),
     ends_on: clean(formData.get("ends_on"), 10),
     is_challenge: on(formData, "is_challenge"),
+    qr_self: on(formData, "qr_self"),
+    quiz: readQuizJson(formData.get("quiz")),
+    quiz_pass: toInt(formData.get("quiz_pass")),
+    game_id: cleanOrNull(formData.get("game_id"), 40),
   });
   finish(r, "/staff/admin/missions", id === null ? "미션을 올렸어요" : "미션을 고쳤어요", id === null ? "/staff/admin/missions/new" : `/staff/admin/missions/${id}`);
 }
