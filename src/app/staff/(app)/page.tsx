@@ -66,7 +66,7 @@ function todos(d: HomeData, isSunday: boolean): Todo[] {
       });
     }
   }
-  if (d.reports > 0) out.push({ key: "reports", icon: "badge", title: `신고된 댓글 ${d.reports}건`, sub: "숲 소식 댓글을 확인해 주세요", href: "/staff/approvals", action: "확인" });
+  if (d.reports > 0) out.push({ key: "reports", icon: "badge", title: `신고된 댓글 ${d.reports}건`, sub: "숲 소식 댓글을 확인해 주세요", href: "/staff/approvals?tab=comments", action: "확인" });
   if (d.joiners > 0) out.push({ key: "joiners", icon: "bird", title: `새로 가입한 아이 ${d.joiners}명`, sub: "반 배정과 동의서 확인하기", href: "/staff/children?new=1", action: "보기" });
   return out;
 }

@@ -171,15 +171,19 @@ export async function proxyMissionAction(formData: FormData) {
 export async function reviewAction(formData: FormData) {
   const staff = await requireStaff();
   const id = toInt(formData.get("id"));
-  if (id === null) redirect("/staff/approvals");
+  // The filter chip that was on (?f=) stays on after the review.
+  const f = formData.get("f");
+  const back = f === "photo" || f === "text" || f === "mine" ? `/staff/approvals?f=${f}` : "/staff/approvals";
+  if (id === null) redirect(back);
   const approve = formData.get("decision") === "approve";
-  finish(await reviewSubmission(staff, id, approve), "/staff/approvals", approve ? "승인했어요" : "반려했어요");
+  finish(await reviewSubmission(staff, id, approve), back, approve ? "미션을 확인했어요" : "미션을 돌려보냈어요. 아이가 다시 할 수 있어요");
 }
 
 export async function commentAction(formData: FormData) {
   const staff = await requireStaff();
   const id = toInt(formData.get("id"));
-  const back = formData.get("back") === "posts" && staff.role === "admin" ? "/staff/admin/posts" : "/staff/approvals";
+  // Back to the 댓글 part of 할 일 (teachers who also check missions would otherwise land on the mission list).
+  const back = formData.get("back") === "posts" && staff.role === "admin" ? "/staff/admin/posts" : "/staff/approvals?tab=comments";
   if (id === null) redirect(back);
   if (formData.get("decision") === "hide") finish(await hideComment(staff, id), back, "댓글을 지웠어요");
   finish(await dismissReports(staff, id), back, "댓글을 그대로 두었어요");
