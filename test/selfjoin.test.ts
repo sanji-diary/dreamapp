@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 process.env.PGLITE_DIR = "memory";
@@ -185,6 +187,19 @@ describe("the home-screen manifest", () => {
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("content-type")).toContain("application/manifest+json");
     expect(await res.json()).toMatchObject({ start_url: "/", display: "standalone", name: "꿈의숲키우기" });
+  });
+
+  it("names icons that exist at the size it says, the same ones in every manifest", async () => {
+    const { icons } = await (await manifestGet(manifestReq())).json();
+    // One as drawn, and one Android may cut to its own shape.
+    expect(icons.map((i: { purpose: string }) => i.purpose)).toEqual(["any", "maskable"]);
+    for (const icon of icons) {
+      const png = readFileSync(join("public", icon.src));
+      expect(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`).toBe(icon.sizes); // width and height in the PNG header
+    }
+    for (const file of ["manifest.webmanifest", "manifest-staff.webmanifest"]) {
+      expect(JSON.parse(readFileSync(join("public", file), "utf8")).icons).toEqual(icons);
+    }
   });
 
   it("gives a signed-in child a start_url that is their own card entry", async () => {
