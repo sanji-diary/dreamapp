@@ -48,7 +48,7 @@ export function SubHeader({ back, backLabel, title, right }: { back: string; bac
 
 export function TextLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="flex h-11 shrink-0 items-center px-2 text-[15px] font-bold text-navy no-underline">
+    <Link href={href} className="flex h-11 shrink-0 items-center px-2 text-[15px] font-bold text-staff no-underline">
       {children}
     </Link>
   );
@@ -60,14 +60,14 @@ export function Flash({ ok, error }: { ok?: string | string[]; error?: string | 
   const o = typeof ok === "string" ? ok : null;
   if (!e && !o) return null;
   return (
-    <p role={e ? "alert" : "status"} className={`mx-4 mt-3 mb-0 rounded-[10px] px-3 py-[11px] text-[14px] leading-5 font-bold ${e ? "bg-danger-tint text-[#8E2A22]" : "bg-navy-tint text-navy"}`}>
+    <p role={e ? "alert" : "status"} className={`mx-4 mt-3 mb-0 rounded-[10px] px-3 py-[11px] text-[14px] leading-5 font-bold ${e ? "bg-danger-tint text-[#8E2A22]" : "bg-staff-tint text-staff"}`}>
       {(e ?? o)!.slice(0, 200)}
     </p>
   );
 }
 
 const SMALL = {
-  navy: "bg-navy text-white",
+  navy: "bg-staff text-white",
   gray: "bg-fill text-sub",
   danger: "bg-danger text-white",
 } as const;
@@ -155,7 +155,7 @@ export function TextField({
   );
 }
 
-export const textareaClass = "min-h-[96px] w-full rounded-xl border-[1.5px] border-[#D1D6DB] bg-white px-3.5 py-3 text-[16px] leading-6 text-ink outline-none focus:border-navy";
+export const textareaClass = "min-h-[96px] w-full rounded-xl border-[1.5px] border-[#D1D6DB] bg-white px-3.5 py-3 text-[16px] leading-6 text-ink outline-none focus:border-staff";
 export const selectClass = `${inputClass} appearance-auto`;
 
 /**
@@ -186,7 +186,7 @@ export function Chips({
           <label key={o.value} className="flex h-11 cursor-pointer items-center">
             <input type={multiple ? "checkbox" : "radio"} name={name} value={o.value} defaultChecked={selected.includes(o.value)} className="peer sr-only" />
             <span
-              className={`flex h-[34px] items-center rounded-lg px-3 text-[14px] font-semibold text-sub peer-checked:bg-navy peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy ${onWhite ? "bg-white" : "bg-fill"}`}
+              className={`flex h-[34px] items-center rounded-lg px-3 text-[14px] font-semibold text-sub peer-checked:bg-staff peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-staff ${onWhite ? "bg-white" : "bg-fill"}`}
             >
               {o.label}
             </span>
@@ -206,7 +206,7 @@ export function Switch({ label, name, defaultChecked, hint }: { label: string; n
         {hint ? <span className="text-[12px] leading-[18px] text-mute">{hint}</span> : null}
       </span>
       <input type="checkbox" role="switch" name={name} defaultChecked={defaultChecked} className="peer sr-only" />
-      <span className="flex h-[30px] w-[52px] shrink-0 items-center rounded-full bg-faint px-[3px] transition-colors peer-checked:justify-end peer-checked:bg-navy peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
+      <span className="flex h-[30px] w-[52px] shrink-0 items-center rounded-full bg-faint px-[3px] transition-colors peer-checked:justify-end peer-checked:bg-staff peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-staff">
         <span className="h-6 w-6 rounded-full bg-white" />
       </span>
     </label>

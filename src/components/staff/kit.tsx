@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from "react";
  * Two things to keep in mind when adding to it:
  * - Focus rings. In Tailwind 4 `outline-none` also switches off `focus-visible:outline-2` on the
  *   same element (both go through --tw-outline-style). Write the ring classes alone
- *   (`focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy`), or put
+ *   (`focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff`), or put
  *   `group outline-none` on the link and the `group-focus-visible:` ring on the shape inside it.
  * - `className` props are for placing a component (margin, flex, grid position). Do not pass a class
  *   that competes with one the component sets itself (another height, gap, padding or display):
@@ -36,7 +36,7 @@ import type { CSSProperties, ReactNode } from "react";
 export function Page({ children, flush = false, wide = false, narrow = false, className = "" }: { children: ReactNode; flush?: boolean; wide?: boolean; narrow?: boolean; className?: string }) {
   const width = flush || wide ? "w-full" : narrow ? "mx-auto w-full max-w-[600px] lg:mx-0 lg:max-w-[640px]" : pageColumn;
   return (
-    <div data-wide="" className={`flex min-w-0 grow flex-col text-[14px] leading-[1.4] tracking-[-0.015em] break-keep wrap-break-word text-ink tabular-nums ${flush ? "" : "gap-3.5 px-[18px] pt-5 pb-6 lg:gap-4 lg:px-4 lg:pt-3"} ${width} ${className}`}>
+    <div data-wide="" className={`flex min-w-0 grow flex-col text-[14px] leading-[1.4] tracking-[-0.015em] break-keep wrap-break-word text-ink tabular-nums ${flush ? "" : "gap-3.5 px-[18px] pt-5 pb-6 lg:gap-[18px] lg:px-0 lg:pt-0 lg:pb-0"} ${width} ${className}`}>
       {children}
     </div>
   );
@@ -106,6 +106,18 @@ const ICONS = {
   out: <path d="M10 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h4M14 8l4 4-4 4M18 12H9" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   adjust: <path d="M12 4v8M8 8h8M8 18h8" />,
+  leaf: <path d="M12 21v-7M12 14c-4 0-6.5-2.6-6.5-6A6.5 6.5 0 0 1 12 1.5 6.5 6.5 0 0 1 18.5 8c0 3.4-2.5 6-6.5 6Z" />,
+  book: <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5ZM4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5M12 6.5v7M9.5 9h5" />,
+  shield: <path d="M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6Z" />,
+  bell: <path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15ZM10 20.5a2 2 0 0 0 4 0" />,
+  download: <path d="M12 4v11m0 0-4-4m4 4 4-4M5 19.5h14" />,
+  phone: <path d="M5.5 3.5H9l1.5 4.2-2.2 1.5a11 11 0 0 0 6.5 6.5l1.5-2.2 4.2 1.5v3.5a1.6 1.6 0 0 1-1.7 1.6A16.5 16.5 0 0 1 3.9 5.2a1.6 1.6 0 0 1 1.6-1.7Z" />,
+  photo: <path d="M5.5 4.5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2ZM9 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 1 0 0-3M20.5 15.5l-5-5-9 9" />,
+  up: <path d="M6 15l6-6 6 6" />,
+  down: <path d="M6 9l6 6 6-6" />,
+  trash: <path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13h9l1-13M10.5 10.5v6M13.5 10.5v6" />,
+  move: <path d="M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5" />,
+  sort: <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />,
 } as const;
 
 export type LineIconName = keyof typeof ICONS;
@@ -168,7 +180,7 @@ const TEACHER = { s: "h-9 w-9 text-[14px]", m: "h-12 w-12 text-[18px]", round: "
 /** A teacher's initial (family name) on navy tint. */
 export function TeacherAvatar({ name, size = "s", onWhite = false }: { name: string; size?: keyof typeof TEACHER; onWhite?: boolean }) {
   return (
-    <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full font-bold text-navy ${TEACHER[size]} ${onWhite ? "bg-white" : "bg-navy-tint"}`}>
+    <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full font-bold text-staff ${TEACHER[size]} ${onWhite ? "bg-white" : "bg-staff-tint"}`}>
       {name.slice(0, 1)}
     </span>
   );
@@ -178,13 +190,13 @@ export function TeacherAvatar({ name, size = "s", onWhite = false }: { name: str
 
 export type TagTone = "navy" | "blue" | "warn" | "danger" | "gray";
 const TAG: Record<TagTone, string> = {
-  navy: "bg-navy-tint text-navy",
+  navy: "bg-staff-tint text-staff",
   blue: "bg-blue-tint text-blue",
   warn: "bg-warn-tint text-warn",
   danger: "bg-danger-tint text-danger",
   gray: "bg-fill text-mute",
 };
-const TAG_TEXT: Record<TagTone, string> = { navy: "text-navy", blue: "text-blue", warn: "text-warn", danger: "text-danger", gray: "text-mute" };
+const TAG_TEXT: Record<TagTone, string> = { navy: "text-staff", blue: "text-blue", warn: "text-warn", danger: "text-danger", gray: "text-mute" };
 
 /** Status label. Colours carry meaning only: navy = fine, blue = worry, warn = needs a look, danger = absent. */
 export function Tag({ children, tone = "gray", onWhite = false }: { children: ReactNode; tone?: TagTone; onWhite?: boolean }) {
@@ -204,13 +216,13 @@ export function CountBadge({ n, small = false, className = "" }: { n: number; sm
 
 /* ---------- chips and the segmented control (both are links: the choice lives in the address) ---------- */
 
-export const chipClass = (on: boolean) => `rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap ${on ? "bg-navy text-white" : "bg-fill text-sub"}`;
+export const chipClass = (on: boolean) => `rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap lg:rounded-[10px] lg:px-3.5 lg:py-[9px] lg:text-[14px] ${on ? "bg-staff text-white" : "bg-fill text-sub lg:bg-white lg:text-ink2 lg:ring-1 lg:ring-[#e1e4ea] lg:ring-inset"}`;
 
 /** Filter chip. The 44px box around the pill keeps it easy to tap. */
 export function Chip({ href, on = false, children }: { href: string; on?: boolean; children: ReactNode }) {
   return (
     <Link href={href} aria-current={on ? "true" : undefined} className="group flex h-11 shrink-0 items-center no-underline outline-none lg:h-10">
-      <span className={`${chipClass(on)} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy`}>{children}</span>
+      <span className={`${chipClass(on)} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff`}>{children}</span>
     </Link>
   );
 }
@@ -235,7 +247,7 @@ export function Segmented({ items, label, onGray = false }: { items: { href: str
           scroll={it.scroll}
           aria-current={it.on ? "page" : undefined}
           // Below lg the ::before stretches the tap area over the 3px of track above and below (44px in all); the tab still looks 38px.
-          className={`relative flex h-[38px] items-center justify-center rounded-[9px] before:absolute before:inset-x-0 before:-inset-y-[3px] before:content-[''] lg:before:hidden no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy lg:h-8 ${it.on ? "bg-white font-bold text-ink shadow-[0_1px_3px_rgba(25,31,40,0.1)]" : "text-mute"}`}
+          className={`relative flex h-[38px] items-center justify-center rounded-[9px] before:absolute before:inset-x-0 before:-inset-y-[3px] before:content-[''] lg:before:hidden no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-staff lg:h-8 ${it.on ? "bg-white font-bold text-ink shadow-[0_1px_3px_rgba(25,31,40,0.1)]" : "text-mute"}`}
         >
           {it.label}
         </Link>
@@ -250,7 +262,7 @@ export function Segmented({ items, label, onGray = false }: { items: { href: str
 export function Tile({ children, href, className = "" }: { children: ReactNode; href?: string; className?: string }) {
   const cls = `rounded-[20px] bg-fill p-4 ${className}`;
   return href ? (
-    <Link href={href} className={`block text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${cls}`}>
+    <Link href={href} className={`block text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff ${cls}`}>
       {children}
     </Link>
   ) : (
@@ -260,12 +272,12 @@ export function Tile({ children, href, className = "" }: { children: ReactNode; 
 
 /** Gray box for a group of content on wide screens (and the side panel). `tight` drops the 12px gap between its children (for a list of rows). */
 export function Box({ children, tight = false, className = "" }: { children: ReactNode; tight?: boolean; className?: string }) {
-  return <div className={`flex min-w-0 flex-col rounded-[20px] bg-fill p-[18px] ${tight ? "" : "gap-3"} ${className}`}>{children}</div>;
+  return <div className={`flex min-w-0 flex-col rounded-[20px] bg-fill p-[18px] lg:rounded-2xl lg:border lg:border-staff-line lg:bg-white lg:px-[22px] lg:py-5 lg:shadow-[0_1px_2px_rgba(17,24,39,0.04)] ${tight ? "" : "gap-3"} ${className}`}>{children}</div>;
 }
 
 /** White card with a hairline border, for tables. */
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`flex min-w-0 flex-col rounded-[20px] border border-line px-2.5 py-1.5 ${className}`}>{children}</div>;
+  return <div className={`flex min-w-0 flex-col rounded-[20px] border border-line bg-white px-2.5 py-1.5 lg:rounded-2xl lg:border-staff-line lg:px-0 lg:py-0 lg:shadow-[0_1px_2px_rgba(17,24,39,0.04)] ${className}`}>{children}</div>;
 }
 
 /** Number over a small label. `href` makes it a link. */
@@ -278,7 +290,7 @@ export function StatTile({ value, label, tone, href }: { value: ReactNode; label
   );
   const cls = "block rounded-2xl bg-fill px-1.5 py-3 text-center";
   return href ? (
-    <Link href={href} className={`${cls} text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy`}>
+    <Link href={href} className={`${cls} text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff`}>
       {inner}
     </Link>
   ) : (
@@ -290,14 +302,14 @@ export function StatTile({ value, label, tone, href }: { value: ReactNode; label
 export function Kpi({ label, value, note, tone, href }: { label: string; value: ReactNode; note?: ReactNode; tone?: "blue" | "danger"; href?: string }) {
   const inner = (
     <>
-      <span className="text-[12.5px] text-mute">{label}</span>
-      <b className="mt-0.5 mb-px block text-[24px] tracking-[-0.035em]">{value}</b>
-      {note ? <small className={`text-[12px] ${tone === "blue" ? "text-blue" : tone === "danger" ? "text-danger" : "text-mute"}`}>{note}</small> : null}
+      <span className="text-[12.5px] text-mute lg:text-[14px] lg:font-semibold lg:text-sub">{label}</span>
+      <b className="mt-0.5 mb-px block text-[24px] tracking-[-0.035em] lg:mt-1.5 lg:mb-1 lg:text-[30px] lg:leading-[1.15] lg:font-extrabold">{value}</b>
+      {note ? <small className={`text-[12px] lg:text-[13.5px] ${tone === "blue" ? "text-staff" : tone === "danger" ? "text-badge lg:font-semibold" : "text-mute"}`}>{note}</small> : null}
     </>
   );
-  const cls = "block rounded-[18px] bg-fill px-4 py-3.5";
+  const cls = "block rounded-[18px] bg-fill px-4 py-3.5 lg:rounded-2xl lg:border lg:border-staff-line lg:bg-white lg:px-[22px] lg:py-5 lg:shadow-[0_1px_2px_rgba(17,24,39,0.04)]";
   return href ? (
-    <Link href={href} className={`${cls} text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy`}>
+    <Link href={href} className={`${cls} text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff`}>
       {inner}
     </Link>
   ) : (
@@ -310,7 +322,7 @@ export function ProgressBar({ value, max, label, thin = false, soft = false }: {
   const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((value / max) * 100))) : 0;
   return (
     <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.max(0, Math.min(max, value))} className={`overflow-hidden rounded-[5px] bg-track ${thin ? "h-2" : "h-2.5"}`}>
-      <div className={`h-full rounded-[5px] bg-bar ${soft ? "opacity-55" : ""}`} style={{ width: `${pct}%` }} />
+      <div className={`h-full rounded-[5px] bg-staff ${soft ? "opacity-45" : ""}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -321,7 +333,7 @@ export function ProgressBar({ value, max, label, thin = false, soft = false }: {
 export function SectionHead({ children, note, right, className = "" }: { children: ReactNode; note?: ReactNode; right?: ReactNode; className?: string }) {
   return (
     <div className={`flex min-h-8 items-center gap-2 ${className}`}>
-      <h2 className="m-0 min-w-0 grow text-[17px] font-bold tracking-[-0.025em]">
+      <h2 className="m-0 min-w-0 grow text-[17px] font-bold tracking-[-0.025em] lg:text-[18px]">
         {children}
         {note ? <span className="ml-1.5 text-[13px] font-medium tracking-[-0.015em] text-mute">{note}</span> : null}
       </h2>
@@ -334,7 +346,7 @@ export function SectionHead({ children, note, right, className = "" }: { childre
 export function RoundLink({ href, label, icon, white = false, prefetch }: { href: string; label: string; icon: LineIconName; white?: boolean; prefetch?: boolean }) {
   return (
     <Link href={href} aria-label={label} prefetch={prefetch} className="group grid h-11 w-11 shrink-0 place-items-center no-underline outline-none">
-      <span className={`grid h-10 w-10 place-items-center rounded-full text-ink2 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy ${white ? "bg-white shadow-[0_2px_10px_rgba(25,31,40,0.1)]" : "bg-fill"}`}>
+      <span className={`grid h-10 w-10 place-items-center rounded-full text-ink2 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff ${white ? "bg-white shadow-[0_2px_10px_rgba(25,31,40,0.1)]" : "bg-fill"}`}>
         <LineIcon name={icon} />
       </span>
     </Link>
@@ -351,19 +363,19 @@ export function PageHeader({ title, count, sub, right, back, backLabel = "뒤로
     return (
       <header className="-mx-0.5 -mt-0.5 flex items-center gap-2 print:hidden">
         <RoundLink href={back} label={backLabel} icon="back" />
-        <h1 className="m-0 min-w-0 grow text-center text-[17px] font-bold tracking-[-0.025em] lg:text-left lg:text-[22px] lg:tracking-[-0.035em]">{title}</h1>
+        <h1 className="m-0 min-w-0 grow text-center text-[17px] font-bold tracking-[-0.025em] lg:text-left lg:text-[24px] lg:font-extrabold lg:tracking-[-0.03em]">{title}</h1>
         {right ?? <span className="w-11 shrink-0 lg:hidden" />}
       </header>
     );
   }
   return (
-    <header className="flex min-h-11 items-center gap-2.5 print:hidden">
-      <div className="flex min-w-0 grow flex-col">
-        <h1 className="m-0 text-[22px] leading-[1.35] font-bold tracking-[-0.035em]">
+    <header className="flex min-h-11 flex-wrap items-center gap-2.5 print:hidden lg:items-end lg:gap-4">
+      <div className="flex min-w-0 grow basis-[220px] flex-col lg:gap-1.5">
+        <h1 className="m-0 text-[22px] leading-[1.35] font-bold tracking-[-0.035em] lg:text-[28px] lg:leading-[1.25] lg:font-extrabold lg:tracking-[-0.03em]">
           {title}
-          {count !== undefined ? <small className="ml-1.5 text-[14px] font-medium tracking-[-0.015em] text-mute">{count}</small> : null}
+          {count !== undefined ? <small className="ml-1.5 text-[14px] font-medium tracking-[-0.015em] text-mute lg:ml-2 lg:text-[15px] lg:font-semibold lg:text-sub">{count}</small> : null}
         </h1>
-        {sub ? <p className="m-0 text-[13px] text-mute">{sub}</p> : null}
+        {sub ? <p className="m-0 text-[13px] text-mute lg:text-[14px] lg:text-sub">{sub}</p> : null}
       </div>
       {right}
     </header>
@@ -373,13 +385,13 @@ export function PageHeader({ title, count, sub, right, back, backLabel = "뒤로
 /* ---------- rows ---------- */
 
 const pillBase = "rounded-[9px] px-3 py-2 text-[13px] leading-[1.4] font-bold whitespace-nowrap";
-export const pillClass = (tone: "navy" | "gray" | "white" = "navy") => `${pillBase} ${tone === "navy" ? "bg-navy text-white" : tone === "white" ? "bg-white text-sub" : "bg-fill text-sub"}`;
+export const pillClass = (tone: "navy" | "gray" | "white" = "navy") => `${pillBase} ${tone === "navy" ? "bg-staff text-white" : tone === "white" ? "bg-white text-sub" : "bg-fill text-sub"}`;
 
 /** The navy pill at the right of a row, as a link. `label` names it for screen readers ("박도윤 고민 읽기"). */
 export function PillLink({ href, children, tone = "navy", label, prefetch }: { href: string; children: ReactNode; tone?: "navy" | "gray" | "white"; label?: string; prefetch?: boolean }) {
   return (
     <Link href={href} aria-label={label} prefetch={prefetch} className="group flex h-11 shrink-0 items-center no-underline outline-none lg:h-9">
-      <span className={`${pillClass(tone)} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy`}>{children}</span>
+      <span className={`${pillClass(tone)} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff`}>{children}</span>
     </Link>
   );
 }
@@ -388,7 +400,7 @@ export function PillLink({ href, children, tone = "navy", label, prefetch }: { h
 export function PillButton({ children, tone = "navy", label, name, value, type = "submit" }: { children: ReactNode; tone?: "navy" | "gray" | "white"; label?: string; name?: string; value?: string; type?: "submit" | "button" }) {
   return (
     <button type={type} name={name} value={value} aria-label={label} className="group flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 outline-none lg:h-9">
-      <span className={`${pillClass(tone)} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy`}>{children}</span>
+      <span className={`${pillClass(tone)} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff`}>{children}</span>
     </button>
   );
 }
@@ -397,7 +409,7 @@ export function PillButton({ children, tone = "navy", label, name, value, type =
 export function PillNote({ children, tone = "gray" }: { children: ReactNode; tone?: "gray" | "navy" | "warn" }) {
   return (
     <span className="flex h-11 shrink-0 items-center lg:h-9">
-      <span className={`${pillBase} ${tone === "navy" ? "bg-navy-tint text-navy" : tone === "warn" ? "bg-warn-tint text-warn" : "bg-fill text-sub"}`}>{children}</span>
+      <span className={`${pillBase} ${tone === "navy" ? "bg-staff-tint text-staff" : tone === "warn" ? "bg-warn-tint text-warn" : "bg-fill text-sub"}`}>{children}</span>
     </span>
   );
 }
@@ -426,7 +438,7 @@ export function ListRow({ left, title, sub, right, href, prefetch, compact = fal
   );
   const cls = `flex items-center gap-3 border-b border-line last:border-b-0 ${compact ? "py-[9px]" : "py-[13px]"}`;
   return href ? (
-    <Link href={href} prefetch={prefetch} className={`${cls} text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy`}>
+    <Link href={href} prefetch={prefetch} className={`${cls} text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-staff`}>
       {inner}
     </Link>
   ) : (
@@ -456,7 +468,7 @@ export function InfoField({ label, children, onGray = false }: { label: string; 
  * still fit side by side with their words whole.
  */
 export const ctaClass = (tone: "navy" | "gray" = "navy") =>
-  `flex h-[52px] w-full cursor-pointer items-center justify-center rounded-[14px] border-0 px-3 text-[16px] font-bold tracking-[-0.02em] whitespace-nowrap no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy max-[359px]:h-12 max-[359px]:px-2 max-[359px]:text-[14px] ${tone === "navy" ? "bg-navy text-white" : "bg-fill text-ink2"}`;
+  `flex h-[52px] w-full cursor-pointer items-center justify-center rounded-[14px] border-0 px-3 text-[16px] font-bold tracking-[-0.02em] whitespace-nowrap no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff max-[359px]:h-12 max-[359px]:px-2 max-[359px]:text-[14px] ${tone === "navy" ? "bg-staff text-white" : "bg-fill text-ink2"}`;
 
 export function CtaLink({ href, children, tone = "navy" }: { href: string; children: ReactNode; tone?: "navy" | "gray" }) {
   return (
@@ -468,8 +480,12 @@ export function CtaLink({ href, children, tone = "navy" }: { href: string; child
 
 /** Compact buttons for the top bar and panels of wide screens (they are 44px tall on phones). solid = navy, ghost = gray, white = on a gray box. */
 export const barButtonClass = (tone: "solid" | "ghost" | "white" = "ghost") =>
-  `inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border-0 px-[13px] text-[13.5px] whitespace-nowrap no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy lg:h-[38px] ${
-    tone === "solid" ? "bg-navy font-bold text-white" : tone === "white" ? "bg-white font-semibold text-ink2" : "bg-fill font-semibold text-ink2"
+  `inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[10px] border-0 px-[13px] text-[13.5px] whitespace-nowrap no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff lg:rounded-xl lg:px-4 lg:text-[14.5px] ${
+    tone === "solid"
+      ? "bg-staff font-bold text-white lg:shadow-[0_1px_2px_rgba(17,24,39,0.1)]"
+      : tone === "white"
+        ? "bg-white font-semibold text-ink2 lg:ring-1 lg:ring-[#e1e4ea] lg:ring-inset"
+        : "bg-fill font-semibold text-ink2 lg:bg-white lg:text-ink lg:shadow-[0_1px_2px_rgba(17,24,39,0.05)] lg:ring-1 lg:ring-[#e1e4ea] lg:ring-inset"
   }`;
 
 /** `className` is for placing the button (flex-1, min-w-0), not for hiding it: wrap it in a hidden element instead. */
@@ -485,7 +501,7 @@ export function BarLink({ href, children, tone = "ghost", className = "" }: { hr
 
 /** One-line message box. tone: navy = done, danger = problem, warn = needs a look, gray = plain note. */
 export function Notice({ children, tone = "gray", role }: { children: ReactNode; tone?: "navy" | "danger" | "warn" | "gray"; role?: "alert" | "status" }) {
-  const cls = tone === "navy" ? "bg-navy-tint text-navy" : tone === "danger" ? "bg-danger-tint text-danger" : tone === "warn" ? "bg-warn-tint text-warn" : "bg-fill text-sub";
+  const cls = tone === "navy" ? "bg-staff-tint text-staff" : tone === "danger" ? "bg-danger-tint text-danger" : tone === "warn" ? "bg-warn-tint text-warn" : "bg-fill text-sub";
   return (
     <p role={role} className={`m-0 rounded-xl px-3.5 py-3 text-[14px] leading-5 font-bold ${cls}`}>
       {children}

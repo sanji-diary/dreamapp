@@ -1,106 +1,154 @@
-import { AdminHeader, AdminPage, ConfirmPill, writeSplitClass } from "@/components/staff/admin-kit";
+import Link from "next/link";
+import { AdminHeader, AdminPage, ConfirmPill, rowClass, tableClass, tdClass, thClass } from "@/components/staff/admin-kit";
 import { ContentTabs } from "@/components/staff/AdminMenu";
-import { Checkbox, FieldGroup, FormSection, SubmitButton, SwitchRow, TextArea, errorFor } from "@/components/staff/form-kit";
-import { EmptyNote, FlashNote, PillButton, PillLink, SectionHead, Tag } from "@/components/staff/kit";
-import { PhotoInput, PhotoZoom } from "@/components/staff/widgets";
+import { BarLink, Card, EmptyNote, FlashNote, LineIcon, PillLink, RoundLink, Tag } from "@/components/staff/kit";
 import { requireAdmin } from "@/lib/auth";
-import { commentAction } from "@/lib/staff/actions";
 import { postAction } from "@/lib/staff/actions-admin";
-import { listPosts } from "@/lib/staff/admin-misc";
-import { shortDate, toInt } from "@/lib/staff/util";
+import { listPosts, type PostRow } from "@/lib/staff/admin-misc";
+import { shortDate } from "@/lib/staff/util";
 
 export const metadata = { title: "숲 소식 · 꿈의숲키우기" };
 
+/** The first line of a post stands in for a title in lists; the rest is the gray preview. */
+function split(body: string): { head: string; rest: string } {
+  const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+  return { head: lines[0] ?? "", rest: lines.slice(1).join(" ") };
+}
+
+function Thumb({ p, size }: { p: PostRow; size: number }) {
+  return p.image_url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img alt="" src={p.image_url} className="shrink-0 rounded-xl object-cover" style={{ width: size, height: size }} />
+  ) : (
+    <span aria-hidden="true" className="grid shrink-0 place-items-center rounded-xl bg-[#f2f4f6] text-mute" style={{ width: size, height: size }}>
+      <LineIcon name="list" size={Math.round(size * 0.4)} stroke={1.7} />
+    </span>
+  );
+}
+
+const reactions = (p: PostRow) => `좋아요 ${p.likes} · ${p.comments_open ? `댓글 ${p.comments.filter((c) => !c.hidden).length}` : "댓글 받지 않음"}`;
+
+/** 숲 소식, a board of posts (design-reference/admin2/Posts.dc.html). Writing and changing a post happen on their own page. */
 export default async function PostsAdminPage({ searchParams }: PageProps<"/staff/admin/posts">) {
   const staff = await requireAdmin();
   const sp = await searchParams;
   const posts = (await listPosts(staff)) ?? [];
-  const editing = posts.find((p) => p.id === toInt(sp.edit)) ?? null;
   return (
     <AdminPage>
-      <AdminHeader title="소식·예배" />
+      <AdminHeader
+        title="소식 글"
+        count={`${posts.length}개`}
+        phoneRight={<RoundLink href="/staff/admin/posts/new" label="글쓰기" icon="pen" />}
+        wideRight={
+          <BarLink href="/staff/admin/posts/new" tone="solid">
+            <LineIcon name="pen" size={18} />
+            글쓰기
+          </BarLink>
+        }
+      />
       <ContentTabs active="posts" />
       <FlashNote ok={sp.ok} error={sp.error} />
-      <div className={writeSplitClass}>
-        {/* Writing comes first on phones and sits in the box at the right on wide screens. */}
-        <FormSection
-          box
-          className="md:col-start-2 md:row-start-1"
-          title={editing ? "소식 고치기" : "새 소식"}
-          right={
-            editing ? (
-              <PillLink href="/staff/admin/posts" tone="white">
-                새로 쓰기
-              </PillLink>
-            ) : undefined
-          }
-        >
-          <form key={editing?.id ?? "new"} action={postAction} className="flex flex-col gap-3">
-            {editing ? <input type="hidden" name="id" value={editing.id} /> : null}
-            <TextArea label="내용" name="body" id="p-body" required maxLength={2000} defaultValue={editing?.body ?? ""} error={errorFor(sp.error, /내용/)} />
-            <FieldGroup legend="사진 (선택)" hint="사진 동의를 받은 아이만 나오게 해 주세요." error={errorFor(sp.error, /사진|이미지/)}>
-              <div className="rounded-2xl bg-white p-3">
-                <PhotoInput current={editing?.image_url} round={false} max={1200} />
-              </div>
-            </FieldGroup>
-            {editing?.image_url ? <Checkbox name="remove_image" label="사진 빼기" /> : null}
-            <SwitchRow onGray label="댓글 받기" hint="아이들이 이 소식에 댓글을 달 수 있어요" name="comments_open" defaultChecked={editing ? editing.comments_open : true} />
-            <SubmitButton>{editing ? "고친 내용 저장" : "소식 올리기"}</SubmitButton>
-          </form>
-        </FormSection>
 
-        <section className="flex min-w-0 flex-col md:col-start-1 md:row-start-1">
-          <SectionHead note={`${posts.length}개`}>올린 소식</SectionHead>
-          {posts.map((p) => (
-            <article key={p.id} className="flex flex-col gap-1.5 border-b border-line py-3 last:border-b-0">
-              <div className="flex items-start gap-3">
-                {p.image_url ? <PhotoZoom src={p.image_url} alt="소식 사진" size={56} /> : null}
-                <p className="m-0 line-clamp-4 min-w-0 grow text-[14px] leading-[21px] whitespace-pre-line text-ink2">{p.body}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-1.5">
-                <span className="min-w-0 grow text-[13px] text-mute">
-                  {shortDate(p.created_on)} · 좋아요 {p.likes} · 댓글 {p.comments.length}
-                </span>
-                {p.comments_open ? null : <Tag>댓글 닫힘</Tag>}
-                {editing?.id === p.id ? <Tag tone="navy">고치는 중</Tag> : null}
-                <PillLink href={`/staff/admin/posts?edit=${p.id}`} tone="gray" label={`${shortDate(p.created_on)} 소식 고치기`}>
+      {posts.length === 0 ? (
+        <Card>
+          <EmptyNote>아직 올린 소식이 없어요. 오른쪽 위의 글쓰기로 첫 소식을 올려 보세요.</EmptyNote>
+        </Card>
+      ) : null}
+
+      {/* Phones and tablets: one card per post. */}
+      {posts.length > 0 ? (
+        <ul className="m-0 flex list-none flex-col p-0 lg:hidden">
+          {posts.map((p) => {
+            const { head, rest } = split(p.body);
+            return (
+              <li key={p.id} className="flex items-start gap-3 border-b border-line py-3.5 last:border-b-0">
+                <Thumb p={p} size={56} />
+                <div className="flex min-w-0 grow flex-col gap-1">
+                  <b className="line-clamp-2 text-[15px] tracking-[-0.02em]">{head}</b>
+                  {rest ? <span className="line-clamp-1 text-[13px] text-mute">{rest}</span> : null}
+                  <span className="text-[13px] text-sub">
+                    {shortDate(p.created_on)} · {reactions(p)}
+                  </span>
+                </div>
+                <PillLink href={`/staff/admin/posts/${p.id}`} tone="gray" label={`${head} 고치기`}>
                   고치기
                 </PillLink>
-                <form action={postAction} className="flex">
-                  <input type="hidden" name="id" value={p.id} />
-                  <input type="hidden" name="op" value="delete" />
-                  <ConfirmPill message="이 소식을 지울까요? 댓글도 함께 지워져요." label={`${shortDate(p.created_on)} 소식 지우기`}>
-                    지우기
-                  </ConfirmPill>
-                </form>
-              </div>
-              {p.comments.length > 0 ? (
-                <ul className="m-0 flex list-none flex-col rounded-2xl bg-fill px-3.5 py-1">
-                  {p.comments.map((c) => (
-                    <li key={c.id} className="flex min-h-11 items-center gap-2 border-b border-track last:border-b-0">
-                      <span className={`min-w-0 grow py-1.5 text-[13px] leading-[19px] ${c.hidden ? "text-faint line-through" : "text-ink2"}`}>
-                        <b>{c.author}</b> {c.body}
-                      </span>
-                      {c.hidden ? (
-                        <span className="shrink-0 text-[12px] text-mute">지움</span>
-                      ) : (
-                        <form action={commentAction} className="flex">
-                          <input type="hidden" name="id" value={c.id} />
-                          <input type="hidden" name="back" value="posts" />
-                          <PillButton tone="white" name="decision" value="hide" label={`${c.author} 댓글 지우기`}>
-                            지우기
-                          </PillButton>
-                        </form>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </article>
-          ))}
-          {posts.length === 0 ? <EmptyNote>아직 올린 소식이 없어요.</EmptyNote> : null}
-        </section>
-      </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      {/* Wide screens: a table. */}
+      {posts.length > 0 ? (
+        <div className="hidden lg:block">
+          <Card>
+            <table className={tableClass}>
+              <thead>
+                <tr>
+                  <th scope="col" className={thClass()}>
+                    글
+                  </th>
+                  <th scope="col" className={thClass()}>
+                    좋아요 · 댓글
+                  </th>
+                  <th scope="col" className={thClass()}>
+                    올린 날
+                  </th>
+                  <th scope="col" className={thClass()}>
+                    상태
+                  </th>
+                  <th scope="col" className={`${thClass()} text-right`}>
+                    고치기 · 지우기
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map((p) => {
+                  const { head, rest } = split(p.body);
+                  const reported = p.comments.some((c) => c.hidden);
+                  return (
+                    <tr key={p.id} className={rowClass}>
+                      <td className={tdClass()}>
+                        <Link href={`/staff/admin/posts/${p.id}`} className="flex max-w-[560px] items-center gap-3.5 text-ink no-underline hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
+                          <Thumb p={p} size={56} />
+                          <span className="flex min-w-0 flex-col gap-0.5">
+                            <b className="truncate font-semibold">{head}</b>
+                            {rest ? <span className="truncate text-[13.5px] text-mute">{rest}</span> : null}
+                          </span>
+                        </Link>
+                      </td>
+                      <td className={`${tdClass({ nowrap: true })} text-ink2`}>{reactions(p)}</td>
+                      <td className={`${tdClass({ nowrap: true })} text-ink2`}>{shortDate(p.created_on)}</td>
+                      <td className={tdClass()}>
+                        <span className="flex flex-wrap gap-1">
+                          <Tag tone="navy">올림</Tag>
+                          {p.comments_open ? null : <Tag>댓글 닫힘</Tag>}
+                          {reported ? <Tag tone="warn">지운 댓글 있음</Tag> : null}
+                        </span>
+                      </td>
+                      <td className={tdClass({ tight: true })}>
+                        <span className="flex items-center justify-end gap-1.5">
+                          <PillLink href={`/staff/admin/posts/${p.id}`} tone="gray" label={`${head} 고치기`}>
+                            고치기
+                          </PillLink>
+                          <form action={postAction} className="flex">
+                            <input type="hidden" name="id" value={p.id} />
+                            <input type="hidden" name="op" value="delete" />
+                            <ConfirmPill message="이 소식을 지울까요? 댓글도 함께 지워져요." label={`${head} 지우기`}>
+                              지우기
+                            </ConfirmPill>
+                          </form>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+      ) : null}
     </AdminPage>
   );
 }

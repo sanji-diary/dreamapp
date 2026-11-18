@@ -89,7 +89,8 @@ PGLITE_DIR=memory DREAM_SEED=off npx next build
 1. ~~미션 계획 관리자 화면~~ (끝남, 지시서 `docs/TASK-mission-plan-admin.md`): 미션 화면이 고정·순환·기간 세 묶음으로 나뉘고, 고정 미션 4개 만들기, 주별 말씀(`admin/missions/[id]/verses`, 붙여넣기 도우미), 순환 미션 고르기와 자동으로 되돌리기, 미션 양식의 일정 선택, 출석의 주일 목록, 설정의 반가워 물방울·순환 개수가 들어감. 실제 기기에서는 아직 확인하지 않음. 직접 고른 순환 미션은 보관함 목록 순서로 저장됨.
 2. **직접 따라 해 보는 확인표**: 시험용 반과 아이를 만들고, 미션 종류마다 숫자가 맞게 들어오는지 순서대로 확인하는 안내. 1번이 끝난 뒤 그 화면 기준으로 작성.
 3. 실제 기기 확인(전도사님이 직접): 갤럭시 폴드, 아이폰 홈 화면 아이콘, 키보드가 입력 칸을 가리는지, 카카오톡 안 브라우저, 카메라로 QR 찍기.
-4. 작은 것: 새로 가입한 아이가 14일 동안 목록에 남는 것, 컴퓨터 화면에서 포인트 조정 위치, 푸시 알림(보류), 실제 아이 정보를 넣기 전에 Supabase 유료 요금제 검토.
+4. **관리자 화면 두 번째 시안의 남은 부분**: 화면 모양은 바꿨고, 시안에 있지만 아직 없는 기능은 따로 만들어야 함. 글 제목, 사진 여러 장, 임시 저장과 날짜 정해 올리기, 글 꾸미기(굵게·큰 글씨·구분선·링크), 글 여러 개 한꺼번에 지우기·찾기, 교적부에서 보호자에게 전화·문자, 반 편성 화면에서 담임 바꾸기, 휴대폰 관리 홈 시안(지금은 숲 그림 홈 그대로).
+5. 작은 것: 새로 가입한 아이가 14일 동안 목록에 남는 것, 컴퓨터 화면에서 포인트 조정 위치, 푸시 알림(보류), 실제 아이 정보를 넣기 전에 Supabase 유료 요금제 검토.
 
 ## 확인 도구
 
@@ -109,5 +110,6 @@ node tools/checks/kid-missions.cjs demo-2 390 844
 - 기획안: https://claude.ai/artifact/HN9LbhJ8bGMxR4cQkS6R3n
 - 화면 시안(아이·교사·관리자 전체): https://claude.ai/artifact/QYRzhGaGb4VepsYtbg5tGU
 - 관리자 화면 시안: https://claude.ai/artifact/7Hh6EQEzD8ySZ3Kr7WrpXx, 저장소의 `design-reference/admin-design.html`
+- 관리자 화면 두 번째 시안(2026-11-18 확정, 교적부 표 화면 기준): https://claude.ai/artifact/HVxw5q8fP3qpjeqfpVBMTT, 저장소의 `design-reference/admin2/`. 넓은 화면의 틀(연보라 바탕 위 흰 판, 묶음 메뉴, 위쪽 찾기 줄)과 관리 홈·교적부·소식 글·글쓰기·예배 순서·반 편성·미션 계획이 이 시안을 따름. 색은 `globals.css`의 `staff` 토큰.
 - 화면 부품: `src/components/staff/kit.tsx`, `form-kit.tsx`, `admin-kit.tsx` (머리말에 쓰는 규칙이 있음), 색·글자 토큰은 `src/app/globals.css`
 - 게임 규칙: `src/lib/game.ts`, 미션 계획: `src/lib/plan.ts`, 말씀 비교와 나누기: `src/lib/verse.ts`

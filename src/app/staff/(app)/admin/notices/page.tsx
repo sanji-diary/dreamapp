@@ -16,7 +16,7 @@ export default async function NoticesAdminPage({ searchParams }: PageProps<"/sta
   const editing = notices.find((n) => n.id === toInt(sp.edit)) ?? null;
   return (
     <AdminPage>
-      <AdminHeader title="소식·예배" />
+      <AdminHeader title="소식 글" />
       <ContentTabs active="notices" />
       <FlashNote ok={sp.ok} error={sp.error} />
       <div className={writeSplitClass}>

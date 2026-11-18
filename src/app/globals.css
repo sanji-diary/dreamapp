@@ -34,6 +34,14 @@
   --color-sky-deep: #dcedfb;
   --color-ground-deep: #e3e394;
   --color-hill: #d3e6cd;
+  /* Teacher screens, second design (design-reference/admin2): accent, its tint, the lavender ground
+     around the white panel on wide screens, the page behind the cards, and the cards' hairline. */
+  --color-staff: #3046d9;
+  --color-staff-tint: #edf0fc;
+  --color-staff-ground: #e8ebf8;
+  --color-staff-canvas: #f7f8fb;
+  --color-staff-line: #eceef3;
+  --color-badge: #c2410c;
 }
 
 html,

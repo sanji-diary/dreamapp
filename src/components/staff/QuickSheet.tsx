@@ -36,7 +36,7 @@ export function QuickSheet({ actions }: { actions: QuickAction[] }) {
         aria-label="바로 하기"
         aria-haspopup="dialog"
         onClick={() => dialog.current?.showModal()}
-        className="-mt-[22px] grid h-[50px] w-[50px] cursor-pointer place-items-center rounded-full border-0 bg-navy p-0 text-white shadow-[0_6px_16px_rgba(11,31,166,0.32)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+        className="-mt-[22px] grid h-[50px] w-[50px] cursor-pointer place-items-center rounded-full border-0 bg-staff p-0 text-white shadow-[0_6px_16px_rgba(11,31,166,0.32)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff"
       >
         <LineIcon name="plus" size={24} stroke={2.2} />
       </button>
@@ -55,7 +55,7 @@ export function QuickSheet({ actions }: { actions: QuickAction[] }) {
             <h2 id="quick-sheet-title" className="m-0 grow text-[17px] font-bold tracking-[-0.025em]">
               바로 하기
             </h2>
-            <button type="button" aria-label="닫기" onClick={close} className="-mr-2.5 grid h-11 w-11 cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-mute focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-navy">
+            <button type="button" aria-label="닫기" onClick={close} className="-mr-2.5 grid h-11 w-11 cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-mute focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-staff">
               <LineIcon name="close" size={18} />
             </button>
           </div>
@@ -65,7 +65,7 @@ export function QuickSheet({ actions }: { actions: QuickAction[] }) {
             <ul className="m-0 flex list-none flex-col p-0">
               {actions.map((a) => (
                 <li key={a.href} className="border-b border-line last:border-b-0">
-                  <Link href={a.href} onClick={close} className="flex items-center gap-3 py-[13px] text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy">
+                  <Link href={a.href} onClick={close} className="flex items-center gap-3 py-[13px] text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-staff">
                     <ClayIcon name={a.icon} />
                     <span className="flex min-w-0 grow flex-col">
                       <b className="block text-[16px] tracking-[-0.02em]">{a.title}</b>

@@ -24,7 +24,7 @@ export function WorryList({ worries, current }: { worries: WorryListItem[]; curr
               href={`/staff/worries/${w.id}`}
               prefetch={false}
               aria-current={on ? "page" : undefined}
-              className={`-mx-2 flex items-center gap-3 rounded-[14px] px-2 py-[13px] text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy ${on ? "bg-navy-tint" : "lg:hover:bg-fill"}`}
+              className={`-mx-2 flex items-center gap-3 rounded-[14px] px-2 py-[13px] text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-staff ${on ? "bg-staff-tint" : "lg:hover:bg-fill"}`}
             >
               <span className="flex shrink-0 max-[319px]:hidden">
                 <ClayIcon name="bubble" size="s" onWhite={on} />
@@ -77,12 +77,12 @@ export function WorryThread({ w }: { w: WorryDetail }) {
   ];
   return (
     <div className="flex grow flex-col gap-3.5">
-      <div className="flex items-center gap-2.5 rounded-[14px] bg-navy-tint px-3.5 py-3">
+      <div className="flex items-center gap-2.5 rounded-[14px] bg-staff-tint px-3.5 py-3">
         <span className="flex shrink-0 max-[319px]:hidden">
           <ClayIcon name="bubble" size="s" onWhite />
         </span>
         <p className="m-0 min-w-0 text-[13px] leading-[1.45] text-ink2">
-          <b className="text-navy">{to.to}</b> {to.rest}
+          <b className="text-staff">{to.to}</b> {to.rest}
         </p>
       </div>
       <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
@@ -91,7 +91,7 @@ export function WorryThread({ w }: { w: WorryDetail }) {
             {m.on && (i === 0 || messages[i - 1].on !== m.on) ? <li className="py-0.5 text-center text-[13px] text-mute">{formatKoreanDate(m.on)}</li> : null}
             <li className={`flex flex-col gap-1 ${m.teacher ? "items-end" : "items-start"}`}>
               {m.teacher ? null : <span className="px-1 text-[12px] text-mute">{m.by}</span>}
-              <p className={`m-0 max-w-[84%] rounded-[18px] px-3.5 py-[11px] text-[14.5px] leading-[1.5] whitespace-pre-line ${m.teacher ? (m.mine ? "bg-navy text-white" : "bg-navy-tint text-ink") : "bg-fill"}`}>{m.text}</p>
+              <p className={`m-0 max-w-[84%] rounded-[18px] px-3.5 py-[11px] text-[14.5px] leading-[1.5] whitespace-pre-line ${m.teacher ? (m.mine ? "bg-staff text-white" : "bg-staff-tint text-ink") : "bg-fill"}`}>{m.text}</p>
               {m.teacher ? <span className="px-1 text-[12px] text-mute">{m.by}</span> : null}
             </li>
           </Fragment>

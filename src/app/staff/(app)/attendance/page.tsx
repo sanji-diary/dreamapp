@@ -70,7 +70,7 @@ export default async function AttendancePage({ searchParams }: PageProps<"/staff
         ))}
         <option value="all">모든 반</option>
       </select>
-      <span aria-hidden="true" className="flex min-h-11 min-w-0 items-center gap-1 rounded-[10px] px-1 text-[17px] font-bold tracking-[-0.025em] peer-focus-visible:outline-2 peer-focus-visible:outline-navy">
+      <span aria-hidden="true" className="flex min-h-11 min-w-0 items-center gap-1 rounded-[10px] px-1 text-[17px] font-bold tracking-[-0.025em] peer-focus-visible:outline-2 peer-focus-visible:outline-staff">
         {all ? "모든 반" : cls.name}
         <LineIcon name="next" size={16} stroke={2.2} className="rotate-90 text-sub" />
       </span>
@@ -142,7 +142,7 @@ export default async function AttendancePage({ searchParams }: PageProps<"/staff
               {words}
             </span>
           ) : (
-            <Link key={c.date} href={href(c.date)} scroll={false} aria-current={on ? "date" : undefined} className={`${box} no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${on ? "bg-navy text-white" : "bg-fill text-sub"}`}>
+            <Link key={c.date} href={href(c.date)} scroll={false} aria-current={on ? "date" : undefined} className={`${box} no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff ${on ? "bg-staff text-white" : "bg-fill text-sub"}`}>
               {words}
             </Link>
           );

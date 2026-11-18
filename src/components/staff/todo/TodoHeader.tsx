@@ -38,7 +38,7 @@ export function TodoHeader({ active, counts, wideTitle, wideCount, right, phone 
                   key={it.href}
                   href={it.href}
                   aria-current={it.on ? "page" : undefined}
-                  className={`relative flex h-[38px] items-center justify-center rounded-[9px] no-underline after:absolute after:inset-x-0 after:-inset-y-[3px] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy ${it.on ? "bg-white font-bold text-ink shadow-[0_1px_3px_rgba(25,31,40,0.1)]" : "text-mute"}`}
+                  className={`relative flex h-[38px] items-center justify-center rounded-[9px] no-underline after:absolute after:inset-x-0 after:-inset-y-[3px] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-staff ${it.on ? "bg-white font-bold text-ink shadow-[0_1px_3px_rgba(25,31,40,0.1)]" : "text-mute"}`}
                 >
                   {it.label}
                 </Link>

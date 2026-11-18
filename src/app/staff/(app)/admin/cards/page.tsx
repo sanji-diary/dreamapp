@@ -44,7 +44,7 @@ const PRINT_CSS = `
 const qrImage = async (url: string) => `data:image/svg+xml;utf8,${encodeURIComponent(await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M" }))}`;
 
 // 44px tall on phones (they stand alone in their row there), the size of a chip on wide screens.
-const pickerClass = "h-11 min-w-0 max-w-full cursor-pointer rounded-full border-0 bg-fill px-3.5 text-[13px] font-semibold text-sub focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy lg:h-[34px]";
+const pickerClass = "h-11 min-w-0 max-w-full cursor-pointer rounded-full border-0 bg-fill px-3.5 text-[13px] font-semibold text-sub focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff lg:h-[34px]";
 
 export default async function CardsPage({ searchParams }: PageProps<"/staff/admin/cards">) {
   const staff = await requireAdmin();
@@ -67,7 +67,7 @@ export default async function CardsPage({ searchParams }: PageProps<"/staff/admi
           <PrintButton>가입 QR 인쇄하기</PrintButton>
         </div>
         <div className="join-poster flex flex-col items-center gap-4 rounded-[20px] border border-line px-4 pt-6 pb-8 text-center print:border-0">
-          <span className="join-brand text-[14px] font-bold text-navy">꿈의숲키우기</span>
+          <span className="join-brand text-[14px] font-bold text-staff">꿈의숲키우기</span>
           <span className="join-title text-[26px] leading-[34px] font-bold tracking-[-0.035em] text-ink">
             QR을 찍고
             <br />

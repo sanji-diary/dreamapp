@@ -99,6 +99,37 @@ export async function classStats(staff: Staff, ws: string): Promise<ClassStat[]>
   return rows.map((r) => ({ ...r, short: shortClassName(r.name) }));
 }
 
+/** How many came on one Sunday: `recorded` children had a mark, `present` of them came (late counts). */
+export interface SundayCount {
+  week: string;
+  recorded: number;
+  present: number;
+}
+
+/**
+ * The last `n` Sundays up to `thisWeek`, oldest first, counted over the children in the teacher's
+ * detail scope who are in a class now (as classStats counts them). A Sunday with no marks has 0 and 0.
+ */
+export async function attendanceTrend(staff: Staff, thisWeek: string, n = 8): Promise<SundayCount[]> {
+  const weeks = Array.from({ length: n }, (_, i) => addDays(thisWeek, -7 * (n - 1 - i)));
+  const scope = detailScope(staff);
+  if (scope !== null && scope.length === 0) return weeks.map((week) => ({ week, recorded: 0, present: 0 }));
+  const sc = scopeSql(scope, "c.class_id", 3);
+  const rows = await db.query<{ day: string; recorded: number; present: number }>(
+    `select a.date::text as day, count(*)::int as recorded, (count(*) filter (where a.status in ('present','late')))::int as present
+       from attendance a
+       join children c on c.id = a.child_id
+       join classes k on k.id = c.class_id
+      where c.active and not k.archived and a.date between $1 and $2 and ${sc.sql}
+      group by a.date`,
+    [weeks[0], thisWeek, ...sc.params],
+  );
+  return weeks.map((week) => {
+    const r = rows.find((x) => x.day === week);
+    return { week, recorded: r?.recorded ?? 0, present: r?.present ?? 0 };
+  });
+}
+
 export function sumStats(list: ClassStat[]): Totals {
   const t: Totals = { kids: 0, recorded: 0, present: 0, drops: 0, approved: 0 };
   for (const c of list) {

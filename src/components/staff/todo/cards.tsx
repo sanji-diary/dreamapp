@@ -24,13 +24,13 @@ export function MissionCard({ p, showClass, filter, now }: { p: PendingItem; sho
     <li className={tile}>
       <div className="flex items-center gap-2.5">
         <label className="-mr-1 hidden h-9 w-6 shrink-0 cursor-pointer place-items-center lg:grid">
-          <input type="checkbox" name="ids" value={p.id} form={BULK_FORM_ID} aria-label={`${what} 고르기`} className="h-[17px] w-[17px] cursor-pointer accent-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy" />
+          <input type="checkbox" name="ids" value={p.id} form={BULK_FORM_ID} aria-label={`${what} 고르기`} className="h-[17px] w-[17px] cursor-pointer accent-staff focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff" />
         </label>
         <TreeAvatar level={p.level} photo={p.child_photo} size="s" onWhite />
         <div className="flex min-w-0 grow flex-col">
           <b className="text-[15px]">
             {/* The name opens the child's page; its tap area (::after) is 44px tall though the word is small. */}
-            <Link href={`/staff/children/${p.child_id}`} className="relative text-inherit no-underline after:absolute after:-inset-x-2 after:-inset-y-3.5 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+            <Link href={`/staff/children/${p.child_id}`} className="relative text-inherit no-underline after:absolute after:-inset-x-2 after:-inset-y-3.5 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
               {p.child_name}
             </Link>
             {showClass && p.class_name ? <span className="ml-1 font-medium text-mute">{shortClassName(p.class_name)}</span> : null}

@@ -128,7 +128,7 @@ export default async function StaffAdminPage({ searchParams }: PageProps<"/staff
                     <td className={td()}>
                       <Link href={`/staff/admin/staff/${s.id}`} className="group flex items-center gap-2 text-ink no-underline outline-none">
                         <TeacherAvatar name={s.name} />
-                        <b className="whitespace-nowrap group-hover:underline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy">
+                        <b className="whitespace-nowrap group-hover:underline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff">
                           {s.name}
                           {s.id === me.id ? <span className="font-medium text-mute"> (나)</span> : null}
                         </b>

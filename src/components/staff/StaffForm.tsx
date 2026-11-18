@@ -66,7 +66,7 @@ export function StaffForm({
               return (
                 <label key={c.id} className="relative flex h-11 cursor-pointer items-center">
                   <input type="checkbox" name="class_ids" value={c.id} checked={on} onChange={() => setClassIds((ids) => (on ? ids.filter((x) => x !== c.id) : [...ids, c.id]))} className="peer sr-only" />
-                  <span className="rounded-full bg-fill px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap text-sub peer-checked:bg-navy peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">{c.name}</span>
+                  <span className="rounded-full bg-fill px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap text-sub peer-checked:bg-staff peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-staff">{c.name}</span>
                 </label>
               );
             })}

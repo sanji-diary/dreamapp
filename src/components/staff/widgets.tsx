@@ -38,7 +38,7 @@ export function CopyField({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center gap-2">
-      <input readOnly aria-label={label} value={value} onFocus={(e) => e.currentTarget.select()} className="h-11 min-w-0 grow rounded-[10px] border-[1.5px] border-[#D1D6DB] bg-white px-3 text-[13px] text-ink2 outline-none focus:border-navy" />
+      <input readOnly aria-label={label} value={value} onFocus={(e) => e.currentTarget.select()} className="h-11 min-w-0 grow rounded-[10px] border-[1.5px] border-[#D1D6DB] bg-white px-3 text-[13px] text-ink2 outline-none focus:border-staff" />
       <button
         type="button"
         className="flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0"
@@ -52,7 +52,7 @@ export function CopyField({ value, label }: { value: string; label: string }) {
           }
         }}
       >
-        <span className="flex h-[30px] min-w-[60px] items-center justify-center rounded-md bg-navy px-2 text-[12px] font-semibold text-white" aria-live="polite">
+        <span className="flex h-[30px] min-w-[60px] items-center justify-center rounded-md bg-staff px-2 text-[12px] font-semibold text-white" aria-live="polite">
           {copied ? "복사됨" : "복사"}
         </span>
       </button>
@@ -98,7 +98,7 @@ export function PhotoInput({ current, label = "사진 고르기", max = 800, rou
         <div aria-hidden="true" className={`h-16 w-16 shrink-0 bg-fill ${round ? "rounded-full" : "rounded-xl"}`} />
       )}
       <div className="flex min-w-0 flex-col gap-1">
-        <label className="flex h-11 w-fit cursor-pointer items-center rounded-[10px] bg-fill px-3.5 text-[14px] font-bold text-ink2 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-navy">
+        <label className="flex h-11 w-fit cursor-pointer items-center rounded-[10px] bg-fill px-3.5 text-[14px] font-bold text-ink2 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-staff">
           {label}
           <input
             ref={input}
@@ -164,7 +164,7 @@ export function PhotoZoom({ src, alt, size = 46 }: { src: string; alt: string; s
 
 export function PrintButton({ children }: { children: ReactNode }) {
   return (
-    <button type="button" onClick={() => window.print()} className="flex h-[52px] w-full cursor-pointer items-center justify-center rounded-xl border-0 bg-navy text-[16px] font-bold tracking-[-0.3px] text-white">
+    <button type="button" onClick={() => window.print()} className="flex h-[52px] w-full cursor-pointer items-center justify-center rounded-xl border-0 bg-staff text-[16px] font-bold tracking-[-0.3px] text-white">
       {children}
     </button>
   );

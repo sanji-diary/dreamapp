@@ -82,7 +82,7 @@ export function FieldGroup({ legend, hint, error, children, className = "" }: { 
 // 16px text below `lg`: a phone browser zooms into a box with smaller text when it is tapped.
 // The ring is on :focus-within, not :focus-visible: a box to type in shows it however it was reached, and a
 // date box shows it for each of its inner parts (day, month, year and the calendar button) too.
-const boxBase = "w-full min-w-0 rounded-xl border-[1.5px] bg-white text-[16px] text-ink placeholder:text-faint focus-within:border-navy focus-within:outline-2 focus-within:outline-offset-[-1.5px] focus-within:outline-navy disabled:bg-fill disabled:text-mute lg:text-[15px]";
+const boxBase = "w-full min-w-0 rounded-xl border-[1.5px] bg-white text-[16px] text-ink placeholder:text-faint focus-within:border-staff focus-within:outline-2 focus-within:outline-offset-[-1.5px] focus-within:outline-staff disabled:bg-fill disabled:text-mute lg:text-[15px]";
 const boxBorder = (invalid: boolean) => (invalid ? "border-danger" : "border-[#d1d6db]");
 
 /**
@@ -273,7 +273,7 @@ export function ChoiceChips({
           return (
             <label key={o.value} className={`relative flex h-11 min-w-11 items-center justify-center ${o.disabled ? "opacity-50" : "cursor-pointer"}`}>
               <input type={multiple ? "checkbox" : "radio"} name={name} value={o.value} disabled={o.disabled} {...(onChange ? { checked: on, onChange: () => onChange(o.value) } : { defaultChecked: on })} className="peer sr-only" />
-              <span className={`rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap text-sub peer-checked:bg-navy peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy ${onGray ? "bg-white" : "bg-fill"}`}>{o.label}</span>
+              <span className={`rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap text-sub peer-checked:bg-staff peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-staff ${onGray ? "bg-white" : "bg-fill"}`}>{o.label}</span>
             </label>
           );
         })}
@@ -290,7 +290,7 @@ export function Checkbox({ label, name, value, defaultChecked, checked, onChange
         name={name}
         value={value}
         {...(onChange ? { checked: checked === true, onChange: (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.checked) } : { defaultChecked })}
-        className="h-5 w-5 shrink-0 cursor-pointer accent-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+        className="h-5 w-5 shrink-0 cursor-pointer accent-staff focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff"
       />
       <span className="min-w-0">{label}</span>
     </label>
@@ -343,7 +343,7 @@ export function SwitchRow({
         {...(onChange ? { checked: checked === true, onChange: (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.checked) } : { defaultChecked })}
         className="peer sr-only"
       />
-      <span className={`${trackClass(false)} bg-[#cfd5dc] after:left-[3px] peer-checked:bg-navy peer-checked:after:left-[21px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy`} />
+      <span className={`${trackClass(false)} bg-[#cfd5dc] after:left-[3px] peer-checked:bg-staff peer-checked:after:left-[21px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-staff`} />
     </label>
   );
 }
@@ -359,10 +359,10 @@ export function SwitchGroup({ children, onGray = false }: { children: ReactNode;
  * It keeps a 44px tap area on phones; `small` is the table size of the mock.
  */
 export function SwitchSubmit({ on, label, small = false, name, value, disabled = false }: { on: boolean; label: string; small?: boolean; name?: string; value?: string; disabled?: boolean }) {
-  const knob = on ? (small ? "bg-navy after:left-[17px]" : "bg-navy after:left-[21px]") : "bg-[#cfd5dc] after:left-[3px]";
+  const knob = on ? (small ? "bg-staff after:left-[17px]" : "bg-staff after:left-[21px]") : "bg-[#cfd5dc] after:left-[3px]";
   return (
     <button type="submit" role="switch" aria-checked={on} aria-label={label} name={name} value={value} disabled={disabled} className="group inline-grid h-11 w-12 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-0 outline-none disabled:cursor-default disabled:opacity-50 lg:h-9">
-      <span className={`${trackClass(small)} ${knob} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy`} />
+      <span className={`${trackClass(small)} ${knob} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff`} />
     </button>
   );
 }
@@ -409,7 +409,7 @@ export function CancelLink({ href, children, onGray = false }: { href: string; c
   return (
     <Link
       href={href}
-      className={`flex h-[52px] w-full min-w-0 items-center justify-center rounded-[14px] px-3 text-[16px] font-bold tracking-[-0.02em] whitespace-nowrap text-ink2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy max-[359px]:h-12 max-[359px]:px-2 max-[359px]:text-[14px] ${onGray ? "bg-white" : "bg-fill"}`}
+      className={`flex h-[52px] w-full min-w-0 items-center justify-center rounded-[14px] px-3 text-[16px] font-bold tracking-[-0.02em] whitespace-nowrap text-ink2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff max-[359px]:h-12 max-[359px]:px-2 max-[359px]:text-[14px] ${onGray ? "bg-white" : "bg-fill"}`}
     >
       {children}
     </Link>

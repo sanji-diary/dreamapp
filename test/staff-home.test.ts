@@ -7,7 +7,7 @@ import { ROLE_PRESETS } from "@/lib/authz";
 import { db, resetDbForTests } from "@/lib/db";
 import { canWriteAnyVisits, fifthTab, quickActions } from "@/lib/staff/access";
 import { childStats } from "@/lib/staff/children";
-import { classStats, forestLevel, homeData, homeKind, pickTrees, resolveWeek, shortClassName, unreadWorries } from "@/lib/staff/home";
+import { attendanceTrend, classStats, forestLevel, homeData, homeKind, pickTrees, resolveWeek, shortClassName, unreadWorries } from "@/lib/staff/home";
 import { addDays, todayKst, weekLabel, weekStart } from "@/lib/time";
 import type { Role, Staff } from "@/lib/types";
 
@@ -185,6 +185,36 @@ describe("home: numbers follow the teacher's classes", () => {
     await att(s.kidA, addDays(WS, -7), "present");
     await att(s.kidA2, addDays(WS, -7), "late");
     expect((await homeData(s.staff.homeroom, { today: TODAY })).lastWeekPresent).toBe(2);
+  });
+});
+
+describe("home: attendance over the last Sundays", () => {
+  it("counts each Sunday within the teacher's classes, oldest first, with 0 for a Sunday without marks", async () => {
+    const before = addDays(WS, -7);
+    await att(s.kidA, WS, "present");
+    await att(s.kidA2, WS, "absent");
+    await att(s.kidB, WS, "late");
+    await att(s.kidA, before, "late");
+    await att(s.kidA, addDays(WS, -70), "present"); // older than eight Sundays: left out
+
+    const all = await attendanceTrend(s.staff.admin, WS);
+    expect(all.map((w) => w.week)).toEqual(Array.from({ length: 8 }, (_, i) => addDays(WS, -7 * (7 - i))));
+    expect(all[7]).toEqual({ week: WS, recorded: 3, present: 2 });
+    expect(all[6]).toEqual({ week: before, recorded: 1, present: 1 });
+    expect(all.slice(0, 6).every((w) => w.recorded === 0 && w.present === 0)).toBe(true);
+
+    expect((await attendanceTrend(s.staff.homeroom, WS))[7]).toEqual({ week: WS, recorded: 2, present: 1 });
+    expect((await attendanceTrend(s.staff.other, WS, 2)).map((w) => w.present)).toEqual([0, 1]);
+    expect((await attendanceTrend(s.staff.basic, WS)).every((w) => w.recorded === 0)).toBe(true);
+  });
+
+  it("leaves out children who are no longer in a class or have left", async () => {
+    await att(s.kidA, WS, "present");
+    await att(s.kidB, WS, "present");
+    await db.query("update children set class_id = null where id = $1", [s.kidB]);
+    expect((await attendanceTrend(s.staff.admin, WS, 1))[0]).toEqual({ week: WS, recorded: 1, present: 1 });
+    await db.query("update children set active = false where id = $1", [s.kidA]);
+    expect((await attendanceTrend(s.staff.admin, WS, 1))[0]).toEqual({ week: WS, recorded: 0, present: 0 });
   });
 });
 

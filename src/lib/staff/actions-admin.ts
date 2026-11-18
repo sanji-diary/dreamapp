@@ -242,25 +242,29 @@ export async function staffInviteAction(formData: FormData) {
 
 export async function classSaveAction(formData: FormData) {
   const staff = await requireAdmin();
-  finish(await saveClass(staff, toInt(formData.get("id")), clean(formData.get("name"), 20), toInt(formData.get("grade"))), "/staff/admin/classes", "저장했어요");
+  const id = toInt(formData.get("id"));
+  // Back to the class that was open (a new class: the list).
+  const back = id === null ? "/staff/admin/classes" : `/staff/admin/classes?class=${id}`;
+  finish(await saveClass(staff, id, clean(formData.get("name"), 20), toInt(formData.get("grade"))), back, "저장했어요");
 }
 
 export async function classOpAction(formData: FormData) {
   const staff = await requireAdmin();
   const id = toInt(formData.get("id"));
   if (id === null) redirect("/staff/admin/classes");
+  const back = `/staff/admin/classes?class=${id}`;
   const op = clean(formData.get("op"), 10);
-  if (op === "up" || op === "down") finish(await moveClass(staff, id, op), "/staff/admin/classes");
+  if (op === "up" || op === "down") finish(await moveClass(staff, id, op), back);
   if (op === "archive") finish(await archiveClass(staff, id, true), "/staff/admin/classes", "반을 보관했어요");
-  if (op === "restore") finish(await archiveClass(staff, id, false), "/staff/admin/classes", "반을 다시 꺼냈어요");
-  redirect("/staff/admin/classes");
+  if (op === "restore") finish(await archiveClass(staff, id, false), back, "반을 다시 꺼냈어요");
+  redirect(back);
 }
 
 export async function childrenMoveAction(formData: FormData) {
   const staff = await requireAdmin();
   const ids = formData.getAll("child_ids").map((v) => toInt(v)).filter((n): n is number => n !== null);
   const from = clean(formData.get("from"), 10);
-  const back = from ? `/staff/admin/classes?from=${encodeURIComponent(from)}` : "/staff/admin/classes";
+  const back = from ? `/staff/admin/classes?class=${encodeURIComponent(from)}` : "/staff/admin/classes";
   const to = toInt(formData.get("to"));
   if (to === null) finish(fail("옮길 반을 골라 주세요"), back);
   const r = await moveChildren(staff, ids, to);
@@ -314,17 +318,19 @@ export async function postAction(formData: FormData) {
     if (id === null) redirect(back);
     finish(await deletePost(staff, id), back, "소식을 지웠어요");
   }
+  // A problem sends the writer back to the page they wrote on.
+  const writing = id === null ? `${back}/new` : `${back}/${id}`;
   let image: string | null = null;
   const f = formData.get("photo");
   if (f instanceof File && f.size > 0) {
     try {
       image = await saveUpload(f, "post", { staffId: staff.id });
     } catch (e) {
-      finish(fail(e instanceof Error ? e.message : "사진을 올리지 못했어요"), back);
+      finish(fail(e instanceof Error ? e.message : "사진을 올리지 못했어요"), back, undefined, writing);
     }
   }
   const r = await savePost(staff, id, { body: clean(formData.get("body"), 2000), comments_open: on(formData, "comments_open"), image_url: image, removeImage: on(formData, "remove_image") });
-  finish(r, back, id === null ? "소식을 올렸어요" : "소식을 고쳤어요", id === null ? back : `${back}?edit=${id}`);
+  finish(r, back, id === null ? "소식을 올렸어요" : "소식을 고쳤어요", writing);
 }
 
 /* ---------- the shared join QR ---------- */

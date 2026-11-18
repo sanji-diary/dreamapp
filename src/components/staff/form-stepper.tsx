@@ -33,11 +33,11 @@ export function StepperBox({ id, name, label, value, defaultValue = 0, onChange,
     else setOwn(next);
   };
   const button =
-    "grid h-full w-11 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-0 text-[20px] leading-none font-semibold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-navy disabled:cursor-default disabled:text-[#c4cad1]";
+    "grid h-full w-11 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-0 text-[20px] leading-none font-semibold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-staff disabled:cursor-default disabled:text-[#c4cad1]";
   const shown = text ?? String(n);
   return (
     <div
-      className={`flex h-[46px] items-center overflow-hidden rounded-xl border-[1.5px] bg-white has-[input:focus-visible]:border-navy has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-[-1.5px] has-[input:focus-visible]:outline-navy ${invalid ? "border-danger" : "border-[#d1d6db]"}`}
+      className={`flex h-[46px] items-center overflow-hidden rounded-xl border-[1.5px] bg-white has-[input:focus-visible]:border-staff has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-[-1.5px] has-[input:focus-visible]:outline-staff ${invalid ? "border-danger" : "border-[#d1d6db]"}`}
     >
       <button type="button" aria-label={`${label} 줄이기`} disabled={n <= min} onClick={() => set(n - step)} className={button}>
         −

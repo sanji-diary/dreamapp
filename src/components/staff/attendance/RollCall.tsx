@@ -7,7 +7,7 @@ import type { MonthKid } from "@/lib/staff/attendance-month";
 import type { AttendanceStore } from "./store";
 
 export const STATUS_BUTTONS: { status: AttStatus; label: string; on: string }[] = [
-  { status: "present", label: "출석", on: "bg-navy font-bold text-white" },
+  { status: "present", label: "출석", on: "bg-staff font-bold text-white" },
   { status: "late", label: "지각", on: "bg-warn-tint font-bold text-warn" },
   { status: "absent", label: "결석", on: "bg-danger-tint font-bold text-danger" },
 ];
@@ -52,7 +52,7 @@ function Row({ kid, date, store }: { kid: MonthKid; date: string; store: Attenda
                 className="group flex h-11 cursor-pointer items-center border-0 bg-transparent p-0 outline-none max-[329px]:flex-1"
               >
                 <span
-                  className={`grid h-[34px] w-[50px] place-items-center rounded-[9px] text-[13px] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy max-[359px]:w-11 max-[329px]:h-9 max-[329px]:w-full ${active ? b.on : "bg-fill font-semibold text-sub"}`}
+                  className={`grid h-[34px] w-[50px] place-items-center rounded-[9px] text-[13px] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff max-[359px]:w-11 max-[329px]:h-9 max-[329px]:w-full ${active ? b.on : "bg-fill font-semibold text-sub"}`}
                 >
                   {b.label}
                 </span>
@@ -79,7 +79,7 @@ function Row({ kid, date, store }: { kid: MonthKid; date: string; store: Attenda
               const v = ev.currentTarget.value.trim();
               if (v !== store.get(kid.id, date).note) store.save(kid.id, date, { status: "absent", note: v });
             }}
-            className="h-11 w-full rounded-xl border-0 bg-fill px-3.5 text-[16px] text-ink placeholder:text-faint focus-visible:outline-2 focus-visible:outline-navy"
+            className="h-11 w-full rounded-xl border-0 bg-fill px-3.5 text-[16px] text-ink placeholder:text-faint focus-visible:outline-2 focus-visible:outline-staff"
           />
         </div>
       ) : null}
@@ -136,7 +136,7 @@ export function RollCall({ date, kids, store, title, grouped }: { date: string; 
       <span className="grow" />
       <div className="sticky bottom-[76px] z-10 -mx-[18px] bg-white px-[18px] pt-2 pb-2.5">
         {store.message ? (
-          <p role={store.message.error ? "alert" : "status"} className={`m-0 pb-2 text-center text-[13px] font-semibold ${store.message.error ? "text-danger" : "text-navy"}`}>
+          <p role={store.message.error ? "alert" : "status"} className={`m-0 pb-2 text-center text-[13px] font-semibold ${store.message.error ? "text-danger" : "text-staff"}`}>
             {store.message.text}
           </p>
         ) : (

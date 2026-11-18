@@ -26,7 +26,7 @@ export function PoolPicker({ choices, chosen, other, cap, legend, targeted }: { 
   const rotating = choices.filter((c) => picked.includes(c.id)).reduce((sum, c) => sum + c.drops, 0);
   const total = other + rotating;
   const room = cap - other;
-  const tone = total === cap ? "bg-navy-tint text-navy" : "bg-warn-tint text-warn";
+  const tone = total === cap ? "bg-staff-tint text-staff" : "bg-warn-tint text-warn";
   return (
     <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
       <legend className="mb-1 p-0 text-[13px] leading-[19px] text-sub">{legend}</legend>
@@ -47,7 +47,7 @@ export function PoolPicker({ choices, chosen, other, cap, legend, targeted }: { 
                 }
               />
             </div>
-            <Link href={m.href} aria-label={`${m.title} 자세히`} className="flex h-11 shrink-0 items-center px-1 text-[13px] font-semibold text-navy no-underline">
+            <Link href={m.href} aria-label={`${m.title} 자세히`} className="flex h-11 shrink-0 items-center px-1 text-[13px] font-semibold text-staff no-underline">
               자세히
             </Link>
           </li>

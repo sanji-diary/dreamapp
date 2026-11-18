@@ -34,11 +34,11 @@ export function CopyLine({ value, label }: { value: string; label: string }) {
         aria-label={label}
         value={value}
         onFocus={(e) => e.currentTarget.select()}
-        className="h-11 min-w-0 grow rounded-xl border-[1.5px] border-[#d1d6db] bg-white px-3 text-[13px] text-ink2 focus:border-navy focus:outline-2 focus:outline-offset-[-1.5px] focus:outline-navy"
+        className="h-11 min-w-0 grow rounded-xl border-[1.5px] border-[#d1d6db] bg-white px-3 text-[13px] text-ink2 focus:border-staff focus:outline-2 focus:outline-offset-[-1.5px] focus:outline-staff"
       />
       <button
         type="button"
-        className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border-0 bg-navy px-[13px] text-[13.5px] font-bold whitespace-nowrap text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+        className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border-0 bg-staff px-[13px] text-[13.5px] font-bold whitespace-nowrap text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff"
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(value);
@@ -76,7 +76,7 @@ export function CopyButton({ value, children, label, className = "" }: { value: 
         setTimeout(() => setState("idle"), 2000);
       }}
     >
-      <span aria-live="polite" className={`group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy ${className}`}>
+      <span aria-live="polite" className={`group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff ${className}`}>
         {state === "copied" ? "링크를 복사했어요" : state === "failed" ? "복사하지 못했어요" : children}
       </span>
     </button>

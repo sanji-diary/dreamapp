@@ -196,8 +196,11 @@ export async function reviewAction(formData: FormData) {
 export async function commentAction(formData: FormData) {
   const staff = await requireStaff();
   const id = toInt(formData.get("id"));
-  // Back to the 댓글 part of 할 일 (teachers who also check missions would otherwise land on the mission list).
-  const back = formData.get("back") === "posts" && staff.role === "admin" ? "/staff/admin/posts" : "/staff/approvals?tab=comments";
+  // Back to where the button was: a post's page in 소식 글 (admins), or the 댓글 part of 할 일
+  // (teachers who also check missions would otherwise land on the mission list).
+  const from = String(formData.get("back") ?? "");
+  const post = /^post:(\d{1,9})$/.exec(from);
+  const back = staff.role === "admin" && post ? `/staff/admin/posts/${post[1]}` : staff.role === "admin" && from === "posts" ? "/staff/admin/posts" : "/staff/approvals?tab=comments";
   if (id === null) redirect(back);
   if (formData.get("decision") === "hide") finish(await hideComment(staff, id), back, "댓글을 지웠어요");
   finish(await dismissReports(staff, id), back, "댓글을 그대로 두었어요");

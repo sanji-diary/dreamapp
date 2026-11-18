@@ -16,14 +16,14 @@ export const metadata = { title: "아이 정보 · 꿈의숲키우기" };
 const METHOD: Record<string, string> = { in_person: "대면", phone: "전화", message: "메시지" };
 const STATUS: Record<string, string> = { approved: "완료", pending: "확인 대기", rejected: "반려" };
 const ATT: Record<string, { label: string; cls: string }> = {
-  present: { label: "출석", cls: "bg-navy text-white" },
+  present: { label: "출석", cls: "bg-staff text-white" },
   late: { label: "지각", cls: "bg-warn text-white" },
   absent: { label: "결석", cls: "bg-danger text-white" },
 };
 
 type Tab = "info" | "visits" | "activity";
 
-const formButton = "flex h-11 min-w-0 items-center justify-center rounded-xl px-3 text-[15px] font-bold whitespace-nowrap no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
+const formButton = "flex h-11 min-w-0 items-center justify-center rounded-xl px-3 text-[15px] font-bold whitespace-nowrap no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff";
 
 function VisitForm({ childId, visit, today }: { childId: number; visit?: VisitRow; today: string }) {
   const key = visit ? `v${visit.id}` : "new";
@@ -60,7 +60,7 @@ function VisitForm({ childId, visit, today }: { childId: number; visit?: VisitRo
         <Link href={`/staff/children/${childId}?tab=visits`} scroll={false} className={`${formButton} flex-1 bg-white text-ink2 max-[339px]:flex-none`}>
           그만두기
         </Link>
-        <button type="submit" className={`${formButton} flex-[1.3] cursor-pointer border-0 bg-navy text-white max-[339px]:flex-none`}>
+        <button type="submit" className={`${formButton} flex-[1.3] cursor-pointer border-0 bg-staff text-white max-[339px]:flex-none`}>
           {visit ? "고친 내용 저장" : "기록 저장"}
         </button>
       </div>
@@ -113,7 +113,7 @@ function InfoTab({ c, today }: { c: ChildDetail; today: string }) {
               </span>
             </div>
             <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] font-semibold text-ink2">
-              <input type="checkbox" name="photo_consent" defaultChecked={c.photo_consent} className="h-5 w-5 accent-navy" />
+              <input type="checkbox" name="photo_consent" defaultChecked={c.photo_consent} className="h-5 w-5 accent-staff" />
               사진 올리는 것에 동의했어요
             </label>
           </form>
@@ -202,7 +202,7 @@ function VisitsTab({ c, here, today, adding, editing }: { c: ChildDetail; here: 
       </SectionHead>
       {adding && canAdd ? <VisitForm childId={c.id} today={today} /> : null}
       {c.writingCount > 0 ? (
-        <Link href={`${here}?tab=activity#writing`} scroll={false} className="flex min-h-11 items-center gap-2 rounded-2xl bg-fill px-4 py-2.5 text-[14px] font-semibold text-ink2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+        <Link href={`${here}?tab=activity#writing`} scroll={false} className="flex min-h-11 items-center gap-2 rounded-2xl bg-fill px-4 py-2.5 text-[14px] font-semibold text-ink2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
           <span className="min-w-0 grow">아이가 쓴 글 {c.writingCount}개 보기</span>
           <Chevron />
         </Link>
@@ -411,7 +411,7 @@ export default async function ChildPage({ params, searchParams }: PageProps<"/st
             {c.class_id === null && c.self_joined ? <Tag tone="danger">반 미정</Tag> : null}
             {st && st.absentWeeks >= 2 ? <Tag tone="danger">{st.absentWeeks}주 결석</Tag> : null}
             {st && st.worries > 0 ? (
-              <Link href="/staff/worries" aria-label={`새 고민 ${st.worries}건 읽으러 가기`} className="relative no-underline after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+              <Link href="/staff/worries" aria-label={`새 고민 ${st.worries}건 읽으러 가기`} className="relative no-underline after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
                 <Tag tone="blue">고민 {st.worries}</Tag>
               </Link>
             ) : null}

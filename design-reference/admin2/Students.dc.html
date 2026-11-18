@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>교적부</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+a{color:#3046d9}a:hover{color:#2236b8}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 16px; background: #e8ebf8; font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; color: #191f28; font-size: 15px; line-height: 1.5; letter-spacing: -0.01em">
+  <div style="display: flex; flex-wrap: wrap; max-width: 1680px; min-height: calc(100vh - 32px); margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 1px 2px rgba(23, 31, 80, 0.05), 0 12px 32px rgba(23, 31, 80, 0.07)">
+
+    <nav aria-label="관리 메뉴" style="flex: 1 1 240px; box-sizing: border-box; display: flex; flex-direction: column; padding: 18px 14px 16px; border-right: 1px solid #eef0f4; background: #ffffff">
+      <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 2px 0 8px">
+        <span aria-hidden="true" style="display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: {{accent}}; color: #ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-7M12 14c-4 0-6.5-2.6-6.5-6A6.5 6.5 0 0 1 12 1.5 6.5 6.5 0 0 1 18.5 8c0 3.4-2.5 6-6.5 6Z"></path></svg></span>
+        <span style="flex: 1; font-size: 19px; font-weight: 800; letter-spacing: -0.03em">꿈의숲</span>
+        <button type="button" aria-label="메뉴 접기" style="display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: #6b7684"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v16M19 12H9m0 0 4-4m-4 4 4 4"></path></svg></button>
+      </div>
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 18px">
+          <p style="margin: 0 0 6px; padding: 0 12px; font-size: 12px; font-weight: 600; color: #6b7684">{{g.label}}</p>
+          <sc-for list="{{g.items}}" as="n" hint-placeholder-count="5">
+            <a href="{{n.href}}" aria-current="{{n.current}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; background: {{n.bg}}; color: {{n.color}}; font-size: 15px; font-weight: {{n.weight}}; text-decoration: none">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{n.d}}"></path></svg>
+              <span style="flex: 1">{{n.name}}</span>
+              <sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{false}}"><span style="display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 11px; background: {{n.badgeBg}}; color: {{n.badgeColor}}; font-size: 12px; font-weight: 700">{{n.badge}}</span></sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 18px">
+        <p style="margin: 0 0 6px; padding: 0 12px; font-size: 12px; font-weight: 600; color: #6b7684">선생님</p>
+        <sc-for list="{{teachers}}" as="t" hint-placeholder-count="5">
+          <a href="#" style="display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 10px; color: #333d4b; font-size: 14.5px; text-decoration: none">
+            <span aria-hidden="true" style="display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: {{t.bg}}; color: {{t.fg}}; font-size: 11px; font-weight: 700; letter-spacing: -0.04em">{{t.short}}</span>
+            <span style="flex: 1">{{t.name}}</span>
+            <span style="font-size: 12.5px; color: #6b7684">{{t.cls}}</span>
+          </a>
+        </sc-for>
+        <a href="#" style="display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 10px; color: {{accent}}; font-size: 14.5px; font-weight: 600; text-decoration: none">
+          <span aria-hidden="true" style="display: grid; place-items: center; width: 28px; height: 28px; box-sizing: border-box; border-radius: 50%; border: 1.5px dashed {{accent}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          선생님 초대
+        </a>
+      </div>
+      <span style="flex: 1; min-height: 20px"></span>
+      <div style="padding-top: 10px; border-top: 1px solid #eef0f4">
+        <a href="#" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; color: #333d4b; font-size: 15px; text-decoration: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 1 0 0-6M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5"></path></svg>
+          <span style="flex: 1">기본 설정</span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b95a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+        </a>
+      </div>
+    </nav>
+
+    <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; background: #f7f8fb">
+      <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 76px; box-sizing: border-box; padding: 14px 28px; border-bottom: 1px solid #eef0f4; background: #ffffff">
+        <label style="position: relative; flex: 0 1 440px; min-width: 200px; display: flex; align-items: center">
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">전체에서 찾기</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="2" stroke-linecap="round" style="position: absolute; left: 14px"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 1 0 0-13M16 16l4.5 4.5"></path></svg>
+          <input type="search" placeholder="아이 이름, 반, 글 제목으로 찾기" style="box-sizing: border-box; width: 100%; height: 44px; padding: 0 14px 0 42px; border: 1px solid #e5e8ee; border-radius: 12px; background: #f9fafc; font: inherit; font-size: 14.5px; color: #191f28">
+        </label>
+        <span style="flex: 1"></span>
+        <button type="button" aria-label="알림 3개" style="position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #eceef3; border-radius: 12px; background: #ffffff; color: #333d4b">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15ZM10 20.5a2 2 0 0 0 4 0"></path></svg>
+          <span aria-hidden="true" style="position: absolute; top: 5px; right: 5px; display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #c2410c; color: #ffffff; font-size: 10.5px; font-weight: 700">3</span>
+        </button>
+        <button type="button" style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 6px 0 4px; border: 0; border-radius: 12px; background: transparent; font: inherit; color: #191f28; text-align: left">
+          <span aria-hidden="true" style="display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: {{tint2}}; color: {{accent}}; font-size: 13px; font-weight: 700">인성</span>
+          <span style="display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 14.5px; font-weight: 700">김인성 전도사</span><span style="font-size: 12.5px; color: #6b7684">관리자</span></span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </header>
+
+      <main style="flex: 1; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box; padding: 28px 28px 32px">
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+          <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px">
+            <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.25">교적부</h1>
+            <p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; color: #4e5968">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 1 0 0-7M5 20c.7-3.6 3.4-5.5 7-5.5s6.3 1.9 7 5.5"></path></svg>
+              전체 <b style="color: #191f28">32명</b> · 반 없는 아이 <b style="color: #191f28">2명</b>
+            </p>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px">
+            <button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: 1px solid #e1e4ea; border-radius: 12px; background: #ffffff; font: inherit; font-size: 14.5px; font-weight: 600; color: #191f28; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05)">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19.5h14"></path></svg>
+              엑셀로 내려받기
+            </button>
+            <a href="#" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 12px; background: {{accent}}; font-size: 14.5px; font-weight: 700; color: #ffffff; text-decoration: none; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.1)">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+              아이 등록
+            </a>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+          <label style="position: relative; flex: 0 1 220px; min-width: 170px; display: flex; align-items: center">
+            <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">이름으로 찾기</span>
+            <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="2" stroke-linecap="round" style="position: absolute; left: 12px"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 1 0 0-13M16 16l4.5 4.5"></path></svg>
+            <input type="search" value="{{q}}" onChange="{{onQ}}" placeholder="이름으로 찾기" style="box-sizing: border-box; width: 100%; height: 42px; padding: 0 12px 0 38px; border: 1px solid #e1e4ea; border-radius: 10px; background: #ffffff; font: inherit; font-size: 14.5px; color: #191f28; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+          </label>
+          <label style="position: relative; display: inline-flex; align-items: center">
+            <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">학년</span>
+            <select value="{{grade}}" onChange="{{onGrade}}" style="appearance: none; -webkit-appearance: none; height: 42px; padding: 0 38px 0 14px; border: 1px solid {{gradeBorder}}; border-radius: 10px; background: #ffffff; font: inherit; font-size: 14.5px; font-weight: 500; color: #191f28; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+              <option value="">모든 학년</option>
+              <option value="4학년">4학년</option>
+              <option value="5학년">5학년</option>
+              <option value="6학년">6학년</option>
+            </select>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4e5968" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; pointer-events: none"><path d="m6 9 6 6 6-6"></path></svg>
+          </label>
+          <label style="position: relative; display: inline-flex; align-items: center">
+            <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">반</span>
+            <select value="{{cls}}" onChange="{{onCls}}" style="appearance: none; -webkit-appearance: none; height: 42px; padding: 0 38px 0 14px; border: 1px solid {{clsBorder}}; border-radius: 10px; background: #ffffff; font: inherit; font-size: 14.5px; font-weight: 500; color: #191f28; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+              <option value="">모든 반</option>
+              <option value="4학년 1반">4학년 1반</option>
+              <option value="4학년 2반">4학년 2반</option>
+              <option value="5학년 1반">5학년 1반</option>
+              <option value="5학년 2반">5학년 2반</option>
+              <option value="6학년 1반">6학년 1반</option>
+              <option value="6학년 2반">6학년 2반</option>
+            </select>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4e5968" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; pointer-events: none"><path d="m6 9 6 6 6-6"></path></svg>
+          </label>
+          <label style="position: relative; display: inline-flex; align-items: center">
+            <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">앱 가입</span>
+            <select value="{{join}}" onChange="{{onJoin}}" style="appearance: none; -webkit-appearance: none; height: 42px; padding: 0 38px 0 14px; border: 1px solid {{joinBorder}}; border-radius: 10px; background: #ffffff; font: inherit; font-size: 14.5px; font-weight: 500; color: #191f28; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+              <option value="">앱 가입 모두</option>
+              <option value="no">가입 전인 아이</option>
+              <option value="yes">가입한 아이</option>
+            </select>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4e5968" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; pointer-events: none"><path d="m6 9 6 6 6-6"></path></svg>
+          </label>
+          <sc-if value="{{filtered}}" hint-placeholder-val="{{false}}">
+            <button type="button" onClick="{{clearFilters}}" style="height: 42px; padding: 0 10px; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: {{accent}}">조건 지우기</button>
+          </sc-if>
+          <span style="flex: 1"></span>
+          <span style="font-size: 13.5px; color: #4e5968">아이를 고르면 한꺼번에 반을 옮기거나 문자를 보낼 수 있어요</span>
+        </div>
+
+        <div style="background: #ffffff; border: 1px solid #eceef3; border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+          <sc-if value="{{hasPicked}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px 10px 20px; border-bottom: 1px solid #eef0f4; border-radius: 16px 16px 0 0; background: {{tint}}">
+              <span style="margin-right: 6px; font-size: 14.5px; font-weight: 700; color: {{accent}}">{{picked}}명 골랐어요</span>
+              <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid #e1e4ea; border-radius: 8px; background: #ffffff; font: inherit; font-size: 14px; font-weight: 600; color: #191f28"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5"></path></svg>반 옮기기</button>
+              <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid #e1e4ea; border-radius: 8px; background: #ffffff; font: inherit; font-size: 14px; font-weight: 600; color: #191f28"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5Z"></path></svg>보호자에게 문자</button>
+              <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid #e1e4ea; border-radius: 8px; background: #ffffff; font: inherit; font-size: 14px; font-weight: 600; color: #191f28"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4ZM14 4h6v6h-6ZM4 14h6v6H4ZM14 14h2v2h-2ZM18 18h2v2h-2Z"></path></svg>QR 카드 인쇄</button>
+              <span style="flex: 1"></span>
+              <button type="button" onClick="{{clearPick}}" style="height: 36px; padding: 0 10px; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: #4e5968">고르기 풀기</button>
+            </div>
+          </sc-if>
+          <div style="overflow-x: auto">
+            <table style="width: 100%; min-width: 1000px; border-collapse: collapse; font-size: 14.5px">
+              <thead>
+                <tr>
+                  <th scope="col" style="width: 40px; height: 52px; padding: 0 4px 0 20px; border-bottom: 1px solid #eef0f4; text-align: left"><input type="checkbox" checked="{{allOn}}" onChange="{{toggleAll}}" aria-label="이 쪽 아이 모두 고르기" style="width: 18px; height: 18px; margin: 0; accent-color: {{accent}}"></th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684; white-space: nowrap"><button type="button" style="display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; font: inherit; color: inherit">이름<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"></path></svg></button></th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684; white-space: nowrap"><button type="button" style="display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; font: inherit; color: inherit">생일<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"></path></svg></button></th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684; white-space: nowrap"><button type="button" style="display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; font: inherit; color: inherit">반<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"></path></svg></button></th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684; white-space: nowrap">보호자 연락처</th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684; white-space: nowrap"><button type="button" style="display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; font: inherit; color: inherit">최근 4주 출석<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"></path></svg></button></th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684; white-space: nowrap">앱 가입</th>
+                  <th scope="col" style="padding: 0 20px 0 12px; border-bottom: 1px solid #eef0f4; text-align: right; font-size: 13px; font-weight: 600; color: #6b7684; white-space: nowrap">연락 · 더 보기</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+                  <tr style="background: {{r.rowBg}}">
+                    <td style="height: 64px; padding: 0 4px 0 20px; border-bottom: 1px solid #f1f3f6"><input type="checkbox" checked="{{r.checked}}" onChange="{{r.toggle}}" aria-label="{{r.checkLabel}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{accent}}"></td>
+                    <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6">
+                      <a href="#" style="display: inline-flex; align-items: center; gap: 12px; color: #191f28; text-decoration: none">
+                        <span aria-hidden="true" style="display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 50%; background: {{r.avBg}}; color: {{r.avFg}}; font-size: 12.5px; font-weight: 700; letter-spacing: -0.04em">{{r.short}}</span>
+                        <span style="display: flex; flex-direction: column; line-height: 1.35"><span style="font-weight: 600">{{r.name}}</span><span style="font-size: 13px; color: #6b7684">{{r.sub}}</span></span>
+                      </a>
+                    </td>
+                    <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6; color: #333d4b; font-variant-numeric: tabular-nums; white-space: nowrap">{{r.birth}}</td>
+                    <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6; color: #333d4b; white-space: nowrap">{{r.cls}}</td>
+                    <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6; color: #333d4b; font-variant-numeric: tabular-nums; white-space: nowrap">{{r.tel}}</td>
+                    <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6">
+                      <span role="img" aria-label="{{r.attLabel}}" style="display: inline-flex; align-items: center; gap: 4px">
+                        <sc-for list="{{r.dots}}" as="d" hint-placeholder-count="4"><span style="width: 13px; height: 13px; box-sizing: border-box; border-radius: 4px; background: {{d.bg}}; border: 1.5px solid {{d.border}}"></span></sc-for>
+                        <span style="margin-left: 6px; font-size: 13.5px; color: #4e5968; font-variant-numeric: tabular-nums">{{r.attText}}</span>
+                      </span>
+                    </td>
+                    <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6"><span style="display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; background: {{r.joinBg}}; color: {{r.joinFg}}; font-size: 13px; font-weight: 600; white-space: nowrap">{{r.joinText}}</span></td>
+                    <td style="position: relative; padding: 0 16px 0 8px; border-bottom: 1px solid #f1f3f6">
+                      <div style="display: flex; justify-content: flex-end; gap: 2px">
+                        <button type="button" aria-label="{{r.callLabel}}" style="display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; color: #4e5968"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5H9l1.5 4.2-2.2 1.5a11 11 0 0 0 6.5 6.5l1.5-2.2 4.2 1.5v3.5a1.6 1.6 0 0 1-1.7 1.6A16.5 16.5 0 0 1 3.9 5.2a1.6 1.6 0 0 1 1.6-1.7Z"></path></svg></button>
+                        <button type="button" aria-label="{{r.msgLabel}}" style="display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; color: #4e5968"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5Z"></path></svg></button>
+                        <button type="button" aria-label="{{r.moreLabel}}" aria-expanded="{{r.menuOpen}}" onClick="{{r.toggleMenu}}" style="display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: {{r.moreBg}}; color: #333d4b"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="18.5" cy="12" r="1.7"></circle></svg></button>
+                      </div>
+                      <sc-if value="{{r.menuOpen}}" hint-placeholder-val="{{false}}">
+                        <div role="menu" aria-label="{{r.menuLabel}}" style="position: absolute; z-index: 5; top: 54px; right: 16px; width: 212px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: #ffffff; border: 1px solid #e6e9ef; border-radius: 12px; box-shadow: 0 14px 30px rgba(23, 31, 80, 0.14), 0 2px 6px rgba(23, 31, 80, 0.06); text-align: left">
+                          <button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: #f4f6fb; font: inherit; font-size: 14.5px; color: #191f28; text-align: left"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16ZM13.5 6.5l4 4"></path></svg>정보 고치기</button>
+                          <button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 14.5px; color: #191f28; text-align: left"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5"></path></svg>다른 반으로 옮기기</button>
+                          <button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 14.5px; color: #191f28; text-align: left"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a2.5 2.5 0 0 1 2.5 2.5v10A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5v-10A2.5 2.5 0 0 1 6 5ZM3.5 9.5h17M8 3v4M16 3v4"></path></svg>출석 기록 보기</button>
+                          <button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 14.5px; color: #191f28; text-align: left"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4ZM14 4h6v6h-6ZM4 14h6v6H4ZM14 14h2v2h-2ZM18 18h2v2h-2Z"></path></svg>QR 카드 다시 만들기</button>
+                          <span aria-hidden="true" style="height: 1px; margin: 4px 6px; background: #eef0f4"></span>
+                          <button type="button" role="menuitem" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 14.5px; color: #b3261e; text-align: left"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 4.5h15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1ZM5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 12.5h4"></path></svg>쉬는 아이로 돌리기</button>
+                        </div>
+                      </sc-if>
+                    </td>
+                  </tr>
+                </sc-for>
+                <sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+                  <tr>
+                    <td colspan="8" style="padding: 56px 20px; text-align: center; color: #4e5968">조건에 맞는 아이가 없어요. <button type="button" onClick="{{clearFilters}}" style="padding: 0; border: 0; background: transparent; font: inherit; font-weight: 700; color: {{accent}}">조건 지우기</button></td>
+                  </tr>
+                </sc-if>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 10px 14px 10px 20px; background: #ffffff; border: 1px solid #eceef3; border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+          <span style="font-size: 14px; color: #4e5968">32명 가운데 <b style="color: #191f28">1–10번째</b></span>
+          <span aria-hidden="true" style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 13px; color: #4e5968">
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 4px; background: {{accent}}"></span>출석</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 4px; background: {{late}}"></span>늦게 옴</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 4px; border: 1.5px solid #aeb5c0"></span>결석</span>
+          </span>
+          <span style="flex: 1"></span>
+          <nav aria-label="쪽 넘기기" style="display: flex; align-items: center; gap: 4px">
+            <button type="button" aria-label="이전 쪽" disabled style="display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; color: #b0b8c1"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg></button>
+            <button type="button" aria-current="page" style="width: 38px; height: 38px; border: 0; border-radius: 10px; background: {{accent}}; font: inherit; font-size: 14px; font-weight: 700; color: #ffffff">1</button>
+            <button type="button" style="width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14px; color: #333d4b">2</button>
+            <button type="button" style="width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14px; color: #333d4b">3</button>
+            <button type="button" style="width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14px; color: #333d4b">4</button>
+            <button type="button" aria-label="다음 쪽" style="display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; color: #333d4b"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+          </nav>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3046d9","options":["#3046d9","#0b1fa6","#5b5fe0","#1b64da"]},"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { picked: { 2: true }, menu: 2, grade: '', cls: '', join: '', q: '' };
+  }
+  nav(active, accent) {
+    const I = {
+      home: 'M3 10.5 12 3l9 7.5M5 9.5V20h14V9.5M10 20v-5h4v5',
+      people: 'M9 4.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 1 0 0-6.4M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M17 6.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 1 0 0-5M16 14.2c2.3.2 4 1.8 4.5 4.8',
+      attend: 'M6 5h12a2.5 2.5 0 0 1 2.5 2.5v10A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5v-10A2.5 2.5 0 0 1 6 5ZM3.5 9.5h17M8 3v4M16 3v4M9 14.5l2 2 4-4',
+      check: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M8.5 12.2l2.4 2.4 4.6-4.8',
+      chat: 'M20 12a8 8 0 0 1-11.6 7.1L4 20l.9-4.2A8 8 0 1 1 20 12Z',
+      flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+      doc: 'M6.5 3.5h11A2.5 2.5 0 0 1 20 6v12a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18V6a2.5 2.5 0 0 1 2.5-2.5ZM8 8h8M8 12h8M8 16h5',
+      book: 'M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5ZM4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5M12 6.5v7M9.5 9h5',
+      grid: 'M5 3.5h4A1.5 1.5 0 0 1 10.5 5v4A1.5 1.5 0 0 1 9 10.5H5A1.5 1.5 0 0 1 3.5 9V5A1.5 1.5 0 0 1 5 3.5ZM15 3.5h4A1.5 1.5 0 0 1 20.5 5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 13.5 9V5A1.5 1.5 0 0 1 15 3.5ZM5 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9 20.5H5A1.5 1.5 0 0 1 3.5 19v-4A1.5 1.5 0 0 1 5 13.5ZM15 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5Z',
+      coin: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.5 0-2.6.8-2.6 2s1.1 1.6 2.6 2 2.6.8 2.6 2-1.1 2-2.6 2c-1.2 0-2.1-.5-2.6-1.3M12 6.5V8M12 16v1.5',
+      qr: 'M4 4h6v6H4ZM14 4h6v6h-6ZM4 14h6v6H4ZM14 14h2v2h-2ZM18 18h2v2h-2ZM14 18h2M18 14h2',
+    };
+    const groups = [
+      ['자주 쓰는 메뉴', [['home', '홈', 'Main.dc.html'], ['people', '교적부', 'Students.dc.html'], ['attend', '출석', '#'], ['check', '미션 확인', '#', 8], ['chat', '고민 상담', '#', 1]]],
+      ['운영', [['flag', '미션 계획', 'Missions.dc.html'], ['doc', '소식 글', 'Posts.dc.html'], ['book', '예배 순서', 'Worship.dc.html'], ['grid', '반 편성', 'Classes.dc.html'], ['coin', '달란트', '#'], ['qr', 'QR 카드', '#']]],
+    ];
+    return groups.map(([label, items]) => ({
+      label,
+      items: items.map(([icon, name, href, badge]) => {
+        const on = name === active;
+        return { d: I[icon], name, href, current: on ? 'page' : undefined, bg: on ? accent : 'transparent', color: on ? '#ffffff' : '#333d4b', weight: on ? 600 : 500, badge: badge || '', hasBadge: !!badge, badgeBg: on ? '#ffffff' : '#c2410c', badgeColor: on ? accent : '#ffffff' };
+      }),
+    }));
+  }
+  avatars() {
+    return [
+      { bg: '#e3e9fd', fg: '#2a3cae' }, { bg: '#dcf2e5', fg: '#1d6b3a' }, { bg: '#fcefd0', fg: '#7a4a00' },
+      { bg: '#fce4ec', fg: '#a1264f' }, { bg: '#ebe5fb', fg: '#5534b8' }, { bg: '#d9f0f3', fg: '#0f5f6c' },
+    ];
+  }
+  teachers() {
+    const AV = this.avatars();
+    return [['강요셉', '4-1반'], ['박은혜', '4-2반'], ['이다니엘', '5-1반'], ['최한나', '5-2반'], ['정사무엘', '6-1반']]
+      .map(([name, cls], i) => ({ name, cls, short: name.slice(1), bg: AV[i].bg, fg: AV[i].fg }));
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#3046d9';
+    const late = accent + '70';
+    const s = this.state;
+    const AV = this.avatars();
+    const kids = [
+      [1, '김하준', '남', '2015.03.12', '5학년 2반', '사랑초', [1, 1, 1, 1], true, '010-1234-3307'],
+      [2, '이서윤', '여', '2015.07.25', '5학년 2반', '믿음초', [1, 1, 0, 1], true, '010-1234-8152'],
+      [3, '박도윤', '남', '2016.01.08', '4학년 1반', '사랑초', [1, 2, 1, 1], true, '010-1234-2096'],
+      [4, '최지우', '여', '2014.11.30', '6학년 1반', '소망초', [0, 0, 1, 0], false, '010-1234-7741'],
+      [5, '정시우', '남', '2016.05.17', '4학년 2반', '믿음초', [1, 1, 1, 1], true, '010-1234-5528'],
+      [6, '강하은', '여', '2015.09.02', '5학년 1반', '사랑초', [1, 1, 1, 2], true, '010-1234-1863'],
+      [7, '조은우', '남', '2014.04.21', '6학년 2반', '소망초', [1, 0, 1, 1], true, '010-1234-9370'],
+      [8, '윤서아', '여', '2016.12.11', '4학년 1반', '사랑초', [1, 1, 1, 1], true, '010-1234-4415'],
+      [9, '장예준', '남', '2014.08.05', '6학년 1반', '믿음초', [0, 1, 1, 1], false, '010-1234-6684'],
+      [10, '임지아', '여', '2015.02.14', '5학년 1반', '소망초', [1, 1, 0, 0], true, '010-1234-2209'],
+    ];
+    const visible = kids.filter((k) =>
+      (!s.grade || k[4].indexOf(s.grade) === 0) &&
+      (!s.cls || k[4] === s.cls) &&
+      (!s.join || (s.join === 'no' ? !k[7] : k[7])) &&
+      (!s.q || k[1].indexOf(s.q.trim()) !== -1));
+    const picked = Object.keys(s.picked).filter((id) => s.picked[id]).length;
+    const allOn = visible.length > 0 && visible.every((k) => s.picked[k[0]]);
+    const pick = (patch) => this.setState({ picked: Object.assign({}, s.picked, patch) });
+    return {
+      accent,
+      late,
+      tint: accent + '0f',
+      tint2: accent + '1c',
+      groups: this.nav('교적부', accent),
+      teachers: this.teachers(),
+      rows: visible.map((k) => {
+        const [id, name, sex, birth, cls, school, att, joined, tel] = k;
+        const on = !!s.picked[id];
+        const came = att.filter((a) => a > 0).length;
+        const lateN = att.filter((a) => a === 2).length;
+        const open = s.menu === id;
+        const av = AV[id % AV.length];
+        return {
+          name, short: name.slice(1), birth, cls, tel,
+          sub: school + ' ' + cls.slice(0, 3) + ' · ' + sex,
+          avBg: av.bg, avFg: av.fg,
+          rowBg: on ? accent + '0f' : '#ffffff',
+          checked: on,
+          checkLabel: name + ' 고르기',
+          toggle: () => pick({ [id]: !on }),
+          dots: att.map((a) => ({ bg: a === 1 ? accent : a === 2 ? late : '#ffffff', border: a === 0 ? '#aeb5c0' : 'transparent' })),
+          attText: came + ' / 4',
+          attLabel: '최근 4주 가운데 ' + came + '번 나왔어요' + (lateN ? ', 그중 ' + lateN + '번은 늦게 왔어요' : ''),
+          joinText: joined ? '가입함' : '가입 전',
+          joinBg: joined ? '#f2f4f6' : '#fff0e5',
+          joinFg: joined ? '#4e5968' : '#9a3412',
+          callLabel: name + ' 보호자에게 전화',
+          msgLabel: name + ' 보호자에게 문자',
+          moreLabel: name + ' 더 보기',
+          menuLabel: name + ' 메뉴',
+          menuOpen: open,
+          moreBg: open ? '#eef0f6' : 'transparent',
+          toggleMenu: () => this.setState({ menu: open ? null : id }),
+        };
+      }),
+      picked,
+      hasPicked: picked > 0,
+      noPicked: picked === 0,
+      allOn,
+      toggleAll: () => {
+        const patch = {};
+        visible.forEach((k) => { patch[k[0]] = !allOn; });
+        pick(patch);
+      },
+      clearPick: () => this.setState({ picked: {} }),
+      q: s.q,
+      grade: s.grade,
+      cls: s.cls,
+      join: s.join,
+      onQ: (e) => this.setState({ q: e.target.value }),
+      onGrade: (e) => this.setState({ grade: e.target.value }),
+      onCls: (e) => this.setState({ cls: e.target.value }),
+      onJoin: (e) => this.setState({ join: e.target.value }),
+      gradeBorder: s.grade ? accent : '#e1e4ea',
+      clsBorder: s.cls ? accent : '#e1e4ea',
+      joinBorder: s.join ? accent : '#e1e4ea',
+      filtered: !!(s.grade || s.cls || s.join || s.q),
+      clearFilters: () => this.setState({ grade: '', cls: '', join: '', q: '' }),
+      empty: visible.length === 0,
+    };
+  }
+}
+</script>
+</body>
+</html>

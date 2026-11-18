@@ -134,7 +134,7 @@ function Detail({ m, stat, target, v, today }: { m: Mission; stat: MissionStat |
         </InfoField>
         <InfoField onGray label="확인 기다리는 것">
           {pending > 0 ? (
-            <Link href="/staff/approvals" className="text-navy">
+            <Link href="/staff/approvals" className="text-staff">
               {pending}건
             </Link>
           ) : (
@@ -325,7 +325,7 @@ function MissionList({
                         <ClayIcon name={m.icon} size="xs" onWhite={on} />
                         <span className="flex min-w-0 flex-col">
                           <span>
-                            <Link href={href(v, { id: on ? null : m.id }, part)} scroll={false} aria-current={on ? "true" : undefined} className="font-bold text-ink no-underline hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+                            <Link href={href(v, { id: on ? null : m.id }, part)} scroll={false} aria-current={on ? "true" : undefined} className="font-bold text-ink no-underline hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
                               {m.title}
                             </Link>
                             <MissionTags m={m} long={on} past={past} />
@@ -420,7 +420,7 @@ export default async function MissionsAdminPage({ searchParams }: PageProps<"/st
   const copyForm =
     copyPlan && copyFrom !== null ? (
       <details className="group rounded-[20px] bg-fill">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-[20px] px-4 text-[14px] font-bold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy [&::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-[20px] px-4 text-[14px] font-bold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff [&::-webkit-details-marker]:hidden">
           <span className="grow">
             {copyLabel} ({copyPlan.copy.length}개)
           </span>
@@ -536,7 +536,7 @@ export default async function MissionsAdminPage({ searchParams }: PageProps<"/st
         ) : null}
         {pool.length > 0 ? (
           <details className="group rounded-[20px] bg-fill">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-[20px] px-4 text-[14px] font-bold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-[20px] px-4 text-[14px] font-bold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff [&::-webkit-details-marker]:hidden">
               <span className="grow">{plan.editable ? `보관함에서 고르기 (${pool.length}개)` : `보관함 보기 (${pool.length}개)`}</span>
               <span className="transition-transform group-open:rotate-90">
                 <Chevron />
@@ -579,7 +579,7 @@ export default async function MissionsAdminPage({ searchParams }: PageProps<"/st
                     .map((m, i) => (
                       <span key={m.id}>
                         {i > 0 ? ", " : ""}
-                        <Link href={href(v, { id: m.id }, "rotation")} className="text-navy">
+                        <Link href={href(v, { id: m.id }, "rotation")} className="text-staff">
                           {m.title}
                         </Link>
                       </span>
@@ -622,7 +622,7 @@ export default async function MissionsAdminPage({ searchParams }: PageProps<"/st
   return (
     <AdminPage>
       <AdminHeader
-        title="미션"
+        title="미션 계획"
         phoneRight={<RoundLink href={newHref} label="미션 만들기" icon="plus" />}
         wideRight={
           <BarLink href={newHref} tone="solid">

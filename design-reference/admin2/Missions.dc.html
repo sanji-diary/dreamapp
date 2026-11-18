@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>미션 계획</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+a{color:#3046d9}a:hover{color:#2236b8}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 16px; background: #e8ebf8; font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; color: #191f28; font-size: 15px; line-height: 1.5; letter-spacing: -0.01em">
+  <div style="display: flex; flex-wrap: wrap; max-width: 1680px; min-height: calc(100vh - 32px); margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 1px 2px rgba(23, 31, 80, 0.05), 0 12px 32px rgba(23, 31, 80, 0.07)">
+
+    <nav aria-label="관리 메뉴" style="flex: 1 1 240px; box-sizing: border-box; display: flex; flex-direction: column; padding: 18px 14px 16px; border-right: 1px solid #eef0f4; background: #ffffff">
+      <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 2px 0 8px">
+        <span aria-hidden="true" style="display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: {{accent}}; color: #ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-7M12 14c-4 0-6.5-2.6-6.5-6A6.5 6.5 0 0 1 12 1.5 6.5 6.5 0 0 1 18.5 8c0 3.4-2.5 6-6.5 6Z"></path></svg></span>
+        <span style="flex: 1; font-size: 19px; font-weight: 800; letter-spacing: -0.03em">꿈의숲</span>
+        <button type="button" aria-label="메뉴 접기" style="display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: #6b7684"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v16M19 12H9m0 0 4-4m-4 4 4 4"></path></svg></button>
+      </div>
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 18px">
+          <p style="margin: 0 0 6px; padding: 0 12px; font-size: 12px; font-weight: 600; color: #6b7684">{{g.label}}</p>
+          <sc-for list="{{g.items}}" as="n" hint-placeholder-count="5">
+            <a href="{{n.href}}" aria-current="{{n.current}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; background: {{n.bg}}; color: {{n.color}}; font-size: 15px; font-weight: {{n.weight}}; text-decoration: none">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{n.d}}"></path></svg>
+              <span style="flex: 1">{{n.name}}</span>
+              <sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{false}}"><span style="display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 11px; background: {{n.badgeBg}}; color: {{n.badgeColor}}; font-size: 12px; font-weight: 700">{{n.badge}}</span></sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 18px">
+        <p style="margin: 0 0 6px; padding: 0 12px; font-size: 12px; font-weight: 600; color: #6b7684">선생님</p>
+        <sc-for list="{{teachers}}" as="t" hint-placeholder-count="5">
+          <a href="#" style="display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 10px; color: #333d4b; font-size: 14.5px; text-decoration: none">
+            <span aria-hidden="true" style="display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: {{t.bg}}; color: {{t.fg}}; font-size: 11px; font-weight: 700; letter-spacing: -0.04em">{{t.short}}</span>
+            <span style="flex: 1">{{t.name}}</span>
+            <span style="font-size: 12.5px; color: #6b7684">{{t.cls}}</span>
+          </a>
+        </sc-for>
+        <a href="#" style="display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 10px; color: {{accent}}; font-size: 14.5px; font-weight: 600; text-decoration: none">
+          <span aria-hidden="true" style="display: grid; place-items: center; width: 28px; height: 28px; box-sizing: border-box; border-radius: 50%; border: 1.5px dashed {{accent}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          선생님 초대
+        </a>
+      </div>
+      <span style="flex: 1; min-height: 20px"></span>
+      <div style="padding-top: 10px; border-top: 1px solid #eef0f4">
+        <a href="#" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; color: #333d4b; font-size: 15px; text-decoration: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 1 0 0-6M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5"></path></svg>
+          <span style="flex: 1">기본 설정</span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b95a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+        </a>
+      </div>
+    </nav>
+
+    <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; background: #f7f8fb">
+      <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 76px; box-sizing: border-box; padding: 14px 28px; border-bottom: 1px solid #eef0f4; background: #ffffff">
+        <label style="position: relative; flex: 0 1 440px; min-width: 200px; display: flex; align-items: center">
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">전체에서 찾기</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="2" stroke-linecap="round" style="position: absolute; left: 14px"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 1 0 0-13M16 16l4.5 4.5"></path></svg>
+          <input type="search" placeholder="아이 이름, 반, 글 제목으로 찾기" style="box-sizing: border-box; width: 100%; height: 44px; padding: 0 14px 0 42px; border: 1px solid #e5e8ee; border-radius: 12px; background: #f9fafc; font: inherit; font-size: 14.5px; color: #191f28">
+        </label>
+        <span style="flex: 1"></span>
+        <button type="button" aria-label="알림 3개" style="position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #eceef3; border-radius: 12px; background: #ffffff; color: #333d4b">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15ZM10 20.5a2 2 0 0 0 4 0"></path></svg>
+          <span aria-hidden="true" style="position: absolute; top: 5px; right: 5px; display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #c2410c; color: #ffffff; font-size: 10.5px; font-weight: 700">3</span>
+        </button>
+        <button type="button" style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 6px 0 4px; border: 0; border-radius: 12px; background: transparent; font: inherit; color: #191f28; text-align: left">
+          <span aria-hidden="true" style="display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: {{tint2}}; color: {{accent}}; font-size: 13px; font-weight: 700">인성</span>
+          <span style="display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 14.5px; font-weight: 700">김인성 전도사</span><span style="font-size: 12.5px; color: #6b7684">관리자</span></span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </header>
+
+      <main style="flex: 1; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box; padding: 28px 28px 32px">
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+          <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px">
+            <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.25">미션 계획</h1>
+            <p style="margin: 0; font-size: 14px; color: #4e5968">한 주 동안 아이들에게 나가는 미션을 정해요</p>
+          </div>
+          <a href="#" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 12px; background: {{accent}}; font-size: 14.5px; font-weight: 700; color: #ffffff; text-decoration: none; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.1)">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            새 미션 만들기
+          </a>
+        </div>
+
+        <div role="tablist" aria-label="미션 보기" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #e5e8ee">
+          <sc-for list="{{tabs}}" as="tb" hint-placeholder-count="3">
+            <button type="button" role="tab" aria-selected="{{tb.on}}" onClick="{{tb.pick}}" style="height: 46px; padding: 0 14px; margin-bottom: -1px; border: 0; border-bottom: 2.5px solid {{tb.line}}; background: transparent; font: inherit; font-size: 15.5px; font-weight: {{tb.weight}}; color: {{tb.color}}">{{tb.label}}</button>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 18px 12px 10px; background: #ffffff; border: 1px solid #eceef3; border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+          <div style="display: flex; align-items: center; gap: 4px">
+            <button type="button" onClick="{{prevWeek}}" aria-label="지난주" style="display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; color: #333d4b"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg></button>
+            <span style="min-width: 190px; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: -0.02em">{{weekLabel}}</span>
+            <button type="button" onClick="{{nextWeek}}" aria-label="다음 주" style="display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; color: #333d4b"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+            <span style="display: inline-flex; align-items: center; height: 28px; padding: 0 11px; margin-left: 4px; border-radius: 14px; background: {{weekTagBg}}; color: {{weekTagFg}}; font-size: 13px; font-weight: 700">{{weekTag}}</span>
+          </div>
+          <span style="flex: 1"></span>
+          <div style="flex: 0 1 420px; min-width: 260px; display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; align-items: baseline; gap: 8px">
+              <span style="font-size: 14px; font-weight: 600; color: #4e5968">이번 주 물방울</span>
+              <span style="font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums">12 <span style="font-size: 14px; font-weight: 600; color: #4e5968">/ 12개</span></span>
+              <span style="flex: 1"></span>
+              <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 13.5px; font-weight: 700; color: #1d6b3a"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>딱 맞아요</span>
+            </div>
+            <div aria-hidden="true" style="display: flex; gap: 2px; height: 10px">
+              <span style="flex: 6; border-radius: 5px 0 0 5px; background: {{accent}}"></span>
+              <span style="flex: 4; background: {{mid}}"></span>
+              <span style="flex: 2; border-radius: 0 5px 5px 0; background: {{light}}"></span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: #4e5968">
+              <span style="display: inline-flex; align-items: center; gap: 5px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; background: {{accent}}"></span>매주 고정 6</span>
+              <span style="display: inline-flex; align-items: center; gap: 5px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; background: {{mid}}"></span>돌아가며 4</span>
+              <span style="display: inline-flex; align-items: center; gap: 5px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; background: {{light}}"></span>기간 2</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #ffffff; border: 1px solid #eceef3; border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+          <div style="overflow-x: auto">
+            <table style="width: 100%; min-width: 1040px; border-collapse: collapse; font-size: 14.5px">
+              <thead>
+                <tr>
+                  <th scope="col" style="height: 50px; padding: 0 12px 0 22px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684">미션</th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684">확인하는 방법</th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: right; font-size: 13px; font-weight: 600; color: #6b7684">물방울</th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: right; font-size: 13px; font-weight: 600; color: #6b7684">포인트</th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684">누구에게</th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684">기간</th>
+                  <th scope="col" style="padding: 0 12px; border-bottom: 1px solid #eef0f4; text-align: left; font-size: 13px; font-weight: 600; color: #6b7684">끝낸 아이</th>
+                  <th scope="col" style="padding: 0 18px 0 8px; border-bottom: 1px solid #eef0f4; text-align: right; font-size: 13px; font-weight: 600; color: #6b7684">고치기</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{rows}}" as="r" hint-placeholder-count="12">
+                  <sc-if value="{{r.head}}" hint-placeholder-val="{{false}}">
+                    <tr>
+                      <th scope="rowgroup" colspan="8" style="padding: 0; border-bottom: 1px solid #eef0f4; background: #f8f9fc; text-align: left; font-weight: 400">
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-height: 52px; padding: 6px 18px 6px 22px; box-sizing: border-box">
+                          <span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; background: {{r.swatch}}"></span>
+                          <span style="font-size: 15px; font-weight: 700; color: #191f28">{{r.name}}</span>
+                          <span style="font-size: 13.5px; font-weight: 600; color: #333d4b">{{r.sum}}</span>
+                          <span style="font-size: 13.5px; color: #6b7684">{{r.note}}</span>
+                          <span style="flex: 1"></span>
+                          <sc-if value="{{r.hasAction}}" hint-placeholder-val="{{false}}"><button type="button" style="height: 36px; padding: 0 12px; border: 1px solid #e1e4ea; border-radius: 9px; background: #ffffff; font: inherit; font-size: 13.5px; font-weight: 600; color: #191f28">{{r.action}}</button></sc-if>
+                        </div>
+                      </th>
+                    </tr>
+                  </sc-if>
+                  <sc-if value="{{r.item}}" hint-placeholder-val="{{true}}">
+                    <tr>
+                      <td style="height: 64px; padding: 0 12px 0 22px; border-bottom: 1px solid #f1f3f6">
+                        <span style="display: inline-flex; align-items: center; gap: 12px">
+                          <span aria-hidden="true" style="display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: #f2f4f8; color: {{accent}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{r.icon}}"></path></svg></span>
+                          <span style="font-weight: 600; white-space: nowrap">{{r.name}}</span>
+                        </span>
+                      </td>
+                      <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6"><span style="display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; background: #f2f4f6; color: #333d4b; font-size: 13px; font-weight: 600; white-space: nowrap">{{r.how}}</span></td>
+                      <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap"><span style="display: inline-flex; align-items: center; gap: 4px"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="{{accent}}"><path d="M12 3.5s-6 6.6-6 10.8A6 6 0 0 0 18 14.3c0-4.2-6-10.8-6-10.8Z"></path></svg>{{r.drops}}</span></td>
+                      <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6; text-align: right; color: #333d4b; font-variant-numeric: tabular-nums">{{r.points}}</td>
+                      <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6; color: #333d4b; white-space: nowrap">{{r.who}}</td>
+                      <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6; color: #333d4b; white-space: nowrap">{{r.when}}</td>
+                      <td style="padding: 0 12px; border-bottom: 1px solid #f1f3f6">
+                        <span style="display: inline-flex; align-items: center; gap: 10px; white-space: nowrap">
+                          <span aria-hidden="true" style="position: relative; width: 72px; height: 8px; border-radius: 4px; background: #eef0f5; overflow: hidden"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{r.pct}}; border-radius: 4px; background: {{accent}}"></span></span>
+                          <span style="font-size: 14px; color: #333d4b; font-variant-numeric: tabular-nums">{{r.done}}</span>
+                        </span>
+                      </td>
+                      <td style="padding: 0 18px 0 8px; border-bottom: 1px solid #f1f3f6; text-align: right"><button type="button" aria-label="{{r.editLabel}}" style="display: inline-grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: transparent; color: #4e5968"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16ZM13.5 6.5l4 4"></path></svg></button></td>
+                    </tr>
+                  </sc-if>
+                </sc-for>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row" style="height: 54px; padding: 0 12px 0 22px; text-align: left; font-size: 14.5px; font-weight: 700">이번 주 모두 9개</th>
+                  <td style="padding: 0 12px"></td>
+                  <td style="padding: 0 12px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums">12개</td>
+                  <td style="padding: 0 12px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums">80</td>
+                  <td colspan="4" style="padding: 0 18px 0 12px; font-size: 13.5px; color: #6b7684">물방울은 한 주에 12개를 넘지 않게 맞춰 두었어요</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 16px 20px; background: #fff7ef; border: 1px solid #f6dcc4; border-radius: 16px">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9a3412" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M12 8v5M12 16.2v.3"></path></svg>
+          <span style="flex: 1 1 280px; display: flex; flex-direction: column; line-height: 1.45">
+            <span style="font-weight: 700; color: #191f28">다음 주(11월 22일 ~ 28일) 계획이 아직 없어요</span>
+            <span style="font-size: 13.5px; color: #4e5968">비워 두면 매주 고정 미션만 나가요</span>
+          </span>
+          <button type="button" style="height: 42px; padding: 0 14px; border: 1px solid #e1e4ea; border-radius: 10px; background: #ffffff; font: inherit; font-size: 14px; font-weight: 600; color: #191f28">이번 주 것 그대로 쓰기</button>
+          <button type="button" onClick="{{nextWeek}}" style="height: 42px; padding: 0 16px; border: 0; border-radius: 10px; background: #191f28; font: inherit; font-size: 14px; font-weight: 700; color: #ffffff">다음 주 정하기</button>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3046d9","options":["#3046d9","#0b1fa6","#5b5fe0","#1b64da"]},"$preview":{"width":1440,"height":1380}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 0, week: 1 };
+  }
+  nav(active, accent) {
+    const I = {
+      home: 'M3 10.5 12 3l9 7.5M5 9.5V20h14V9.5M10 20v-5h4v5',
+      people: 'M9 4.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 1 0 0-6.4M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M17 6.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 1 0 0-5M16 14.2c2.3.2 4 1.8 4.5 4.8',
+      attend: 'M6 5h12a2.5 2.5 0 0 1 2.5 2.5v10A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5v-10A2.5 2.5 0 0 1 6 5ZM3.5 9.5h17M8 3v4M16 3v4M9 14.5l2 2 4-4',
+      check: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M8.5 12.2l2.4 2.4 4.6-4.8',
+      chat: 'M20 12a8 8 0 0 1-11.6 7.1L4 20l.9-4.2A8 8 0 1 1 20 12Z',
+      flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+      doc: 'M6.5 3.5h11A2.5 2.5 0 0 1 20 6v12a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18V6a2.5 2.5 0 0 1 2.5-2.5ZM8 8h8M8 12h8M8 16h5',
+      book: 'M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5ZM4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5M12 6.5v7M9.5 9h5',
+      grid: 'M5 3.5h4A1.5 1.5 0 0 1 10.5 5v4A1.5 1.5 0 0 1 9 10.5H5A1.5 1.5 0 0 1 3.5 9V5A1.5 1.5 0 0 1 5 3.5ZM15 3.5h4A1.5 1.5 0 0 1 20.5 5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 13.5 9V5A1.5 1.5 0 0 1 15 3.5ZM5 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9 20.5H5A1.5 1.5 0 0 1 3.5 19v-4A1.5 1.5 0 0 1 5 13.5ZM15 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5Z',
+      coin: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.5 0-2.6.8-2.6 2s1.1 1.6 2.6 2 2.6.8 2.6 2-1.1 2-2.6 2c-1.2 0-2.1-.5-2.6-1.3M12 6.5V8M12 16v1.5',
+      qr: 'M4 4h6v6H4ZM14 4h6v6h-6ZM4 14h6v6H4ZM14 14h2v2h-2ZM18 18h2v2h-2ZM14 18h2M18 14h2',
+    };
+    const groups = [
+      ['자주 쓰는 메뉴', [['home', '홈', 'Main.dc.html'], ['people', '교적부', 'Students.dc.html'], ['attend', '출석', '#'], ['check', '미션 확인', '#', 8], ['chat', '고민 상담', '#', 1]]],
+      ['운영', [['flag', '미션 계획', 'Missions.dc.html'], ['doc', '소식 글', 'Posts.dc.html'], ['book', '예배 순서', 'Worship.dc.html'], ['grid', '반 편성', 'Classes.dc.html'], ['coin', '달란트', '#'], ['qr', 'QR 카드', '#']]],
+    ];
+    return groups.map(([label, items]) => ({
+      label,
+      items: items.map(([icon, name, href, badge]) => {
+        const on = name === active;
+        return { d: I[icon], name, href, current: on ? 'page' : undefined, bg: on ? accent : 'transparent', color: on ? '#ffffff' : '#333d4b', weight: on ? 600 : 500, badge: badge || '', hasBadge: !!badge, badgeBg: on ? '#ffffff' : '#c2410c', badgeColor: on ? accent : '#ffffff' };
+      }),
+    }));
+  }
+  teachers() {
+    const AV = [
+      { bg: '#e3e9fd', fg: '#2a3cae' }, { bg: '#dcf2e5', fg: '#1d6b3a' }, { bg: '#fcefd0', fg: '#7a4a00' },
+      { bg: '#fce4ec', fg: '#a1264f' }, { bg: '#ebe5fb', fg: '#5534b8' },
+    ];
+    return [['강요셉', '4-1반'], ['박은혜', '4-2반'], ['이다니엘', '5-1반'], ['최한나', '5-2반'], ['정사무엘', '6-1반']]
+      .map(([name, cls], i) => ({ name, cls, short: name.slice(1), bg: AV[i].bg, fg: AV[i].fg }));
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#3046d9';
+    const s = this.state;
+    const mid = accent + '99';
+    const light = accent + '47';
+    const K = {
+      attend: 'M6 5h12a2.5 2.5 0 0 1 2.5 2.5v10A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5v-10A2.5 2.5 0 0 1 6 5ZM3.5 9.5h17M8 3v4M16 3v4M9 14.5l2 2 4-4',
+      photo: 'M4.5 7.5h3l1.5-2h6l1.5 2h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V9a1.5 1.5 0 0 1 1.5-1.5ZM12 10a3 3 0 1 0 0 6 3 3 0 1 0 0-6',
+      self: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M8.5 12.2l2.4 2.4 4.6-4.8',
+      quiz: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4v.3M12 16.3v.2',
+      text: 'M4 20h4L19 9l-4-4L4 16ZM13.5 6.5l4 4',
+      comment: 'M20 12a8 8 0 0 1-11.6 7.1L4 20l.9-4.2A8 8 0 1 1 20 12Z',
+      qr: 'M4 4h6v6H4ZM14 4h6v6h-6ZM4 14h6v6H4ZM14 14h2v2h-2ZM18 18h2v2h-2Z',
+    };
+    const head = (name, sum, note, action, swatch) => ({ head: true, item: false, name, sum, note, action, hasAction: !!action, swatch });
+    const item = (icon, name, how, drops, points, who, when, done, of) => ({
+      head: false, item: true, icon: K[icon], name, how, drops: drops + '개', points, who, when,
+      done: done + ' / ' + of + '명', pct: Math.round((done / of) * 100) + '%', editLabel: name + ' 고치기',
+    });
+    const weeks = [['11월 8일 ~ 14일', '지난주', '#f2f4f6', '#4e5968'], ['11월 15일 ~ 21일', '이번 주', accent + '1a', accent], ['11월 22일 ~ 28일', '다음 주', '#fff0e5', '#9a3412']];
+    const w = weeks[s.week];
+    return {
+      accent,
+      mid,
+      light,
+      tint2: accent + '1c',
+      groups: this.nav('미션 계획', accent),
+      teachers: this.teachers(),
+      tabs: ['주간 계획', '미션 보관함', '주마다 쓸 말씀'].map((label, i) => {
+        const on = s.tab === i;
+        return { label, on, line: on ? accent : 'transparent', weight: on ? 700 : 500, color: on ? '#191f28' : '#4e5968', pick: () => this.setState({ tab: i }) };
+      }),
+      weekLabel: w[0],
+      weekTag: w[1],
+      weekTagBg: w[2],
+      weekTagFg: w[3],
+      prevWeek: () => this.setState({ week: Math.max(0, s.week - 1) }),
+      nextWeek: () => this.setState({ week: Math.min(2, s.week + 1) }),
+      rows: [
+        head('매주 고정', '4개 · 물방울 6개', '매주 똑같이 나가요', '', accent),
+        item('attend', '주일 예배 출석', '선생님이 출석 체크', 2, 10, '모두', '매주', 25, 32),
+        item('photo', '말씀 쓰기', '사진 올리기 → 선생님 확인', 2, 10, '모두', '매주', 18, 32),
+        item('self', '말씀 읽기', '아이가 스스로 체크', 1, 10, '모두', '매주', 21, 32),
+        item('self', '기도하기', '아이가 스스로 체크', 1, 10, '모두', '매주', 23, 32),
+        head('돌아가며', '3개 · 물방울 4개', '오래 쉬었던 미션부터 저절로 골랐어요', '직접 고르기', mid),
+        item('quiz', '성경 퀴즈', '퀴즈 풀기', 2, 10, '모두', '이번 주', 16, 32),
+        item('text', '친구에게 인사하기', '글 쓰기 → 선생님 확인', 1, 10, '모두', '이번 주', 14, 32),
+        item('comment', '숲 소식에 댓글 달기', '저절로 확인', 1, 10, '모두', '이번 주', 11, 32),
+        head('기간', '2개 · 물방울 2개', '날짜를 정해 둔 미션이에요', '지난주 것 가져오기', light),
+        item('qr', '수요 기도회 참석', 'QR 찍기', 1, 0, '모두', '11월 18일(수) 하루', 12, 32),
+        item('photo', '감사 편지 쓰기', '사진 올리기 → 선생님 확인', 1, 10, '5·6학년', '11월 15일 ~ 21일', 3, 20),
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

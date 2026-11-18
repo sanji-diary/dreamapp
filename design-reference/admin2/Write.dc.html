@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>글쓰기</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+a{color:#3046d9}a:hover{color:#2236b8}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 16px; background: #e8ebf8; font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; color: #191f28; font-size: 15px; line-height: 1.5; letter-spacing: -0.01em">
+  <div style="display: flex; flex-wrap: wrap; max-width: 1680px; min-height: calc(100vh - 32px); margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 1px 2px rgba(23, 31, 80, 0.05), 0 12px 32px rgba(23, 31, 80, 0.07)">
+
+    <nav aria-label="관리 메뉴" style="flex: 1 1 240px; box-sizing: border-box; display: flex; flex-direction: column; padding: 18px 14px 16px; border-right: 1px solid #eef0f4; background: #ffffff">
+      <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 2px 0 8px">
+        <span aria-hidden="true" style="display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: {{accent}}; color: #ffffff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-7M12 14c-4 0-6.5-2.6-6.5-6A6.5 6.5 0 0 1 12 1.5 6.5 6.5 0 0 1 18.5 8c0 3.4-2.5 6-6.5 6Z"></path></svg></span>
+        <span style="flex: 1; font-size: 19px; font-weight: 800; letter-spacing: -0.03em">꿈의숲</span>
+        <button type="button" aria-label="메뉴 접기" style="display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: #6b7684"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v16M19 12H9m0 0 4-4m-4 4 4 4"></path></svg></button>
+      </div>
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 18px">
+          <p style="margin: 0 0 6px; padding: 0 12px; font-size: 12px; font-weight: 600; color: #6b7684">{{g.label}}</p>
+          <sc-for list="{{g.items}}" as="n" hint-placeholder-count="5">
+            <a href="{{n.href}}" aria-current="{{n.current}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; background: {{n.bg}}; color: {{n.color}}; font-size: 15px; font-weight: {{n.weight}}; text-decoration: none">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{n.d}}"></path></svg>
+              <span style="flex: 1">{{n.name}}</span>
+              <sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{false}}"><span style="display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 11px; background: {{n.badgeBg}}; color: {{n.badgeColor}}; font-size: 12px; font-weight: 700">{{n.badge}}</span></sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 18px">
+        <p style="margin: 0 0 6px; padding: 0 12px; font-size: 12px; font-weight: 600; color: #6b7684">선생님</p>
+        <sc-for list="{{teachers}}" as="t" hint-placeholder-count="5">
+          <a href="#" style="display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 10px; color: #333d4b; font-size: 14.5px; text-decoration: none">
+            <span aria-hidden="true" style="display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: {{t.bg}}; color: {{t.fg}}; font-size: 11px; font-weight: 700; letter-spacing: -0.04em">{{t.short}}</span>
+            <span style="flex: 1">{{t.name}}</span>
+            <span style="font-size: 12.5px; color: #6b7684">{{t.cls}}</span>
+          </a>
+        </sc-for>
+        <a href="#" style="display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 10px; color: {{accent}}; font-size: 14.5px; font-weight: 600; text-decoration: none">
+          <span aria-hidden="true" style="display: grid; place-items: center; width: 28px; height: 28px; box-sizing: border-box; border-radius: 50%; border: 1.5px dashed {{accent}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          선생님 초대
+        </a>
+      </div>
+      <span style="flex: 1; min-height: 20px"></span>
+      <div style="padding-top: 10px; border-top: 1px solid #eef0f4">
+        <a href="#" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 10px; color: #333d4b; font-size: 15px; text-decoration: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 1 0 0-6M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5"></path></svg>
+          <span style="flex: 1">기본 설정</span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b95a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+        </a>
+      </div>
+    </nav>
+
+    <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; background: #f7f8fb">
+      <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 76px; box-sizing: border-box; padding: 14px 28px; border-bottom: 1px solid #eef0f4; background: #ffffff">
+        <label style="position: relative; flex: 0 1 440px; min-width: 200px; display: flex; align-items: center">
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">전체에서 찾기</span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="2" stroke-linecap="round" style="position: absolute; left: 14px"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 1 0 0-13M16 16l4.5 4.5"></path></svg>
+          <input type="search" placeholder="아이 이름, 반, 글 제목으로 찾기" style="box-sizing: border-box; width: 100%; height: 44px; padding: 0 14px 0 42px; border: 1px solid #e5e8ee; border-radius: 12px; background: #f9fafc; font: inherit; font-size: 14.5px; color: #191f28">
+        </label>
+        <span style="flex: 1"></span>
+        <button type="button" aria-label="알림 3개" style="position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #eceef3; border-radius: 12px; background: #ffffff; color: #333d4b">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15ZM10 20.5a2 2 0 0 0 4 0"></path></svg>
+          <span aria-hidden="true" style="position: absolute; top: 5px; right: 5px; display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #c2410c; color: #ffffff; font-size: 10.5px; font-weight: 700">3</span>
+        </button>
+        <button type="button" style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 6px 0 4px; border: 0; border-radius: 12px; background: transparent; font: inherit; color: #191f28; text-align: left">
+          <span aria-hidden="true" style="display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: {{tint2}}; color: {{accent}}; font-size: 13px; font-weight: 700">인성</span>
+          <span style="display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 14.5px; font-weight: 700">김인성 전도사</span><span style="font-size: 12.5px; color: #6b7684">관리자</span></span>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7684" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </header>
+
+      <main style="flex: 1; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box; padding: 22px 28px 32px">
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+          <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 4px">
+            <a href="Posts.dc.html" style="display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; min-height: 32px; font-size: 14px; font-weight: 600; color: #4e5968; text-decoration: none"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>소식 글 목록</a>
+            <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.25">새 글 쓰기</h1>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: #4e5968"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d6b3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>{{savedText}}</span>
+            <button type="button" onClick="{{saveDraft}}" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px 0 16px; border: 1px solid #e1e4ea; border-radius: 12px; background: #ffffff; font: inherit; font-size: 14.5px; font-weight: 600; color: #191f28; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05)">임시 저장<span style="display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 11px; background: #f2f4f8; font-size: 12.5px; font-weight: 700; color: #333d4b">{{drafts}}</span></button>
+            <button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 22px; border: 0; border-radius: 12px; background: {{accent}}; font: inherit; font-size: 14.5px; font-weight: 700; color: #ffffff; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.1)">{{postLabel}}</button>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+          <section aria-label="글 쓰는 곳" style="flex: 3 1 540px; min-width: 0; display: flex; flex-direction: column; background: #ffffff; border: 1px solid #eceef3; border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px 24px 4px">
+              <span id="kind-l" style="font-size: 14px; font-weight: 600; color: #4e5968">올릴 곳</span>
+              <div role="group" aria-labelledby="kind-l" style="display: inline-flex; padding: 3px; border-radius: 12px; background: #f2f4f8">
+                <sc-for list="{{kinds}}" as="k" hint-placeholder-count="2">
+                  <button type="button" aria-pressed="{{k.on}}" onClick="{{k.pick}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: {{k.bg}}; font: inherit; font-size: 14.5px; font-weight: {{k.weight}}; color: {{k.color}}; box-shadow: {{k.shadow}}">{{k.label}}</button>
+                </sc-for>
+              </div>
+              <span style="font-size: 13.5px; color: #6b7684">{{kindHint}}</span>
+            </div>
+
+            <div style="padding: 10px 24px 0">
+              <label for="w-title" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">제목</label>
+              <input id="w-title" type="text" value="{{title}}" onChange="{{onTitle}}" placeholder="제목을 써 주세요" style="box-sizing: border-box; width: 100%; height: 64px; padding: 0; border: 0; border-bottom: 1px solid #eef0f4; background: transparent; font: inherit; font-size: 26px; font-weight: 700; letter-spacing: -0.03em; color: #191f28">
+            </div>
+
+            <div role="toolbar" aria-label="글 꾸미기" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 8px 18px; border-bottom: 1px solid #eef0f4">
+              <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 14.5px; font-weight: 600; color: #191f28"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 4.5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2ZM9 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 1 0 0-3M20.5 15.5l-5-5-9 9"></path></svg>사진</button>
+              <span aria-hidden="true" style="width: 1px; height: 20px; margin: 0 6px; background: #e5e8ee"></span>
+              <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 14.5px; font-weight: 800; color: #191f28">굵게</button>
+              <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 14.5px; color: #191f28"><span aria-hidden="true" style="font-size: 17px; font-weight: 700">가</span>큰 글씨</button>
+              <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 14.5px; color: #191f28"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h16"></path></svg>구분선</button>
+              <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 14.5px; color: #191f28"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>링크</button>
+              <span style="flex: 1"></span>
+              <span style="padding-right: 6px; font-size: 13px; color: #6b7684; font-variant-numeric: tabular-nums">{{count}} / 2000자</span>
+            </div>
+
+            <div style="padding: 18px 24px 8px">
+              <label for="w-body" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">내용</label>
+              <textarea id="w-body" value="{{body}}" onChange="{{onBody}}" placeholder="아이들에게 전할 이야기를 써 주세요" style="box-sizing: border-box; display: block; width: 100%; min-height: 300px; padding: 0; border: 0; resize: vertical; background: transparent; font: inherit; font-size: 16.5px; line-height: 1.8; color: #191f28"></textarea>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; margin: 0 24px; padding: 18px 0 20px; border-top: 1px solid #eef0f4">
+              <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px">
+                <span style="font-size: 15px; font-weight: 700">사진 {{photoCount}}장</span>
+                <span style="font-size: 13.5px; color: #6b7684">맨 앞 사진이 목록에 보여요 · 10장까지 넣을 수 있어요</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 12px">
+                <sc-for list="{{photos}}" as="p" hint-placeholder-count="3">
+                  <div style="position: relative; width: 104px; height: 104px; border-radius: 12px; background: {{p.bg}}; display: grid; place-items: center; color: {{p.fg}}; font-size: 13px; font-weight: 600">
+                    {{p.label}}
+                    <sc-if value="{{p.first}}" hint-placeholder-val="{{false}}"><span style="position: absolute; left: 6px; top: 6px; padding: 0 7px; border-radius: 6px; background: {{accent}}; color: #ffffff; font-size: 11.5px; font-weight: 700; line-height: 20px">대표</span></sc-if>
+                    <button type="button" aria-label="{{p.removeLabel}}" onClick="{{p.remove}}" style="position: absolute; right: 4px; top: 4px; display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(25, 31, 40, 0.65); color: #ffffff"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+                  </div>
+                </sc-for>
+                <button type="button" onClick="{{addPhoto}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 104px; height: 104px; box-sizing: border-box; border: 1.5px dashed #b8c0cc; border-radius: 12px; background: #fafbfc; font: inherit; font-size: 13.5px; font-weight: 600; color: {{accent}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>사진 더하기</button>
+              </div>
+              <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; border-radius: 10px; background: {{consentBg}}; font-size: 14.5px; color: #191f28">
+                <input type="checkbox" checked="{{consent}}" onChange="{{toggleConsent}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{accent}}">
+                사진에 나온 아이 모두 사진 동의를 받았어요
+              </label>
+            </div>
+          </section>
+
+          <div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+            <section aria-labelledby="set-h" style="display: flex; flex-direction: column; background: #ffffff; border: 1px solid #eceef3; border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+              <h2 id="set-h" style="margin: 0; padding: 18px 20px 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.02em">올리기 설정</h2>
+              <div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 6px 20px; border-top: 1px solid #f1f3f6">
+                <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.4"><span style="font-weight: 600">댓글 받기</span><span style="font-size: 13px; color: #6b7684">{{commentHint}}</span></span>
+                <button type="button" role="switch" aria-checked="{{comments}}" aria-label="댓글 받기" onClick="{{toggleComments}}" style="position: relative; flex: none; width: 50px; height: 30px; border: 0; border-radius: 15px; background: {{switchBg}}">
+                  <span aria-hidden="true" style="position: absolute; top: 3px; left: {{knobLeft}}; width: 24px; height: 24px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(17, 24, 39, 0.25)"></span>
+                </button>
+              </div>
+              <fieldset style="margin: 0; padding: 12px 20px 16px; border: 0; border-top: 1px solid #f1f3f6; display: flex; flex-direction: column; gap: 6px">
+                <legend style="float: left; padding: 0; margin-bottom: 4px; font-weight: 600">올리는 때</legend>
+                <sc-for list="{{whens}}" as="w" hint-placeholder-count="2">
+                  <label style="clear: both; display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 14.5px"><input type="radio" name="when" checked="{{w.on}}" onChange="{{w.pick}}" style="width: 18px; height: 18px; margin: 0; accent-color: {{accent}}">{{w.label}}</label>
+                </sc-for>
+                <sc-if value="{{later}}" hint-placeholder-val="{{false}}">
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-left: 28px">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #4e5968">날짜<input type="date" value="2026-11-22" style="box-sizing: border-box; height: 42px; padding: 0 10px; border: 1px solid #e1e4ea; border-radius: 10px; font: inherit; font-size: 14.5px; color: #191f28"></label>
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #4e5968">시간<input type="time" value="09:00" style="box-sizing: border-box; height: 42px; padding: 0 10px; border: 1px solid #e1e4ea; border-radius: 10px; font: inherit; font-size: 14.5px; color: #191f28"></label>
+                  </div>
+                </sc-if>
+              </fieldset>
+            </section>
+
+            <section aria-labelledby="pv-h" style="display: flex; flex-direction: column; gap: 12px; padding: 18px 20px 20px; background: #ffffff; border: 1px solid #eceef3; border-radius: 16px; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04)">
+              <h2 id="pv-h" style="margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.02em">아이 화면 미리 보기</h2>
+              <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 18px; background: #f2f5fb">
+                <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; background: #ffffff; box-shadow: 0 1px 3px rgba(17, 24, 39, 0.06)">
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <span aria-hidden="true" style="display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: {{tint2}}; color: {{accent}}; font-size: 11px; font-weight: 700">인성</span>
+                    <span style="display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 13.5px; font-weight: 700">김인성 전도사</span><span style="font-size: 12px; color: #6b7684">{{previewKind}} · 방금</span></span>
+                  </div>
+                  <p style="margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.4">{{previewTitle}}</p>
+                  <sc-if value="{{hasPhoto}}" hint-placeholder-val="{{true}}"><div aria-hidden="true" style="height: 132px; border-radius: 10px; background: {{coverBg}}; display: grid; place-items: center; color: {{coverFg}}; font-size: 13px; font-weight: 600">{{coverLabel}}</div></sc-if>
+                  <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #333d4b; white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden">{{previewBody}}</p>
+                  <div style="display: flex; gap: 14px; padding-top: 8px; border-top: 1px solid #f1f3f6; font-size: 13px; color: #4e5968">
+                    <span>좋아요 0</span>
+                    <span>{{previewComments}}</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3046d9","options":["#3046d9","#0b1fa6","#5b5fe0","#1b64da"]},"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      kind: '숲 소식',
+      title: '추수감사주일에 과일 바구니를 만들었어요',
+      body: '반마다 과일 바구니를 하나씩 만들었어요.\n예배가 끝나고 이웃 어르신들께 가져다 드렸답니다.\n\n함께해 준 친구들 고마워요!',
+      comments: true,
+      when: 'now',
+      consent: true,
+      photos: [[1, '바구니', '#fcefd0', '#7a4a00'], [2, '단체 사진', '#dcf2e5', '#1d6b3a'], [3, '어르신 댁', '#e3e9fd', '#2a3cae']],
+      next: 4,
+      drafts: 2,
+      saved: '오전 11:42에 저절로 저장했어요',
+    };
+  }
+  nav(active, accent) {
+    const I = {
+      home: 'M3 10.5 12 3l9 7.5M5 9.5V20h14V9.5M10 20v-5h4v5',
+      people: 'M9 4.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 1 0 0-6.4M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M17 6.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 1 0 0-5M16 14.2c2.3.2 4 1.8 4.5 4.8',
+      attend: 'M6 5h12a2.5 2.5 0 0 1 2.5 2.5v10A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5v-10A2.5 2.5 0 0 1 6 5ZM3.5 9.5h17M8 3v4M16 3v4M9 14.5l2 2 4-4',
+      check: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M8.5 12.2l2.4 2.4 4.6-4.8',
+      chat: 'M20 12a8 8 0 0 1-11.6 7.1L4 20l.9-4.2A8 8 0 1 1 20 12Z',
+      flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+      doc: 'M6.5 3.5h11A2.5 2.5 0 0 1 20 6v12a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18V6a2.5 2.5 0 0 1 2.5-2.5ZM8 8h8M8 12h8M8 16h5',
+      book: 'M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5ZM4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5M12 6.5v7M9.5 9h5',
+      grid: 'M5 3.5h4A1.5 1.5 0 0 1 10.5 5v4A1.5 1.5 0 0 1 9 10.5H5A1.5 1.5 0 0 1 3.5 9V5A1.5 1.5 0 0 1 5 3.5ZM15 3.5h4A1.5 1.5 0 0 1 20.5 5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 13.5 9V5A1.5 1.5 0 0 1 15 3.5ZM5 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9 20.5H5A1.5 1.5 0 0 1 3.5 19v-4A1.5 1.5 0 0 1 5 13.5ZM15 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5Z',
+      coin: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 1 0 0-17M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.5 0-2.6.8-2.6 2s1.1 1.6 2.6 2 2.6.8 2.6 2-1.1 2-2.6 2c-1.2 0-2.1-.5-2.6-1.3M12 6.5V8M12 16v1.5',
+      qr: 'M4 4h6v6H4ZM14 4h6v6h-6ZM4 14h6v6H4ZM14 14h2v2h-2ZM18 18h2v2h-2ZM14 18h2M18 14h2',
+    };
+    const groups = [
+      ['자주 쓰는 메뉴', [['home', '홈', 'Main.dc.html'], ['people', '교적부', 'Students.dc.html'], ['attend', '출석', '#'], ['check', '미션 확인', '#', 8], ['chat', '고민 상담', '#', 1]]],
+      ['운영', [['flag', '미션 계획', 'Missions.dc.html'], ['doc', '소식 글', 'Posts.dc.html'], ['book', '예배 순서', 'Worship.dc.html'], ['grid', '반 편성', 'Classes.dc.html'], ['coin', '달란트', '#'], ['qr', 'QR 카드', '#']]],
+    ];
+    return groups.map(([label, items]) => ({
+      label,
+      items: items.map(([icon, name, href, badge]) => {
+        const on = name === active;
+        return { d: I[icon], name, href, current: on ? 'page' : undefined, bg: on ? accent : 'transparent', color: on ? '#ffffff' : '#333d4b', weight: on ? 600 : 500, badge: badge || '', hasBadge: !!badge, badgeBg: on ? '#ffffff' : '#c2410c', badgeColor: on ? accent : '#ffffff' };
+      }),
+    }));
+  }
+  teachers() {
+    const AV = [
+      { bg: '#e3e9fd', fg: '#2a3cae' }, { bg: '#dcf2e5', fg: '#1d6b3a' }, { bg: '#fcefd0', fg: '#7a4a00' },
+      { bg: '#fce4ec', fg: '#a1264f' }, { bg: '#ebe5fb', fg: '#5534b8' },
+    ];
+    return [['강요셉', '4-1반'], ['박은혜', '4-2반'], ['이다니엘', '5-1반'], ['최한나', '5-2반'], ['정사무엘', '6-1반']]
+      .map(([name, cls], i) => ({ name, cls, short: name.slice(1), bg: AV[i].bg, fg: AV[i].fg }));
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#3046d9';
+    const s = this.state;
+    const extra = [['교회 마당', '#fce4ec', '#a1264f'], ['과일 고르기', '#ebe5fb', '#5534b8'], ['포장하기', '#d9f0f3', '#0f5f6c']];
+    const cover = s.photos[0];
+    return {
+      accent,
+      tint2: accent + '1c',
+      groups: this.nav('소식 글', accent),
+      teachers: this.teachers(),
+      savedText: s.saved,
+      drafts: s.drafts,
+      saveDraft: () => this.setState({ drafts: s.drafts + 1, saved: '방금 임시 저장했어요' }),
+      postLabel: s.when === 'now' ? '올리기' : '날짜 정해 올리기',
+      kinds: ['숲 소식', '공지'].map((label) => {
+        const on = s.kind === label;
+        return { label, on, bg: on ? '#ffffff' : 'transparent', color: on ? '#191f28' : '#4e5968', weight: on ? 700 : 500, shadow: on ? '0 1px 3px rgba(17, 24, 39, 0.12)' : 'none', pick: () => this.setState({ kind: label }) };
+      }),
+      kindHint: s.kind === '공지' ? '공지는 아이 화면 맨 위에 보여요' : '아이들의 숲 소식에 올라가요',
+      title: s.title,
+      body: s.body,
+      onTitle: (e) => this.setState({ title: e.target.value }),
+      onBody: (e) => this.setState({ body: e.target.value }),
+      count: s.body.length,
+      photoCount: s.photos.length,
+      photos: s.photos.map(([id, label, bg, fg], i) => ({
+        label, bg, fg, first: i === 0,
+        removeLabel: label + ' 사진 빼기',
+        remove: () => this.setState({ photos: s.photos.filter((p) => p[0] !== id) }),
+      })),
+      addPhoto: () => {
+        if (s.photos.length >= 10) return;
+        const e = extra[(s.next - 4) % extra.length];
+        this.setState({ photos: s.photos.concat([[s.next, e[0], e[1], e[2]]]), next: s.next + 1 });
+      },
+      consent: s.consent,
+      consentBg: s.consent ? '#f6f7fa' : '#fff0e5',
+      toggleConsent: () => this.setState({ consent: !s.consent }),
+      comments: s.comments,
+      toggleComments: () => this.setState({ comments: !s.comments }),
+      switchBg: s.comments ? accent : '#c9cfd8',
+      knobLeft: s.comments ? '23px' : '3px',
+      commentHint: s.comments ? '아이들이 댓글을 달 수 있어요' : '이 글에는 댓글을 받지 않아요',
+      whens: [['now', '지금 바로 올리기'], ['later', '날짜와 시간 정하기']].map(([v, label]) => ({ label, on: s.when === v, pick: () => this.setState({ when: v }) })),
+      later: s.when === 'later',
+      previewKind: s.kind,
+      previewTitle: s.title || '제목을 써 주세요',
+      previewBody: s.body || '내용을 쓰면 여기에 보여요',
+      previewComments: s.comments ? '댓글 0' : '댓글 받지 않음',
+      hasPhoto: s.photos.length > 0,
+      coverBg: cover ? cover[2] : '#f2f4f6',
+      coverFg: cover ? cover[3] : '#6b7684',
+      coverLabel: cover ? cover[1] + ' 사진' : '',
+    };
+  }
+}
+</script>
+</body>
+</html>

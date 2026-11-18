@@ -81,7 +81,7 @@ export function VerseEditor({
             절로 나누기
           </button>
           {pasteNote ? (
-            <span role="status" className="text-[13px] font-semibold text-navy">
+            <span role="status" className="text-[13px] font-semibold text-staff">
               {pasteNote}
             </span>
           ) : null}

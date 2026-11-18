@@ -152,7 +152,7 @@ function StallLine({ stall }: { stall: string }) {
           <input id="fp-stall" value={text} onChange={(e) => setText(e.currentTarget.value)} maxLength={40} placeholder="예: 떡볶이 코너" enterKeyHint="done" autoFocus className={inputBoxClass()} />
         </div>
         <button type="submit" className="group flex h-[46px] shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 outline-none">
-          <span className={`${pillClass("navy")} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy`}>정하기</span>
+          <span className={`${pillClass("navy")} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff`}>정하기</span>
         </button>
       </form>
     );
@@ -164,7 +164,7 @@ function StallLine({ stall }: { stall: string }) {
         setText(stall);
         setEditing(true);
       }}
-      className="-my-2 flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent px-1 text-[13px] font-bold text-navy underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-navy"
+      className="-my-2 flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent px-1 text-[13px] font-bold text-staff underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-staff"
     >
       {stall ? "바꾸기" : "코너 이름 정하기"}
     </button>
@@ -194,7 +194,7 @@ const OFFLINE = "연결이 불안정해요. 잠시 뒤에 다시 해 주세요";
 /** The amount tiles of the mock; anything else goes through "직접 입력". */
 const AMOUNTS = [1, 2, 3, 5, 10];
 
-const roundButton = "grid h-10 w-10 place-items-center rounded-full bg-fill text-ink2 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy";
+const roundButton = "grid h-10 w-10 place-items-center rounded-full bg-fill text-ink2 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff";
 
 function RoundButton({ label, icon, onClick, pressed }: { label: string; icon: LineIconName; onClick: () => void; pressed?: boolean }) {
   return (
@@ -330,7 +330,7 @@ export function FestivalPay({ eventName, kids, classes, levels, last: initialLas
       <span>
         방금 결제: {last.childName} {last.amount}달란트 ·
       </span>
-      <button type="button" onClick={undo} disabled={busy} className="-my-1.5 h-11 cursor-pointer border-0 bg-transparent px-1.5 text-[13px] font-bold text-danger underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-navy disabled:cursor-default disabled:opacity-50">
+      <button type="button" onClick={undo} disabled={busy} className="-my-1.5 h-11 cursor-pointer border-0 bg-transparent px-1.5 text-[13px] font-bold text-danger underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-staff disabled:cursor-default disabled:opacity-50">
         취소
       </button>
     </p>
@@ -370,7 +370,7 @@ export function FestivalPay({ eventName, kids, classes, levels, last: initialLas
                   setCustom(false);
                   setAmount(n);
                 }}
-                className={`cursor-pointer rounded-2xl border-0 px-1.5 py-3 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${on ? "bg-navy text-white" : "bg-fill text-ink"}`}
+                className={`cursor-pointer rounded-2xl border-0 px-1.5 py-3 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff ${on ? "bg-staff text-white" : "bg-fill text-ink"}`}
               >
                 <b className="block text-[17px] tracking-[-0.02em]">{n}</b>
                 <span className={`text-[11.5px] ${on ? "text-[#cfd6f6]" : "text-mute"}`}>달란트</span>
@@ -386,7 +386,7 @@ export function FestivalPay({ eventName, kids, classes, levels, last: initialLas
               setCustom(true);
               setAmount(0);
             }}
-            className={`cursor-pointer rounded-2xl border-0 px-1.5 py-3 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${custom ? "bg-navy text-white" : "bg-fill text-ink"}`}
+            className={`cursor-pointer rounded-2xl border-0 px-1.5 py-3 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff ${custom ? "bg-staff text-white" : "bg-fill text-ink"}`}
           >
             <b className="block text-[17px] tracking-[-0.02em]">직접</b>
             <span className={`text-[11.5px] ${custom ? "text-[#cfd6f6]" : "text-mute"}`}>입력</span>
@@ -434,7 +434,7 @@ export function FestivalPay({ eventName, kids, classes, levels, last: initialLas
       <Page narrow>
         <Header left={<RoundLink href="/staff" label="홈으로 돌아가기" icon="back" />} />
         <div className="flex flex-col items-center gap-1.5 pt-4 text-center">
-          <span aria-hidden="true" className="grid h-14 w-14 place-items-center rounded-full bg-navy text-white">
+          <span aria-hidden="true" className="grid h-14 w-14 place-items-center rounded-full bg-staff text-white">
             <LineIcon name="check" size={30} stroke={2.6} />
           </span>
           {/* The result takes the focus, so a screen reader says it first. */}
@@ -470,7 +470,7 @@ export function FestivalPay({ eventName, kids, classes, levels, last: initialLas
 
   const word = q.trim();
   const shown = kids.filter((k) => (classId === null || k.class_id === classId) && (word === "" || k.name.includes(word)));
-  const chip = (on: boolean) => `rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy ${on ? "bg-navy text-white" : "bg-fill text-sub"}`;
+  const chip = (on: boolean) => `rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff ${on ? "bg-staff text-white" : "bg-fill text-sub"}`;
   const chipButton = "group flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 outline-none lg:h-10";
 
   return (
@@ -487,7 +487,7 @@ export function FestivalPay({ eventName, kids, classes, levels, last: initialLas
         <p className="m-0 text-[13px] text-mute">
           {eventName} · 아이를 찾아 주세요{scanOk ? " (오른쪽 위 버튼으로 QR 카드를 찍을 수 있어요)" : ""}
         </p>
-        <div className="flex h-12 items-center gap-2 rounded-full bg-fill px-4 text-faint focus-within:outline-2 focus-within:outline-navy">
+        <div className="flex h-12 items-center gap-2 rounded-full bg-fill px-4 text-faint focus-within:outline-2 focus-within:outline-staff">
           <LineIcon name="search" size={18} />
           <label htmlFor="fp-q" className="sr-only">
             이름으로 찾기
@@ -513,7 +513,7 @@ export function FestivalPay({ eventName, kids, classes, levels, last: initialLas
               type="button"
               disabled={busy}
               onClick={() => openChild(() => festivalChildAction(k.id))}
-              className="flex w-full cursor-pointer items-center gap-3 border-0 bg-transparent px-0 py-[11px] text-left text-inherit focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy disabled:cursor-default"
+              className="flex w-full cursor-pointer items-center gap-3 border-0 bg-transparent px-0 py-[11px] text-left text-inherit focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-staff disabled:cursor-default"
             >
               <span className="flex shrink-0 max-[319px]:hidden">
                 <TreeAvatar level={levels[k.id] ?? null} photo={k.photo_url} size="m" />

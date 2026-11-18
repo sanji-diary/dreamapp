@@ -59,7 +59,7 @@ export function TalentDraft({ id, name, rate: savedRate, rows, error }: { id: nu
           <div className="-my-[5px] flex flex-wrap gap-x-[7px]" role="group" aria-label="비율 넣어 보기">
             {TRY.map((n) => (
               <button key={n} type="button" aria-pressed={rate === n} onClick={() => setText(String(n))} className="group flex h-11 cursor-pointer items-center border-0 bg-transparent p-0 outline-none">
-                <span className={`rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy ${rate === n ? "bg-navy text-white" : "bg-fill text-sub"}`}>{n}P</span>
+                <span className={`rounded-full px-3.5 py-2 text-[13px] leading-[1.4] font-semibold whitespace-nowrap group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff ${rate === n ? "bg-staff text-white" : "bg-fill text-sub"}`}>{n}P</span>
               </button>
             ))}
           </div>
@@ -129,7 +129,7 @@ export function TalentDraft({ id, name, rate: savedRate, rows, error }: { id: nu
           name="op"
           value="delete"
           formNoValidate
-          className="flex h-11 w-fit cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-bold text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+          className="flex h-11 w-fit cursor-pointer items-center border-0 bg-transparent p-0 text-[14px] font-bold text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff"
           onClick={(e) => {
             if (!window.confirm("이 초안을 지울까요? 아이들에게는 아무것도 바뀌지 않아요.")) e.preventDefault();
           }}

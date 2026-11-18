@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { rowClass, tableClass, tdClass, thClass } from "@/components/staff/admin-kit";
+import { AttendanceDots, AttendanceLegend } from "@/components/staff/attendance-dots";
 import { BarLink, Box, Card, Chevron, Chip, Chips, EmptyNote, FlashNote, InfoField, LineIcon, List, ListRow, Notice, Page, PageHeader, RoundLink, Segmented, Tag, TreeAvatar, type TagTone } from "@/components/staff/kit";
 import { AutoForm } from "@/components/staff/widgets";
 import { requireStaff } from "@/lib/auth";
@@ -67,7 +69,7 @@ function ClassPicker({ v, classes, id }: { v: View; classes: { id: number; name:
       <label className="sr-only" htmlFor={id}>
         반 고르기
       </label>
-      <select id={id} name="class" defaultValue={v.classId ?? ""} className={`h-[34px] cursor-pointer rounded-full border-0 px-3 text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${v.classId !== null ? "bg-navy text-white" : "bg-fill text-sub"}`}>
+      <select id={id} name="class" defaultValue={v.classId ?? ""} className={`h-[34px] cursor-pointer rounded-full border-0 px-3 text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff lg:h-10 lg:rounded-[10px] lg:px-3 lg:text-[14px] ${v.classId !== null ? "bg-staff text-white" : "bg-fill text-sub lg:bg-white lg:text-ink2 lg:ring-1 lg:ring-[#e1e4ea] lg:ring-inset"}`}>
         <option value="">모든 반</option>
         {classes.map((c) => (
           <option key={c.id} value={c.id}>
@@ -82,12 +84,12 @@ function ClassPicker({ v, classes, id }: { v: View; classes: { id: number; name:
 
 function SearchBox({ v, id, wide = false, autoFocus = false }: { v: View; id: string; wide?: boolean; autoFocus?: boolean }) {
   return (
-    <form method="get" action="/staff/children" role="search" className={wide ? "flex h-[38px] w-60 items-center gap-2 rounded-full bg-fill px-3.5 text-faint focus-within:outline-2 focus-within:outline-navy" : "flex h-11 items-center gap-2 rounded-full bg-fill px-4 text-faint focus-within:outline-2 focus-within:outline-navy"}>
+    <form method="get" action="/staff/children" role="search" className={wide ? "flex h-10 w-[240px] items-center gap-2 rounded-[10px] bg-white px-3 text-mute shadow-[0_1px_2px_rgba(17,24,39,0.04)] ring-1 ring-[#e1e4ea] ring-inset focus-within:outline-2 focus-within:outline-staff" : "flex h-11 items-center gap-2 rounded-full bg-fill px-4 text-faint focus-within:outline-2 focus-within:outline-staff"}>
       <LineIcon name="search" size={17} />
       <label htmlFor={id} className="sr-only">
         이름으로 찾기
       </label>
-      <input id={id} name="q" type="search" defaultValue={v.q} placeholder="이름으로 찾기" enterKeyHint="search" autoFocus={autoFocus} className={`h-full min-w-0 grow border-0 bg-transparent p-0 text-ink outline-none placeholder:text-faint ${wide ? "text-[13.5px]" : "text-[16px]"}`} />
+      <input id={id} name="q" type="search" defaultValue={v.q} placeholder="이름으로 찾기" enterKeyHint="search" autoFocus={autoFocus} className={`h-full min-w-0 grow border-0 bg-transparent p-0 text-ink outline-none placeholder:text-faint ${wide ? "text-[14.5px] placeholder:text-mute" : "text-[16px]"}`} />
       <Keep v={v} omit="q" />
     </form>
   );
@@ -174,7 +176,7 @@ function KidCard({ k, st, cap, showClass }: { k: ChildListItem; st: ChildStat | 
           <Link
             href={`/staff/children/${k.id}`}
             aria-label={`${k.name} 정보 보기`}
-            className="relative grid h-9 place-items-center rounded-xl bg-white text-[13px] font-bold text-ink2 no-underline after:absolute after:inset-x-0 after:-inset-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+            className="relative grid h-9 place-items-center rounded-xl bg-white text-[13px] font-bold text-ink2 no-underline after:absolute after:inset-x-0 after:-inset-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff"
           >
             정보 보기
           </Link>
@@ -186,86 +188,85 @@ function KidCard({ k, st, cap, showClass }: { k: ChildListItem; st: ChildStat | 
 
 /* ---------- wide screens: table and side panel ---------- */
 
-function Dots({ st }: { st: ChildStat }) {
-  const pad = Math.max(0, 4 - st.weeks.length);
-  return (
-    <span role="img" aria-label={st.weeks.length > 0 ? `최근 ${st.weeks.length}주 중 ${st.attended}번 출석` : "출석 기록 없음"} className="flex gap-1">
-      {Array.from({ length: pad }, (_, i) => (
-        <span key={`pad-${i}`} className="h-2 w-2 rounded-full border border-track" />
-      ))}
-      {st.weeks.map((w) => (
-        <span key={w.date} className={`h-2 w-2 rounded-full ${w.status === "present" || w.status === "late" ? "bg-bar" : "bg-faint/40"}`} />
-      ))}
-    </span>
-  );
-}
-
 function KidTable({ kids, stats, v }: { kids: ChildListItem[]; stats: Map<number, ChildStat>; v: View }) {
-  const th = "border-b border-line px-2.5 py-[9px] text-left text-[12px] font-medium whitespace-nowrap text-mute";
   return (
-    <table className="w-full border-collapse text-[13px]">
-      <thead>
-        <tr>
-          <th scope="col" className={th}>
-            이름
-          </th>
-          <th scope="col" className={th}>
-            반
-          </th>
-          <th scope="col" className={th}>
-            학교
-          </th>
-          <th scope="col" className={th}>
-            최근 4주
-          </th>
-          <th scope="col" className={th}>
-            나무
-          </th>
-          <th scope="col" className={th}>
-            포인트
-          </th>
-          <th scope="col" className={th}>
-            상태
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {kids.map((k) => {
-          const st = stats.get(k.id);
-          const on = v.id === k.id;
-          const td = `border-b border-line p-2.5 ${on ? "bg-navy-tint" : ""}`;
-          const tags = statusTags(k, st);
-          return (
-            <tr key={k.id} className="[&:last-child>td]:border-b-0">
-              <td className={td}>
-                {k.canOpen ? (
-                  <Link href={href(v, { id: on ? null : k.id })} scroll={false} aria-current={on ? "true" : undefined} className="font-bold text-ink no-underline hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
-                    {k.name}
-                  </Link>
-                ) : (
-                  <b>{k.name}</b>
-                )}
-              </td>
-              <td className={`${td} whitespace-nowrap`}>{k.class_name ? shortClassName(k.class_name) : k.classPending ? "반 미정" : "반 없음"}</td>
-              <td className={td}>{st ? (st.school ?? <span className="text-mute">미입력</span>) : <span className="text-faint">–</span>}</td>
-              <td className={td}>{st ? <Dots st={st} /> : <span className="text-faint">–</span>}</td>
-              <td className={`${td} whitespace-nowrap`}>{st ? LEVEL_NAMES[st.level - 1] : <span className="text-faint">–</span>}</td>
-              <td className={td}>{st ? st.points : <span className="text-faint">–</span>}</td>
-              <td className={td}>
-                <span className="flex flex-wrap gap-1">
-                  {tags.map((t) => (
-                    <Tag key={t.text} tone={t.tone} onWhite={on && t.tone === "gray"}>
-                      {t.text}
-                    </Tag>
-                  ))}
-                  {tags.length === 0 && k.canOpen ? <Tag tone="navy">활동 중</Tag> : null}
-                </span>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div className="overflow-x-auto">
+      <table className={tableClass}>
+        <thead>
+          <tr>
+            <th scope="col" className={thClass()}>
+              이름
+            </th>
+            <th scope="col" className={thClass()}>
+              반
+            </th>
+            <th scope="col" className={thClass()}>
+              최근 4주 출석
+            </th>
+            <th scope="col" className={thClass()}>
+              나무
+            </th>
+            <th scope="col" className={thClass({ center: true })}>
+              포인트
+            </th>
+            <th scope="col" className={thClass()}>
+              상태
+            </th>
+            <th scope="col" className={`${thClass()} text-right`}>
+              <span className="sr-only">자세히</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {kids.map((k) => {
+            const st = stats.get(k.id);
+            const on = v.id === k.id;
+            const tags = statusTags(k, st);
+            const cell = tdClass({ selected: on });
+            return (
+              <tr key={k.id} className={rowClass}>
+                <td className={cell}>
+                  <span className="flex items-center gap-3">
+                    <TreeAvatar level={st ? st.level : null} photo={k.photo_url} size={38} />
+                    <span className="flex min-w-0 flex-col leading-[1.35]">
+                      {k.canOpen ? (
+                        <Link href={href(v, { id: on ? null : k.id })} scroll={false} aria-current={on ? "true" : undefined} className="font-semibold text-ink no-underline hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
+                          {k.name}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold">{k.name}</span>
+                      )}
+                      <span className="text-[13px] text-mute">{st ? (st.school ?? "학교 미입력") : "이름과 반만 볼 수 있어요"}</span>
+                    </span>
+                  </span>
+                </td>
+                <td className={`${cell} whitespace-nowrap text-ink2`}>{k.class_name ?? (k.classPending ? "반 미정" : "반 없음")}</td>
+                <td className={cell}>{st ? <AttendanceDots st={st} /> : <span className="text-faint">–</span>}</td>
+                <td className={`${cell} whitespace-nowrap text-ink2`}>{st ? LEVEL_NAMES[st.level - 1] : <span className="text-faint">–</span>}</td>
+                <td className={`${cell} text-center text-ink2`}>{st ? st.points : <span className="text-faint">–</span>}</td>
+                <td className={cell}>
+                  <span className="flex flex-wrap gap-1">
+                    {tags.map((t) => (
+                      <Tag key={t.text} tone={t.tone}>
+                        {t.text}
+                      </Tag>
+                    ))}
+                    {tags.length === 0 && k.canOpen ? <Tag tone="gray">활동 중</Tag> : null}
+                  </span>
+                </td>
+                <td className={`${cell} text-right`}>
+                  {k.canOpen ? (
+                    <Link href={`/staff/children/${k.id}`} aria-label={`${k.name} 자세히 보기`} className="inline-grid h-9 w-9 place-items-center rounded-[10px] text-sub no-underline hover:bg-fill focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
+                      <LineIcon name="next" size={18} />
+                    </Link>
+                  ) : null}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -287,7 +288,7 @@ function SidePanel({ c, st, homeroom, v }: { c: ChildDetail; st: ChildStat | und
             {homeroom.length > 0 ? ` · 담임 ${homeroom.join(", ")}` : ""}
           </span>
         </div>
-        <Link href={href(v, { id: null })} scroll={false} aria-label="닫기" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-mute no-underline hover:bg-white focus-visible:outline-2 focus-visible:outline-navy">
+        <Link href={href(v, { id: null })} scroll={false} aria-label="닫기" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-mute no-underline hover:bg-white focus-visible:outline-2 focus-visible:outline-staff">
           <LineIcon name="close" size={18} />
         </Link>
       </div>
@@ -427,22 +428,36 @@ export default async function ChildrenPage({ searchParams }: PageProps<"/staff/c
     <Page wide>
       <PageHeader
         title={title}
-        count={<span className="hidden lg:inline">{shown.length}명</span>}
-        sub={kind === "none" ? "이름과 반만 볼 수 있어요" : undefined}
-        right={
-          <>
-            {/* From lg: the search box and the admin's buttons, as in the top bar of the mock. */}
-            <span className="hidden items-center gap-2.5 lg:flex">
-              <SearchBox v={v} id="c-q-wide" wide />
-              {isAdmin ? (
+        sub={
+          kind === "none" ? (
+            "이름과 반만 볼 수 있어요"
+          ) : (
+            <span className="hidden lg:inline">
+              전체 <b className="text-ink">{home.length}명</b>
+              {seesNew && newCount > 0 ? (
                 <>
-                  <BarLink href="/staff/admin/cards">QR 카드 인쇄</BarLink>
-                  <BarLink href="/staff/children/new" tone="solid">
-                    + 아이 추가
-                  </BarLink>
+                  {" "}
+                  · 새로 가입한 아이 <b className="text-ink">{newCount}명</b>
                 </>
               ) : null}
             </span>
+          )
+        }
+        right={
+          <>
+            {/* From lg: the admin's buttons (design-reference/admin2/Students.dc.html). */}
+            {isAdmin ? (
+              <span className="hidden items-center gap-2.5 lg:flex">
+                <BarLink href="/staff/admin/cards">
+                  <LineIcon name="qr" size={18} />
+                  QR 카드 인쇄
+                </BarLink>
+                <BarLink href="/staff/children/new" tone="solid">
+                  <LineIcon name="plus" size={18} stroke={2.2} />
+                  아이 등록
+                </BarLink>
+              </span>
+            ) : null}
             {/* Below lg: round buttons. */}
             <span className="flex items-center lg:hidden">
               {isAdmin ? <RoundLink href="/staff/children/new" label="아이 추가" icon="plus" /> : null}
@@ -460,12 +475,16 @@ export default async function ChildrenPage({ searchParams }: PageProps<"/staff/c
       {v.q ? (
         <p className="m-0 -my-1 text-[13px] text-mute">
           ‘{v.q}’ 찾은 결과예요.{" "}
-          <Link href={href(v, { q: "", search: false })} className="font-bold text-navy">
+          <Link href={href(v, { q: "", search: false })} className="font-bold text-staff">
             전체 보기
           </Link>
         </p>
       ) : null}
 
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+      <span className="hidden lg:flex">
+        <SearchBox v={v} id="c-q-wide" wide />
+      </span>
       <Chips label="골라 보기">
         <Chip href={href(v, { ...plain, onlyNew: false })} on={v.f === "all" && !v.onlyNew}>
           전체 {v.onlyNew ? "" : home.length}
@@ -492,6 +511,7 @@ export default async function ChildrenPage({ searchParams }: PageProps<"/staff/c
         ) : null}
         {kind !== "class" || v.f === "other" ? <ClassPicker v={v} classes={classes} id="c-class" /> : null}
       </Chips>
+      </div>
       {v.onlyNew ? <Notice tone="navy">함께 쓰는 QR로 가입한 아이예요. 반과 동의서를 확인해 주세요.</Notice> : null}
       {v.f === "other" ? <p className="m-0 -my-1 text-[13px] text-mute">다른 반 아이는 이름과 반만 볼 수 있어요.</p> : null}
 
@@ -503,22 +523,32 @@ export default async function ChildrenPage({ searchParams }: PageProps<"/staff/c
       </ul>
       {anyFlag ? <p className="m-0 text-[12px] leading-[18px] text-mute lg:hidden">빨간 점은 2주 넘게 결석, 파란 점은 새 고민이 있다는 표시예요.</p> : null}
 
-      {/* wide screens */}
-      <div className="hidden grid-cols-[minmax(0,1fr)_304px] items-start gap-3.5 lg:grid">
-        <Card>{shown.length > 0 ? <KidTable kids={shown} stats={stats} v={v} /> : <EmptyNote>{v.onlyNew ? "새로 가입한 아이가 없어요." : "찾는 아이가 없어요."}</EmptyNote>}</Card>
-        {panel ? (
-          <SidePanel c={panel} st={stats.get(panel.id)} homeroom={panelHomeroom} v={v} />
-        ) : (
-          <Box>
-            <p className="m-0 py-6 text-center text-[13px] leading-[1.5] whitespace-pre-line text-mute">{v.id !== null ? "이 아이의 정보는 볼 수 없어요." : kind === "none" ? "이름과 반만 볼 수 있어요." : "표에서 아이 이름을 누르면\n여기에 정보가 열려요."}</p>
-          </Box>
-        )}
+      {/* wide screens: the table across the page; a child's summary opens beside it. */}
+      <div className={`hidden items-start gap-5 lg:grid ${v.id !== null ? "grid-cols-[minmax(0,1fr)_320px]" : "grid-cols-1"}`}>
+        <div className="flex min-w-0 flex-col gap-3">
+          <Card>{shown.length > 0 ? <KidTable kids={shown} stats={stats} v={v} /> : <EmptyNote>{v.onlyNew ? "새로 가입한 아이가 없어요." : "찾는 아이가 없어요."}</EmptyNote>}</Card>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-staff-line bg-white px-5 py-3 shadow-[0_1px_2px_rgba(17,24,39,0.04)]">
+            <span className="text-[14px] text-sub">
+              <b className="text-ink">{shown.length}명</b>을 보고 있어요
+            </span>
+            <AttendanceLegend />
+            <span className="grow" />
+            {isAdmin ? (
+              <Link href={href(v, { inactive: !v.inactive, id: null })} className="inline-flex min-h-9 items-center text-[14px] font-semibold text-staff no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
+                {v.inactive ? "명단에 있는 아이만 보기" : "명단에서 뺀 아이도 보기"}
+              </Link>
+            ) : null}
+          </div>
+        </div>
+        {panel ? <SidePanel c={panel} st={stats.get(panel.id)} homeroom={panelHomeroom} v={v} /> : v.id !== null ? <Box>
+            <p className="m-0 py-6 text-center text-[13px] leading-[1.5] text-mute">이 아이의 정보는 볼 수 없어요.</p>
+          </Box> : null}
       </div>
 
       {shown.length === 0 ? <div className="lg:hidden"><EmptyNote>{v.onlyNew ? "새로 가입한 아이가 없어요." : "찾는 아이가 없어요."}</EmptyNote></div> : null}
       {isAdmin ? (
-        <p className="m-0 text-[13px]">
-          <Link href={href(v, { inactive: !v.inactive, id: null })} className="inline-flex h-11 items-center font-bold text-navy">
+        <p className="m-0 text-[13px] lg:hidden">
+          <Link href={href(v, { inactive: !v.inactive, id: null })} className="inline-flex h-11 items-center font-bold text-staff">
             {v.inactive ? "명단에 있는 아이만 보기" : "명단에서 뺀 아이도 보기"}
           </Link>
         </p>

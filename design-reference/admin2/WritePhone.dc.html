@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>휴대폰 글쓰기</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+a{color:#3046d9}a:hover{color:#2236b8}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; background: #ffffff; color: #191f28; font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; font-size: 15px; line-height: 1.5; letter-spacing: -0.01em">
+  <header style="display: flex; align-items: center; gap: 6px; height: 60px; padding: 0 12px 0 6px; border-bottom: 1px solid #eef0f4">
+    <a href="HomePhone.dc.html" aria-label="닫기" style="display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; color: #191f28"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+    <h1 style="flex: 1; margin: 0; font-size: 17px; font-weight: 700">새 글</h1>
+    <button type="button" onClick="{{saveDraft}}" style="display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: #f2f4f8; font: inherit; font-size: 14.5px; font-weight: 600; color: #191f28">임시 저장 <span style="color: {{accent}}; font-weight: 700">{{drafts}}</span></button>
+    <button type="button" style="height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: {{accent}}; font: inherit; font-size: 14.5px; font-weight: 700; color: #ffffff">올리기</button>
+  </header>
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px 4px">
+    <div role="group" aria-label="올릴 곳" style="display: inline-flex; padding: 3px; border-radius: 12px; background: #f2f4f8">
+      <sc-for list="{{kinds}}" as="k" hint-placeholder-count="2">
+        <button type="button" aria-pressed="{{k.on}}" onClick="{{k.pick}}" style="height: 40px; padding: 0 16px; border: 0; border-radius: 9px; background: {{k.bg}}; font: inherit; font-size: 14.5px; font-weight: {{k.weight}}; color: {{k.color}}; box-shadow: {{k.shadow}}">{{k.label}}</button>
+      </sc-for>
+    </div>
+    <span style="font-size: 12.5px; color: #6b7684">{{savedText}}</span>
+  </div>
+
+  <div style="padding: 4px 16px 0">
+    <label for="m-title" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">제목</label>
+    <input id="m-title" type="text" value="{{title}}" onChange="{{onTitle}}" placeholder="제목을 써 주세요" style="box-sizing: border-box; width: 100%; height: 56px; padding: 0; border: 0; border-bottom: 1px solid #eef0f4; background: transparent; font: inherit; font-size: 21px; font-weight: 700; letter-spacing: -0.03em; color: #191f28">
+  </div>
+
+  <div style="flex: 1; min-height: 0; padding: 14px 16px 0">
+    <label for="m-body" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">내용</label>
+    <textarea id="m-body" value="{{body}}" onChange="{{onBody}}" placeholder="아이들에게 전할 이야기를 써 주세요" style="box-sizing: border-box; display: block; width: 100%; height: 100%; padding: 0; border: 0; resize: none; background: transparent; font: inherit; font-size: 16px; line-height: 1.75; color: #191f28"></textarea>
+  </div>
+
+  <div style="display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto">
+    <sc-for list="{{photos}}" as="p" hint-placeholder-count="2">
+      <div style="position: relative; flex: none; width: 80px; height: 80px; border-radius: 12px; background: {{p.bg}}; display: grid; place-items: center; color: {{p.fg}}; font-size: 12.5px; font-weight: 600">
+        {{p.label}}
+        <sc-if value="{{p.first}}" hint-placeholder-val="{{false}}"><span style="position: absolute; left: 4px; bottom: 4px; padding: 0 6px; border-radius: 6px; background: {{accent}}; color: #ffffff; font-size: 11px; font-weight: 700; line-height: 18px">대표</span></sc-if>
+      </div>
+    </sc-for>
+    <button type="button" onClick="{{addPhoto}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; flex: none; width: 80px; height: 80px; box-sizing: border-box; border: 1.5px dashed #b8c0cc; border-radius: 12px; background: #fafbfc; font: inherit; font-size: 12.5px; font-weight: 700; color: {{accent}}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>사진 더하기</button>
+  </div>
+
+  <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0 16px; padding: 0 12px; border-radius: 10px; background: #f6f7fa; font-size: 14px">
+    <input type="checkbox" checked="{{consent}}" onChange="{{toggleConsent}}" style="width: 20px; height: 20px; margin: 0; accent-color: {{accent}}">
+    사진에 나온 아이 모두 사진 동의를 받았어요
+  </label>
+
+  <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 16px">
+    <span style="flex: 1; font-size: 14.5px; font-weight: 600">댓글 받기</span>
+    <button type="button" role="switch" aria-checked="{{comments}}" aria-label="댓글 받기" onClick="{{toggleComments}}" style="position: relative; flex: none; width: 52px; height: 32px; border: 0; border-radius: 16px; background: {{switchBg}}">
+      <span aria-hidden="true" style="position: absolute; top: 4px; left: {{knobLeft}}; width: 24px; height: 24px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(17, 24, 39, 0.25)"></span>
+    </button>
+  </div>
+
+  <div role="toolbar" aria-label="글 꾸미기" style="display: flex; align-items: center; gap: 2px; height: 56px; padding: 0 8px; background: #f7f8fb; border-top: 1px solid #eef0f4">
+    <button type="button" aria-label="사진 넣기" style="display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: {{accent}}"><svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 4.5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2ZM9 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 1 0 0-3M20.5 15.5l-5-5-9 9"></path></svg></button>
+    <button type="button" style="height: 44px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14.5px; font-weight: 800; color: #191f28">굵게</button>
+    <button type="button" style="height: 44px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14.5px; color: #191f28">큰 글씨</button>
+    <button type="button" style="height: 44px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14.5px; color: #191f28">구분선</button>
+    <span style="flex: 1"></span>
+    <span style="padding-right: 8px; font-size: 12.5px; color: #6b7684; font-variant-numeric: tabular-nums">{{count}} / 2000자</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3046d9","options":["#3046d9","#0b1fa6","#5b5fe0","#1b64da"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      kind: '숲 소식',
+      title: '추수감사주일에 과일 바구니를 만들었어요',
+      body: '반마다 과일 바구니를 하나씩 만들었어요.\n예배가 끝나고 이웃 어르신들께 가져다 드렸답니다.\n\n함께해 준 친구들 고마워요!',
+      comments: true,
+      consent: true,
+      photos: [['바구니', '#fcefd0', '#7a4a00'], ['단체 사진', '#dcf2e5', '#1d6b3a']],
+      drafts: 2,
+      saved: '11:42 저장됨',
+    };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#3046d9';
+    const s = this.state;
+    const extra = [['교회 마당', '#e3e9fd', '#2a3cae'], ['포장하기', '#fce4ec', '#a1264f'], ['과일 고르기', '#ebe5fb', '#5534b8']];
+    return {
+      accent,
+      drafts: s.drafts,
+      savedText: s.saved,
+      saveDraft: () => this.setState({ drafts: s.drafts + 1, saved: '방금 저장됨' }),
+      kinds: ['숲 소식', '공지'].map((label) => {
+        const on = s.kind === label;
+        return { label, on, bg: on ? '#ffffff' : 'transparent', color: on ? '#191f28' : '#4e5968', weight: on ? 700 : 500, shadow: on ? '0 1px 3px rgba(17, 24, 39, 0.12)' : 'none', pick: () => this.setState({ kind: label }) };
+      }),
+      title: s.title,
+      body: s.body,
+      onTitle: (e) => this.setState({ title: e.target.value }),
+      onBody: (e) => this.setState({ body: e.target.value }),
+      count: s.body.length,
+      photos: s.photos.map(([label, bg, fg], i) => ({ label, bg, fg, first: i === 0 })),
+      addPhoto: () => {
+        if (s.photos.length >= 10) return;
+        this.setState({ photos: s.photos.concat([extra[(s.photos.length - 2 + extra.length) % extra.length]]) });
+      },
+      consent: s.consent,
+      toggleConsent: () => this.setState({ consent: !s.consent }),
+      comments: s.comments,
+      toggleComments: () => this.setState({ comments: !s.comments }),
+      switchBg: s.comments ? accent : '#c9cfd8',
+      knobLeft: s.comments ? '24px' : '4px',
+    };
+  }
+}
+</script>
+</body>
+</html>

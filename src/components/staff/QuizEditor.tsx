@@ -13,8 +13,8 @@ import { ErrorText, HintText, SelectInput, inputBoxClass, textareaBoxClass } fro
 
 type Draft = QuizQuestion & { key: number };
 
-const smallButton = "flex h-11 min-w-11 cursor-pointer items-center justify-center rounded-[10px] border-0 bg-fill px-2.5 text-[13px] font-bold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-default disabled:text-faint";
-const addButton = "flex h-11 w-full cursor-pointer items-center justify-center rounded-xl border-[1.5px] border-dashed border-[#b0b8c1] bg-transparent text-[14px] font-bold text-sub focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
+const smallButton = "flex h-11 min-w-11 cursor-pointer items-center justify-center rounded-[10px] border-0 bg-fill px-2.5 text-[13px] font-bold text-ink2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff disabled:cursor-default disabled:text-faint";
+const addButton = "flex h-11 w-full cursor-pointer items-center justify-center rounded-xl border-[1.5px] border-dashed border-[#b0b8c1] bg-transparent text-[14px] font-bold text-sub focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff";
 
 const blank = (key: number): Draft => ({ key, q: "", choices: ["", ""], answer: 0 });
 
@@ -78,7 +78,7 @@ export function QuizEditor({ initial, initialPass, error }: { initial: QuizQuest
               <div key={ci} className="flex flex-wrap items-center gap-x-1">
                 <label className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center max-[339px]:w-9">
                   <input type="radio" name={`quiz-answer-${d.key}`} checked={d.answer === ci} onChange={() => change(d.key, (x) => ({ ...x, answer: ci }))} className="peer sr-only" />
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#b0b8c1] bg-white text-[13px] font-bold text-white peer-checked:border-navy peer-checked:bg-navy peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#b0b8c1] bg-white text-[13px] font-bold text-white peer-checked:border-staff peer-checked:bg-staff peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-staff">
                     ✓
                   </span>
                   <span className="sr-only">
@@ -100,7 +100,7 @@ export function QuizEditor({ initial, initialPass, error }: { initial: QuizQuest
                     className={inputBoxClass(same)}
                   />
                 </span>
-                {d.answer === ci ? <span className="shrink-0 px-1 text-[12px] font-bold text-navy">정답</span> : null}
+                {d.answer === ci ? <span className="shrink-0 px-1 text-[12px] font-bold text-staff">정답</span> : null}
                 {d.choices.length > QUIZ_MIN_CHOICES ? (
                   <button
                     type="button"

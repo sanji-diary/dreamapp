@@ -46,7 +46,7 @@ export function AdminHeader({
 
 /* ---------- tables (inside the kit's <Card>) ---------- */
 
-export const tableClass = "w-full border-collapse text-[13px]";
+export const tableClass = "w-full border-collapse text-[13px] lg:text-[14.5px]";
 
 interface CellLook {
   /** Numbers and switches sit in the middle of their column. */
@@ -62,9 +62,10 @@ interface CellLook {
   dim?: boolean;
 }
 
-export const thClass = ({ center = false, wrap = false }: CellLook = {}) => `border-b border-line px-2.5 py-[9px] text-[12px] font-medium text-mute ${center ? "text-center" : "text-left"} ${wrap ? "" : "whitespace-nowrap"}`;
+export const thClass = ({ center = false, wrap = false }: CellLook = {}) =>
+  `border-b border-line px-2.5 py-[9px] text-[12px] font-medium text-mute lg:h-12 lg:border-[#eef0f4] lg:px-3 lg:py-1 lg:text-[13px] lg:font-semibold lg:first:pl-[22px] lg:last:pr-[22px] ${center ? "text-center" : "text-left"} ${wrap ? "" : "whitespace-nowrap"}`;
 export const tdClass = ({ center = false, nowrap = false, tight = false, selected = false, dim = false }: CellLook = {}) =>
-  `border-b border-line px-2.5 ${tight ? "py-1" : "py-2.5"} ${center ? "text-center" : ""} ${nowrap ? "whitespace-nowrap" : ""} ${selected ? "bg-navy-tint" : ""} ${dim ? "opacity-60" : ""}`;
+  `border-b border-line px-2.5 lg:border-[#f1f3f6] lg:px-3 lg:first:pl-[22px] lg:last:pr-[22px] ${tight ? "py-1 lg:py-2" : "py-2.5 lg:py-3.5"} ${center ? "text-center" : ""} ${nowrap ? "whitespace-nowrap" : ""} ${selected ? "bg-staff-tint" : ""} ${dim ? "opacity-60" : ""}`;
 /** On a <tr>: the last row has no hairline under it. */
 export const rowClass = "[&:last-child>td]:border-b-0 [&:last-child>th]:border-b-0";
 
@@ -103,7 +104,7 @@ export const writeSplitClass = "grid min-w-0 grid-cols-[minmax(0,1fr)] items-sta
 export function ConfirmPill({ children, message, tone = "gray", name, value, label }: { children: ReactNode; message: string; tone?: "navy" | "gray" | "white"; name?: string; value?: string; label?: string }) {
   return (
     <ConfirmButton message={message} name={name} value={value} className="group flex h-11 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 outline-none lg:h-9">
-      <span className={`${pillClass(tone)} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy`}>
+      <span className={`${pillClass(tone)} group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff`}>
         {label ? (
           <>
             <span aria-hidden="true">{children}</span>
@@ -149,7 +150,7 @@ export function RowLink({ href, left, title, sub, right, selected = false }: { h
       href={href}
       scroll={false}
       aria-current={selected ? "true" : undefined}
-      className={`flex items-center gap-3 py-[13px] text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy ${selected ? "md:-mx-2.5 md:rounded-2xl md:bg-navy-tint md:px-2.5" : ""}`}
+      className={`flex items-center gap-3 py-[13px] text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-staff ${selected ? "md:-mx-2.5 md:rounded-2xl md:bg-staff-tint md:px-2.5" : ""}`}
     >
       {left ? <span className="flex shrink-0 max-[319px]:hidden">{left}</span> : null}
       <span className="flex min-w-0 grow flex-col">

@@ -44,14 +44,14 @@ export function DateJump({ date, today, query, round = false, id }: { date: stri
         ))}
       </select>
       {round ? (
-        <span aria-hidden="true" className="grid h-10 w-10 place-items-center rounded-full bg-fill text-ink2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy">
+        <span aria-hidden="true" className="grid h-10 w-10 place-items-center rounded-full bg-fill text-ink2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-staff">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
             <rect x="4" y="5.5" width="16" height="14.5" rx="3" />
             <path d="M8 3.5v4M16 3.5v4M4 10.5h16" />
           </svg>
         </span>
       ) : (
-        <span aria-hidden="true" className={`${barButtonClass()} peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy`}>
+        <span aria-hidden="true" className={`${barButtonClass()} peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-staff`}>
           다른 주일
         </span>
       )}

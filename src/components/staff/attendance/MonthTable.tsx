@@ -44,14 +44,14 @@ function CellMenu({ kid, col, entry, store, onClose }: { kid: MonthKid; col: Att
               autoFocus={b.status === (entry.status ?? "present")}
               aria-pressed={active}
               onClick={() => pick(b.status)}
-              className={`h-9 w-[52px] cursor-pointer rounded-[9px] border-0 text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${active ? b.on : "bg-fill font-semibold text-sub"}`}
+              className={`h-9 w-[52px] cursor-pointer rounded-[9px] border-0 text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff ${active ? b.on : "bg-fill font-semibold text-sub"}`}
             >
               {b.label}
             </button>
           );
         })}
         {entry.status !== null ? (
-          <button type="button" onClick={() => pick(null)} className="h-9 cursor-pointer rounded-[9px] border-0 bg-transparent px-2 text-[13px] font-semibold text-mute hover:bg-fill focus-visible:outline-2 focus-visible:outline-navy">
+          <button type="button" onClick={() => pick(null)} className="h-9 cursor-pointer rounded-[9px] border-0 bg-transparent px-2 text-[13px] font-semibold text-mute hover:bg-fill focus-visible:outline-2 focus-visible:outline-staff">
             지우기
           </button>
         ) : null}
@@ -76,7 +76,7 @@ function CellMenu({ kid, col, entry, store, onClose }: { kid: MonthKid; col: Att
               const v = ev.currentTarget.value.trim();
               if (v !== store.get(kid.id, col.date).note) store.save(kid.id, col.date, { status: "absent", note: v });
             }}
-            className="h-9 w-full rounded-[10px] border-0 bg-fill px-3 text-[13.5px] text-ink placeholder:text-faint focus-visible:outline-2 focus-visible:outline-navy"
+            className="h-9 w-full rounded-[10px] border-0 bg-fill px-3 text-[13.5px] text-ink placeholder:text-faint focus-visible:outline-2 focus-visible:outline-staff"
           />
         </>
       ) : null}
@@ -152,7 +152,7 @@ export function MonthTable({ date, kids, columns, store, showClass, total, side 
                         href={c.href}
                         scroll={false}
                         aria-current={on ? "date" : undefined}
-                        className={`inline-block rounded-lg px-1.5 py-0.5 no-underline focus-visible:outline-2 focus-visible:outline-navy ${on ? "bg-navy-tint font-bold text-navy" : "text-mute hover:bg-fill"}`}
+                        className={`inline-block rounded-lg px-1.5 py-0.5 no-underline focus-visible:outline-2 focus-visible:outline-staff ${on ? "bg-staff-tint font-bold text-staff" : "text-mute hover:bg-fill"}`}
                       >
                         {words}
                       </Link>
@@ -170,7 +170,7 @@ export function MonthTable({ date, kids, columns, store, showClass, total, side 
           </thead>
           <tbody>
             {kids.map((k) => {
-              const td = `border-b border-line py-1.5 ${open?.id === k.id ? "bg-navy-tint" : ""}`;
+              const td = `border-b border-line py-1.5 ${open?.id === k.id ? "bg-staff-tint" : ""}`;
               const notes = columns.map((c) => ({ c, e: store.get(k.id, c.date) })).filter((x) => x.e.status === "absent" && x.e.note);
               const n = counted(k).length;
               return (
@@ -195,7 +195,7 @@ export function MonthTable({ date, kids, columns, store, showClass, total, side 
                             aria-expanded={isOpen}
                             aria-label={`${k.name} ${c.md} ${e.status ? WORD[e.status] : "기록 없음"}, 고치기`}
                             onClick={() => setOpen(isOpen ? null : { id: k.id, date: c.date })}
-                            className={`h-9 min-w-[46px] cursor-pointer rounded-lg border-0 px-1 text-[13px] font-bold focus-visible:outline-2 focus-visible:outline-navy ${isOpen ? "bg-white" : "bg-transparent hover:bg-fill"} ${e.status ? TONE[e.status] : "text-faint"}`}
+                            className={`h-9 min-w-[46px] cursor-pointer rounded-lg border-0 px-1 text-[13px] font-bold focus-visible:outline-2 focus-visible:outline-staff ${isOpen ? "bg-white" : "bg-transparent hover:bg-fill"} ${e.status ? TONE[e.status] : "text-faint"}`}
                           >
                             {e.status ? WORD[e.status] : "·"}
                           </button>
@@ -230,7 +230,7 @@ export function MonthTable({ date, kids, columns, store, showClass, total, side 
         </table>
         <p className="m-0 px-2.5 py-2 text-[13px] text-mute">
           칸을 누르면 출석, 지각, 결석을 고칠 수 있어요. 아직 오지 않은 주일은 비어 있어요.
-          <span aria-live="polite" className={`ml-1.5 font-semibold ${store.message?.error ? "text-danger" : "text-navy"}`}>
+          <span aria-live="polite" className={`ml-1.5 font-semibold ${store.message?.error ? "text-danger" : "text-staff"}`}>
             {store.busy > 0 ? "저장 중" : (store.message?.text ?? (store.done ? "저장했어요" : ""))}
           </span>
         </p>

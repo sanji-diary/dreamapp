@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { ForestBanner, ForestScene, type ForestTree } from "@/components/staff/Forest";
-import { BarLink, Box, ClayIcon, EmptyNote, Kpi, LineIcon, List, ListRow, Page, PageHeader, PillLink, ProgressBar, SectionHead, Tag, TeacherAvatar, pageColumn } from "@/components/staff/kit";
+import { rowClass, tableClass, tdClass, thClass } from "@/components/staff/admin-kit";
+import { ForestScene, type ForestTree } from "@/components/staff/Forest";
+import { BarLink, ClayIcon, EmptyNote, Kpi, LineIcon, List, ListRow, Page, PageHeader, PillLink, ProgressBar, SectionHead, Tag, TeacherAvatar, barButtonClass, pageColumn } from "@/components/staff/kit";
 import { requireStaff } from "@/lib/auth";
-import { recentNotices, type NoticeRow } from "@/lib/staff/admin-misc";
-import { forestLevel, homeData, pickTrees, type HomeData, type Totals, type WeekRef } from "@/lib/staff/home";
+import { listPosts, recentNotices, type NoticeRow, type PostRow } from "@/lib/staff/admin-misc";
+import { attendanceTrend, forestLevel, homeData, pickTrees, type HomeData, type SundayCount, type Totals, type WeekRef } from "@/lib/staff/home";
 import { OVERDUE_DAYS } from "@/lib/staff/review";
 import { shortDate } from "@/lib/staff/util";
 import { openEvent } from "@/lib/talents";
-import { formatKoreanDate, todayKst, weekLabel } from "@/lib/time";
+import { formatKoreanDate, todayKst } from "@/lib/time";
 import type { WorryAudience } from "@/lib/types";
 
 export const metadata = { title: "교사 홈 · 꿈의숲키우기" };
@@ -125,7 +126,7 @@ function PastRows({ week, past, wide = false }: { week: WeekRef; past: Totals; w
 function WeekNav({ week, thisWeek, onGray = false }: { week: WeekRef; thisWeek: string; onGray?: boolean }) {
   const href = (w: string) => (w === thisWeek ? "/staff" : `/staff?w=${w}`);
   const box = "group grid h-11 w-11 place-items-center outline-none";
-  const dot = `grid h-8 w-8 place-items-center rounded-full text-sub group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy ${onGray ? "bg-white" : "bg-fill"}`;
+  const dot = `grid h-8 w-8 place-items-center rounded-full text-sub group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff ${onGray ? "bg-white" : "bg-fill"}`;
   return (
     <div className="-mr-1.5 flex shrink-0 items-center">
       {week.prev ? (
@@ -155,7 +156,7 @@ function WeekNav({ week, thisWeek, onGray = false }: { week: WeekRef; thisWeek: 
 /** Shown to every teacher, but only while a 달란트 잔치 is open. */
 function FestivalBanner({ name }: { name: string }) {
   return (
-    <Link href="/staff/festival" className="flex min-h-[72px] items-center gap-3 rounded-[20px] bg-navy px-4 py-3 text-white no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy">
+    <Link href="/staff/festival" className="flex min-h-[72px] items-center gap-3 rounded-[20px] bg-staff px-4 py-3 text-white no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
       <ClayIcon name="pouch" size="s" onWhite />
       <span className="flex min-w-0 grow flex-col">
         <b className="text-[16px] tracking-[-0.02em]">달란트 결제하기</b>
@@ -193,18 +194,144 @@ function Notices({ notices }: { notices: NoticeRow[] }) {
 function MeLink({ name }: { name: string }) {
   return (
     <Link href="/staff/more" aria-label="내 정보" className="group -mt-0.5 -mr-0.5 grid h-11 w-11 shrink-0 place-items-center no-underline outline-none">
-      <span className="rounded-full shadow-[0_2px_10px_rgba(25,31,40,0.1)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-navy">
+      <span className="rounded-full shadow-[0_2px_10px_rgba(25,31,40,0.1)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-staff">
         <TeacherAvatar name={name} size="round" onWhite />
       </span>
     </Link>
   );
 }
 
+/** The white card of the wide screens. */
+const cardClass = "flex flex-col rounded-2xl border border-staff-line bg-white shadow-[0_1px_2px_rgba(17,24,39,0.04)]";
+
+/**
+ * 주일 출석 over the last eight Sundays, one bar each; the latest is drawn in the accent, the others
+ * lighter. Pointing at a bar shows its date and count; the same numbers are in a table for screen readers.
+ */
+function AttendanceChart({ trend, kids }: { trend: SundayCount[]; kids: number }) {
+  const top = Math.max(10, Math.ceil(Math.max(kids, ...trend.map((w) => w.present)) / 10) * 10);
+  const H = 176;
+  const marked = trend.filter((w) => w.recorded > 0);
+  const avg = marked.length > 0 ? Math.round((marked.reduce((n, w) => n + w.present, 0) / marked.length) * 10) / 10 : null;
+  const best = marked.reduce<SundayCount | null>((b, w) => (b === null || w.present > b.present ? w : b), null);
+  const last = trend.length - 1;
+  return (
+    <section aria-labelledby="trend-h" className={`${cardClass} min-w-0 grow-[2] basis-0 gap-3.5 px-[22px] pt-[18px] pb-[18px]`}>
+      <div className="flex flex-wrap items-baseline gap-x-2.5">
+        <h2 id="trend-h" className="m-0 text-[18px] font-bold tracking-[-0.02em]">
+          주일 출석 · 최근 8주
+        </h2>
+        <span className="text-[13.5px] text-mute">지금 반에 있는 아이 {kids}명</span>
+      </div>
+      <div aria-hidden="true" className="relative flex gap-2 pl-7" style={{ height: H + 52 }}>
+        <div className="pointer-events-none absolute inset-x-0" style={{ top: 24, height: H }}>
+          {[top / 2, top].map((v) => (
+            <div key={v} className="absolute inset-x-0 flex items-center gap-1.5" style={{ bottom: Math.round((v / top) * H) - 6 }}>
+              <span className="w-[22px] text-right text-[11.5px] text-mute">{v}</span>
+              <span className="h-px grow bg-[#f0f2f6]" />
+            </div>
+          ))}
+        </div>
+        {trend.map((w, i) => {
+          const h = w.recorded > 0 ? Math.max(2, Math.round((w.present / top) * H)) : 0;
+          const [, m, dd] = w.week.split("-");
+          return (
+            <div key={w.week} className="group relative flex min-w-0 flex-1 flex-col">
+              <div className="relative flex flex-col items-center justify-end" style={{ height: H + 24 }}>
+                {i === last && w.recorded > 0 ? <span className="mb-1 text-[12.5px] font-bold text-ink group-hover:invisible">{w.present}명</span> : null}
+                <span className={`w-full max-w-[34px] rounded-t ${i === last ? "bg-staff" : "bg-staff/30 group-hover:bg-staff/50"}`} style={{ height: h }} />
+                <span className="absolute left-1/2 z-[2] hidden -translate-x-1/2 rounded-lg bg-ink px-2.5 py-1.5 text-[12.5px] whitespace-nowrap text-white shadow-[0_6px_16px_rgba(17,24,39,0.2)] group-hover:block" style={{ bottom: h + 8 }}>
+                  {Number(m)}월 {Number(dd)}일 · <b>{w.recorded > 0 ? `${w.present}명` : "기록 없음"}</b>
+                </span>
+              </div>
+              <span className="h-px bg-[#d5dae2]" />
+              <span className={`pt-1.5 text-center text-[12px] whitespace-nowrap ${i === last ? "font-bold text-ink" : "text-mute"}`}>
+                {Number(m)}.{Number(dd)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <table className="sr-only">
+        <caption>주일 출석 · 최근 8주</caption>
+        <tbody>
+          {trend.map((w) => (
+            <tr key={w.week}>
+              <th scope="row">{formatKoreanDate(w.week)}</th>
+              <td>{w.recorded > 0 ? `${w.present}명` : "기록 없음"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="m-0 border-t border-[#f1f3f6] pt-3 text-[13.5px] text-sub">
+        {avg === null || best === null ? (
+          "아직 출석 기록이 없어요"
+        ) : (
+          <>
+            기록한 주일 평균 <b className="text-ink">{avg}명</b> · 가장 많이 온 날은 {shortDate(best.week)} <b className="text-ink">{best.present}명</b>이에요
+          </>
+        )}
+      </p>
+    </section>
+  );
+}
+
+/** Admins: the three newest 숲 소식 posts. */
+function RecentPosts({ posts }: { posts: PostRow[] }) {
+  return (
+    <section aria-labelledby="post-h" className={cardClass}>
+      <div className="flex min-h-[58px] items-center gap-2.5 px-[22px] pt-3">
+        <h2 id="post-h" className="m-0 grow text-[18px] font-bold tracking-[-0.02em]">
+          최근 올린 글
+        </h2>
+        <Link href="/staff/admin/posts" className="inline-flex min-h-9 items-center gap-0.5 text-[14px] font-semibold text-staff no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
+          글 목록
+          <LineIcon name="next" size={15} />
+        </Link>
+      </div>
+      {posts.length === 0 ? (
+        <EmptyNote>아직 올린 글이 없어요.</EmptyNote>
+      ) : (
+        <ul className="m-0 flex list-none flex-col p-0 px-2.5 pb-2.5">
+          {posts.slice(0, 3).map((p) => (
+            <li key={p.id}>
+              <Link href={`/staff/admin/posts?edit=${p.id}`} className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 text-ink no-underline hover:bg-staff-canvas focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-staff">
+                {p.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img alt="" src={p.image_url} className="h-[60px] w-[60px] shrink-0 rounded-xl object-cover" />
+                ) : (
+                  <span aria-hidden="true" className="grid h-[60px] w-[60px] shrink-0 place-items-center rounded-xl bg-[#f2f4f8] text-mute">
+                    <LineIcon name="list" size={22} stroke={1.7} />
+                  </span>
+                )}
+                <span className="flex min-w-0 grow flex-col gap-0.5">
+                  <b className="truncate text-[15px] font-semibold">{firstLine(p.body)}</b>
+                  <span className="text-[13px] text-mute">{p.created_on ? `${shortDate(p.created_on)} 올림` : "올린 날 모름"}</span>
+                  <span className="text-[13px] text-sub">
+                    좋아요 {p.likes} · {p.comments_open ? `댓글 ${p.comments.length}` : "댓글 받지 않음"}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** The first line of a post, for lists. */
+function firstLine(body: string): string {
+  const line = body.split("\n").find((l) => l.trim()) ?? "";
+  return line.trim().slice(0, 60);
+}
+
 export default async function StaffHome({ searchParams }: PageProps<"/staff">) {
   const staff = await requireStaff();
   const sp = await searchParams;
   const today = todayKst();
-  const [d, notices, festival] = await Promise.all([homeData(staff, { week: sp.w, today }), recentNotices(), openEvent()]);
+  const [d, notices, festival, posts] = await Promise.all([homeData(staff, { week: sp.w, today }), recentNotices(), openEvent(), staff.role === "admin" ? listPosts(staff) : null]);
+  const trend = await attendanceTrend(staff, d.thisWeek);
   const items = todos(d, d.thisWeek === today);
   const teacher = `${staff.name} 선생님`;
 
@@ -248,14 +375,13 @@ export default async function StaffHome({ searchParams }: PageProps<"/staff">) {
   const classTrees: ForestTree[] = d.classes.map((c) => ({ key: c.id, level: forestLevel(c.drops, d.classGoal), label: `${c.short} · ${c.drops}` }));
   const kidTrees: ForestTree[] = pickTrees(d.kidTrees).map((k) => ({ key: k.id, level: k.level, label: k.name }));
   const phoneTrees = all ? pickTrees(classTrees) : kidTrees;
-  const bannerTrees = all ? classTrees.slice(0, 8) : kidTrees;
   const left = Math.max(0, d.goal - d.totals.drops);
   const dropsLine = d.goal === 0 ? "아직 반이 없어요" : left > 0 ? `이번 주 목표까지 ${left}개 남았어요` : "이번 주 목표를 채웠어요!";
   const attLine = d.totals.recorded > 0 ? `${d.totals.kids}명 중 ${d.totals.present}명` : "아직 안 했어요";
   const missionLine = d.pending.total > 0 ? `${d.pending.total}건 기다려요` : "모두 확인했어요";
   const phoneItems = items.filter((t) => !t.wideOnly);
   const weekTitle = d.week.current ? `${d.week.label} 할 일` : `${d.week.label} 돌아보기`;
-  const tileClass = "relative flex min-h-[88px] flex-col rounded-[18px] bg-fill p-3.5 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
+  const tileClass = "relative flex min-h-[88px] flex-col rounded-[18px] bg-fill p-3.5 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff";
   // The clay picture sits in the corner of each tile; on a folded cover screen there is no room beside the words, so it is left out.
   const tileIcon = "absolute right-2.5 bottom-2.5 h-[42px] w-[42px] object-contain max-[359px]:hidden";
   const attTile = (
@@ -330,60 +456,146 @@ export default async function StaffHome({ searchParams }: PageProps<"/staff">) {
         ) : null}
       </div>
 
-      {/* ---------- wide screens ---------- */}
-      <div className="hidden flex-col gap-4 px-4 pt-3 lg:flex">
-        <header className="flex items-center gap-2.5">
-          <h1 className="m-0 grow text-[22px] font-bold tracking-[-0.035em]">대시보드</h1>
-          <form action="/staff/children" method="get" role="search" className="flex h-[38px] w-60 items-center gap-2 rounded-full bg-fill px-3.5 text-faint focus-within:outline-2 focus-within:outline-navy">
-            <LineIcon name="search" size={17} />
-            <label htmlFor="dash-q" className="sr-only">
-              아이 이름 찾기
-            </label>
-            <input id="dash-q" name="q" type="search" placeholder="아이 이름 찾기" enterKeyHint="search" className="h-full min-w-0 grow border-0 bg-transparent p-0 text-[13.5px] text-ink outline-none placeholder:text-faint" />
-          </form>
-          {staff.role === "admin" ? (
-            <BarLink href="/staff/admin/missions/new" tone="solid">
-              + 미션 만들기
-            </BarLink>
-          ) : null}
-        </header>
+      {/* ---------- wide screens (design-reference/admin2/Main.dc.html) ---------- */}
+      <div className="hidden flex-col gap-5 lg:flex">
+        <PageHeader
+          title="홈"
+          sub={`${d.week.label} · ${formatKoreanDate(d.thisWeek)} 주일부터`}
+          right={
+            <span className="flex shrink-0 items-center gap-2.5">
+              {d.canAttend ? (
+                <BarLink href="/staff/attendance">
+                  <LineIcon name="check" size={18} />
+                  출석 체크
+                </BarLink>
+              ) : null}
+              {staff.role === "admin" ? (
+                <BarLink href="/staff/admin/posts/new" tone="solid">
+                  <LineIcon name="pen" size={18} />
+                  글쓰기
+                </BarLink>
+              ) : null}
+            </span>
+          }
+        />
         {festival ? <FestivalBanner name={festival.name} /> : null}
-        <ForestBanner trees={bannerTrees}>
-          <p className="m-0 mb-1.5 text-[13px] font-semibold text-sub">{weekLabel(d.thisWeek)}</p>
-          <p className="m-0 text-[22px] leading-[1.35] font-bold tracking-[-0.035em]">
-            {where} 숲이
-            <br />
-            자라고 있어요
-          </p>
-        </ForestBanner>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-4">
           <Kpi label="지난 주일 출석" value={d.totals.recorded > 0 ? `${d.totals.present} / ${d.totals.kids}` : "–"} note={attNote} tone={diff !== null && diff > 0 ? "blue" : undefined} href={d.canAttend ? "/staff/attendance" : undefined} />
+          <Kpi label="확인 기다리는 일" value={`${waiting}건`} note={waitingNote} tone={waiting > 0 ? "danger" : undefined} href="/staff/approvals" />
           <Kpi label="이번 주 미션 참여" value={`${d.participants.did}명`} note={`가입한 ${d.participants.joined}명 중`} />
-          <Kpi label="확인 기다리는 일" value={`${waiting}건`} note={waitingNote} href="/staff/approvals" />
           <Kpi label="장기 결석" value={`${d.absent.length}명`} note="2주 이상 연속" tone={d.absent.length > 0 ? "danger" : undefined} href="/staff/children?f=absent" />
         </div>
-        <div className="grid grid-cols-[1.45fr_1fr] items-start gap-3.5">
-          <Box>
-            <SectionHead right={<span className="text-[13px] text-mute">출석 · 물방울 목표 {d.classGoal}개</span>}>반별 현황</SectionHead>
-            {d.classes.map((c) => (
-              <div key={c.id} className="grid grid-cols-[78px_1fr_40px_1fr_30px] items-center gap-2.5 text-[13px]">
-                <b className="truncate">{c.name}</b>
-                <ProgressBar thin value={c.present} max={c.kids} label={`${c.name} 출석`} />
-                <span>{c.recorded > 0 ? `${c.present}/${c.kids}` : "–"}</span>
-                <ProgressBar thin soft value={c.drops} max={d.classGoal} label={`${c.name} 물방울`} />
-                <span>{c.drops}</span>
-              </div>
-            ))}
-            {d.classes.length === 0 ? <EmptyNote>아직 반이 없어요.</EmptyNote> : null}
-          </Box>
-          <Box tight>
-            <SectionHead right={<WeekNav onGray week={d.week} thisWeek={d.thisWeek} />}>
-              {d.week.current ? "처리할 일" : weekTitle}
-            </SectionHead>
-            {d.past ? <PastRows wide week={d.week} past={d.past} /> : items.length > 0 ? <TodoRows wide items={items} /> : <EmptyNote>지금 기다리는 일이 없어요. 수고하셨어요!</EmptyNote>}
-          </Box>
+        <div className="flex items-stretch gap-5">
+          <section aria-labelledby="todo-h" className={`${cardClass} min-w-0 grow-[3] basis-0`}>
+            <div className="flex min-h-[58px] items-center gap-2.5 px-[22px] pt-3">
+              <h2 id="todo-h" className="m-0 text-[18px] font-bold tracking-[-0.02em]">
+                {d.week.current ? "지금 할 일" : weekTitle}
+              </h2>
+              {d.week.current && items.length > 0 ? <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[#fff0e5] px-2 text-[13px] font-bold text-badge">{items.length}</span> : null}
+              <span className="grow" />
+              <WeekNav week={d.week} thisWeek={d.thisWeek} />
+            </div>
+            <div className="px-2 pb-2">
+              {d.past ? (
+                <div className="px-3.5">
+                  <PastRows wide week={d.week} past={d.past} />
+                </div>
+              ) : items.length > 0 ? (
+                <ul className="m-0 flex list-none flex-col p-0">
+                  {items.map((t) => (
+                    <li key={t.key} className="flex min-h-[72px] items-center gap-3.5 border-t border-[#f1f3f6] px-3.5 py-2.5">
+                      <ClayIcon name={t.icon} size="xs" />
+                      <span className="flex min-w-0 grow flex-col leading-[1.4]">
+                        <b className="text-[15px] tracking-[-0.02em]">{t.title}</b>
+                        <span className="text-[13.5px] text-sub">{t.sub}</span>
+                      </span>
+                      <Link href={t.href} prefetch={t.prefetch} aria-label={`${t.title} ${t.action}`} className={barButtonClass("ghost")}>
+                        {t.action}
+                        <LineIcon name="next" size={15} className="text-mute" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyNote>지금 기다리는 일이 없어요. 수고하셨어요!</EmptyNote>
+              )}
+            </div>
+          </section>
+          <AttendanceChart trend={trend} kids={d.totals.kids} />
         </div>
-        <Notices notices={notices} />
+        <div className="flex items-start gap-5">
+          <section aria-labelledby="cls-h" className={`${cardClass} min-w-0 grow-[3] basis-0`}>
+            <div className="flex min-h-[58px] items-center gap-2.5 px-[22px] pt-3">
+              <h2 id="cls-h" className="m-0 grow text-[18px] font-bold tracking-[-0.02em]">
+                반별 현황
+              </h2>
+              {staff.role === "admin" ? (
+                <Link href="/staff/admin/classes" className="inline-flex min-h-9 items-center gap-0.5 text-[14px] font-semibold text-staff no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff">
+                  반 편성
+                  <LineIcon name="next" size={15} />
+                </Link>
+              ) : null}
+            </div>
+            {d.classes.length === 0 ? (
+              <EmptyNote>아직 반이 없어요.</EmptyNote>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className={tableClass}>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={thClass()}>
+                        반
+                      </th>
+                      <th scope="col" className={thClass()}>
+                        이번 주 출석
+                      </th>
+                      <th scope="col" className={thClass()}>
+                        물방울 <span className="font-medium">· 목표 {d.classGoal}개</span>
+                      </th>
+                      <th scope="col" className={thClass({ center: true })}>
+                        확인 끝난 미션
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.classes.map((c) => (
+                      <tr key={c.id} className={rowClass}>
+                        <th scope="row" className={`${tdClass({ nowrap: true })} text-left font-semibold`}>
+                          {c.name}
+                        </th>
+                        <td className={tdClass()}>
+                          <span className="flex items-center gap-2.5">
+                            <span className="w-[88px]">
+                              <ProgressBar thin value={c.present} max={c.kids} label={`${c.name} 출석`} />
+                            </span>
+                            <span className="whitespace-nowrap text-ink2">{c.recorded > 0 ? `${c.present} / ${c.kids}명` : "체크 전"}</span>
+                          </span>
+                        </td>
+                        <td className={tdClass()}>
+                          <span className="flex items-center gap-2.5">
+                            <span className="w-[88px]">
+                              <ProgressBar thin soft value={c.drops} max={d.classGoal} label={`${c.name} 물방울`} />
+                            </span>
+                            <span className="whitespace-nowrap text-ink2">{c.drops}개</span>
+                          </span>
+                        </td>
+                        <td className={tdClass({ center: true })}>{c.approved}건</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+          <div className="flex min-w-0 grow-[2] basis-0 flex-col gap-5">
+            {posts ? <RecentPosts posts={posts} /> : null}
+            {notices.length > 0 ? (
+              <section className={`${cardClass} px-[22px] pt-3 pb-2`}>
+                <Notices notices={notices} />
+              </section>
+            ) : null}
+          </div>
+        </div>
       </div>
     </Page>
   );
