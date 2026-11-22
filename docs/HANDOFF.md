@@ -10,6 +10,7 @@
 - 실제 서비스: https://dreamforest-level-up.vercel.app (아이 화면), `/staff` (교사·관리자 화면)
 - 작업 가지: `claude/zealous-carson-axtlbt`. 이 가지에 올리면 Vercel이 자동으로 배포합니다.
 - 서버는 Vercel 도쿄(hnd1), 데이터베이스는 Supabase(ap-northeast-1). 마이그레이션은 `migrations/`의 SQL이 순서대로 자동 적용됩니다.
+- 모든 표에 Supabase 보안 잠금(RLS)이 켜져 있고(`migrations/008_rls.sql`), Supabase REST API의 공개 역할(anon, authenticated)은 표에 접근하지 못합니다. 앱은 표 주인(`postgres`)으로 접속하므로 영향이 없습니다. **표를 새로 만드는 마이그레이션에는 `alter table ... enable row level security`를 꼭 넣습니다**(빠뜨리면 `test/rls.test.ts`가 실패).
 
 ## 로컬에서 실행
 
@@ -91,6 +92,12 @@ PGLITE_DIR=memory DREAM_SEED=off npx next build
 3. 실제 기기 확인(전도사님이 직접): 갤럭시 폴드, 아이폰 홈 화면 아이콘, 키보드가 입력 칸을 가리는지, 카카오톡 안 브라우저, 카메라로 QR 찍기.
 4. **관리자 화면 두 번째 시안의 남은 부분**: 화면 모양은 바꿨고, 시안에 있지만 아직 없는 기능은 따로 만들어야 함. 글 제목, 사진 여러 장, 임시 저장과 날짜 정해 올리기, 글 꾸미기(굵게·큰 글씨·구분선·링크), 글 여러 개 한꺼번에 지우기·찾기, 교적부에서 보호자에게 전화·문자, 반 편성 화면에서 담임 바꾸기, 휴대폰 관리 홈 시안(지금은 숲 그림 홈 그대로).
 5. 작은 것: 새로 가입한 아이가 14일 동안 목록에 남는 것, 컴퓨터 화면에서 포인트 조정 위치, 푸시 알림(보류), 실제 아이 정보를 넣기 전에 Supabase 유료 요금제 검토.
+
+## 시험 데이터 지우기
+
+실제 서비스를 처음 상태로 되돌릴 때는 `tools/reset/reset-keep-admin.sql`을 Supabase SQL 편집기에서 실행합니다.
+관리자 계정과 기본 설정만 남고 나머지는 모두 지워집니다(되돌릴 수 없음). 자세한 것은 `tools/reset/README.md`.
+앱에 표를 새로 만들면 이 파일의 지우는 목록에도 넣어야 합니다(빠뜨리면 스크립트가 멈추고, 테스트도 실패함).
 
 ## 확인 도구
 
