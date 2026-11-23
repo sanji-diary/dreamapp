@@ -58,7 +58,8 @@ export type WinResult = CompleteResult | { ok: false; reason: "bad" | "too_fast"
 export async function winGame(childId: number, missionId: number, token: unknown, now: number = Date.now(), date: string = todayKst()): Promise<WinResult> {
   if (!Number.isInteger(missionId)) return { ok: false, reason: "not_found" };
   const m = (await missionsForChild(db, childId, date)).find((x) => x.id === missionId);
-  if (!m || m.kind !== "game" || !findGame(m.game_id)) return { ok: false, reason: "not_found" };
+  // A start token proves nothing for a game that runs on its own server: that one is checked there (hosted-game.ts).
+  if (!m || m.kind !== "game" || findGame(m.game_id)?.host !== "local") return { ok: false, reason: "not_found" };
   if (m.state !== "available") return { ok: false, reason: "already_done" };
   const t = await checkGameToken(token, childId, missionId, now);
   if (!t.ok) return t;

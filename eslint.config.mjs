@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "design-reference/**",
     // Plain Node scripts that open the screens in a browser; not part of the app.
     "tools/**",
+    // Source of the mission games that run on their own game server; each has its own tests.
+    "games/**",
   ]),
 ]);
 

@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { missionsForChild } from "@/lib/game";
 import { findGame } from "@/games/registry";
 import { issueGameToken, winGame } from "./game-proof";
+import { catchUpGames, claimWin, type ClaimResult } from "./hosted-game";
 import { answerQuiz, startQuiz, type QuizFail } from "./quiz";
 
 /**
@@ -58,7 +59,7 @@ export type WinGameActionResult = { ok: false; message: string; token: string | 
 
 async function freshToken(childId: number, missionId: number): Promise<string | null> {
   const m = (await missionsForChild(db, childId)).find((x) => x.id === missionId);
-  if (!m || m.kind !== "game" || m.state !== "available" || !findGame(m.game_id)) return null;
+  if (!m || m.kind !== "game" || m.state !== "available" || findGame(m.game_id)?.host !== "local") return null;
   return issueGameToken(childId, m.id, m.game_id!);
 }
 
@@ -75,4 +76,25 @@ export async function winGameAction(missionId: number, token: string): Promise<W
 export async function gameTokenAction(missionId: number): Promise<string | null> {
   const kid = await requireKid();
   return freshToken(kid.id, Number(missionId));
+}
+
+/* ---------- games that run on their own game server (src/lib/kid/hosted-game.ts) ---------- */
+
+/**
+ * The game in the frame said it is finished, or the screen just asks whether it is. The launch must
+ * be the signed-in child's own; whether the game was really finished is asked of the game server.
+ */
+export async function claimGameAction(launchId: string, roundId?: string): Promise<ClaimResult> {
+  const kid = await requireKid();
+  const r = await claimWin(kid.id, launchId, roundId);
+  if (r.status === "awarded") revalidatePath("/missions");
+  return r;
+}
+
+/** Looks for a finished game whose message never arrived. Returns the completion to show, if one was found. */
+export async function catchUpGamesAction(): Promise<number | null> {
+  const kid = await requireKid();
+  const r = await catchUpGames(kid.id);
+  if (r.completionId !== null) revalidatePath("/missions");
+  return r.completionId;
 }

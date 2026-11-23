@@ -92,7 +92,7 @@ export function MissionForm({
       {kind === "quiz" ? <QuizEditor initial={initial.quiz} initialPass={initial.quiz_pass} error={errorFor(error, /문제|통과 기준/)} /> : null}
       {kind === "game" ? (
         <div className={panelClass}>
-          <FieldGroup legend="어떤 게임인가요?" error={errorFor(error, /게임/)} hint="아이가 게임을 끝까지 하면 미션이 완료돼요. 시간을 재거나 순위를 매기지 않아요.">
+          <FieldGroup legend="어떤 게임인가요?" error={errorFor(error, /게임/)} hint="아이가 게임을 끝까지 하면 미션이 완료돼요. 순위는 매기지 않아요. 둘이 하는 게임은 두 아이가 각자 자기 휴대폰에서 이 미션을 열어야 해요.">
             <div className="flex flex-col gap-2">
               {games.map((g) => (
                 <label key={g.id} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border-2 border-transparent bg-white px-3.5 py-2 has-checked:border-staff has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-staff">

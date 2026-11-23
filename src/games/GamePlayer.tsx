@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type ComponentType } from "react";
 import { gameTokenAction, winGameAction } from "@/lib/kid/mission-actions";
@@ -16,12 +17,15 @@ const buttonClass = "h-[54px] w-full cursor-pointer rounded-[14px] border-0 bg-n
 /**
  * Runs one mini game for a mission. The game only reports a win; this component sends the win
  * with the start token to the server, which decides whether it counts (see lib/kid/game-proof.ts).
+ *
+ * `practice`: the mission is already done and the child plays once more for fun. Nothing is sent
+ * to the server and nothing is given.
  */
-export function GamePlayer({ missionId, gameId, token: firstToken }: { missionId: number; gameId: string; token: string }) {
+export function GamePlayer({ missionId, gameId, token: firstToken, practice = false }: { missionId: number; gameId: string; token: string; practice?: boolean }) {
   const Game = COMPONENTS[gameId];
   const token = useRef<string | null>(firstToken);
   const [round, setRound] = useState(0);
-  const [phase, setPhase] = useState<"play" | "saving" | "failed">("play");
+  const [phase, setPhase] = useState<"play" | "saving" | "failed" | "played">("play");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
@@ -29,6 +33,10 @@ export function GamePlayer({ missionId, gameId, token: firstToken }: { missionId
   if (!Game) return null;
 
   const onWin = async () => {
+    if (practice) {
+      setPhase("played");
+      return;
+    }
     setPhase("saving");
     try {
       // On success the server redirects to the "mission done" screen and this never returns.
@@ -62,6 +70,35 @@ export function GamePlayer({ missionId, gameId, token: firstToken }: { missionId
   };
 
   if (phase === "play") return <Game key={round} onWin={onWin} />;
+  if (phase === "played") {
+    return (
+      <div className="flex grow flex-col">
+        <div className="step-in flex grow flex-col items-center justify-center gap-2 px-6 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img alt="" src="/img/icon-badge.webp" style={{ width: 72, height: 72 }} />
+          <p role="status" className="m-0 text-[22px] leading-[30px] font-bold tracking-[-0.5px]">
+            한 번 더 해냈어요!
+          </p>
+          <p className="m-0 text-[15px] leading-[22px] break-keep text-sub">이미 완료한 미션이라 더 받는 것은 없어요</p>
+        </div>
+        <div className="flex flex-col gap-1 px-5 pt-3 pb-[max(28px,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => {
+              setRound((n) => n + 1);
+              setPhase("play");
+            }}
+            className={buttonClass}
+          >
+            한 번 더 하기
+          </button>
+          <Link href="/missions" className="flex h-11 items-center justify-center text-[15px] font-semibold text-sub underline underline-offset-2">
+            미션 목록으로
+          </Link>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex grow flex-col">
       <div className="step-in flex grow flex-col items-center justify-center gap-2 px-6 text-center">

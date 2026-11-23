@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#163a32">
+  <meta name="description" content="친구와 함께 양 여섯 마리를 꿈의숲교회로 데려가는 2인 협동 게임">
+  <title>한 마리 어디 갔어?</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./client.mjs"></script>
+</head>
+<body>
+  <main class="shell" data-phase="lobby" id="app">
+    <header class="masthead">
+      <div class="wordmark"><span class="crest" aria-hidden="true"><i></i></span><span>꿈의숲교회 <span class="wordmark-sub">소년부</span></span></div>
+      <button type="button" class="text-button" id="leave" hidden>로비로</button>
+    </header>
+
+    <div class="layout">
+      <section class="lobby" id="lobby" aria-labelledby="game-title">
+        <div class="lobby-title">
+          <p class="overline">친구와 함께하는 2인 게임</p>
+          <h1 id="game-title">한 마리<br><span>어디 갔어?</span></h1>
+          <p class="intro">친구와 양 여섯 마리를 모아<br>꿈의숲교회까지 데려다줘요.</p>
+        </div>
+        <form id="entry-form" class="entry-form">
+          <label for="player-name">내 이름</label>
+          <input id="player-name" name="name" placeholder="친구가 알아볼 이름" maxlength="16" autocomplete="nickname" required>
+          <div class="entry-actions">
+            <button class="primary" id="create-room" type="button">방 만들기</button>
+            <button class="outline" id="show-join" type="button" aria-expanded="false" aria-controls="join-fields">코드로 입장</button>
+          </div>
+          <div id="join-fields" class="join-fields" hidden>
+            <label for="join-code">방 코드</label>
+            <div class="join-row">
+              <input id="join-code" name="room" placeholder="5자리 코드" inputmode="text" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button class="primary" type="submit">입장</button>
+            </div>
+          </div>
+          <p id="entry-error" class="status-message" role="status" hidden></p>
+        </form>
+      </section>
+
+      <section class="game" aria-label="한 마리 어디 갔어 플레이 화면">
+        <div class="game-top" id="game-top" hidden>
+          <div class="room-heading"><strong>한 마리 어디 갔어?</strong><span id="room-caption"></span></div>
+          <div class="match-hud" id="match-hud" hidden>
+            <div class="sheep-progress" id="sheep-progress" aria-label="도착한 양 0마리"><span id="saved-count">0 / 6</span><span class="sheep-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+            <div class="timer" id="timer" aria-label="남은 시간">5:00</div>
+          </div>
+        </div>
+        <div class="frame">
+          <canvas id="game-map" aria-label="강아지 두 마리와 양 여섯 마리가 있는 목장 지도"></canvas>
+          <span class="preview-caption" id="preview-caption">양들이 기다리는 목장</span>
+          <p class="signal" id="signal" role="status" hidden></p>
+        </div>
+        <div id="controls" class="controls" hidden>
+          <div class="movement">
+            <div id="stick" class="stick" role="group" aria-label="드래그해서 강아지 움직이기"><span class="stick-center" id="stick-center"></span></div>
+            <span>움직이기</span>
+          </div>
+          <div class="players" id="players" aria-label="함께 플레이하는 친구들"></div>
+          <div class="bark-control">
+            <button type="button" class="bark" id="bark" aria-label="짖기"><span class="bark-icon" aria-hidden="true"></span>짖기</button>
+            <span class="keyboard-label">Space</span>
+          </div>
+        </div>
+        <p id="play-help" class="play-help" hidden>양마다 두 강아지의 짖기를 한 번씩 들려주세요.</p>
+      </section>
+    </div>
+
+    <section class="dialog-layer" id="dialog-layer" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <p class="dialog-eyebrow" id="dialog-eyebrow"></p>
+        <h2 id="dialog-title"></h2>
+        <p id="dialog-copy" class="dialog-copy"></p>
+        <p id="note" class="note" hidden></p>
+        <div id="room-card" class="room-card" hidden><span id="invite-code" class="invite-code"></span><button type="button" id="copy-link" class="outline">초대 링크 복사</button></div>
+        <div class="dialog-actions"><button type="button" class="primary" id="dialog-action" hidden></button><button type="button" class="text-button" id="dialog-leave">로비로</button></div>
+        <p id="dialog-status" class="dialog-status" role="status"></p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

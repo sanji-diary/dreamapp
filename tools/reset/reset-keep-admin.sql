@@ -30,6 +30,7 @@ truncate table
   worries, worry_replies, worry_reads,
   drop_ledger, point_ledger,
   missions, mission_completions, mission_weeks, rotation_weeks, verse_progress, quiz_attempts,
+  game_launches, game_results,
   posts, post_likes, comments, comment_reports,
   notices, worship,
   talent_events, talent_grants, talent_ledger,

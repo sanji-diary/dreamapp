@@ -1,5 +1,5 @@
 import "server-only";
-import { GAMES } from "@/games/registry";
+import { GAMES, playersLine } from "@/games/registry";
 import { db } from "@/lib/db";
 import { KIND_NAMES } from "@/lib/types";
 import { rotatingPerWeek } from "@/lib/plan";
@@ -13,7 +13,7 @@ export async function missionFormOptions() {
   return {
     kinds: Object.entries(KIND_NAMES).map(([value, label]) => ({ value, label })),
     icons: [...MISSION_ICONS],
-    games: GAMES.map((g) => ({ id: g.id, title: g.title, description: g.description })),
+    games: GAMES.map((g) => ({ id: g.id, title: g.title, description: `${playersLine(g)} · ${g.goal}` })),
     rotatingPerWeek: perWeek,
     targets: [{ value: "all", label: "전체" }, ...grades.map((g) => ({ value: `g${g}`, label: `${g}학년` })), ...classes.map((c) => ({ value: `c${c.id}`, label: c.name }))],
   };

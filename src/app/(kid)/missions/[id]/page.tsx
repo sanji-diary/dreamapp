@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PhotoMission, SelfMission, TeacherCheckMission, TextMission, VerseMission, WorryForm } from "@/components/kid/MissionForms";
@@ -8,9 +9,11 @@ import { requireKid } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { missionsForChild } from "@/lib/game";
 import { GamePlayer } from "@/games/GamePlayer";
-import { findGame } from "@/games/registry";
+import { HostedGame } from "@/games/HostedGame";
+import { findGame, playersLine } from "@/games/registry";
 import { audienceChoices } from "@/lib/kid/audience";
 import { issueGameToken } from "@/lib/kid/game-proof";
+import { openLaunch } from "@/lib/kid/hosted-game";
 import { afterCheckLine, RETURNED_LINE, rewardButton, rewardPill } from "@/lib/kid/mission-text";
 import { parseQuiz, passNeed, publicQuiz } from "@/lib/quiz";
 import { normalizeVerse } from "@/lib/verse";
@@ -28,6 +31,15 @@ function BackToList({ label = "미션 목록으로" }: { label?: string }) {
       </div>
     </>
   );
+}
+
+/** The address this screen is shown at: the game in the frame may only talk to exactly this origin. */
+async function pageOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const local = /^(localhost|127\.|\[::1\])/.test(host);
+  const proto = h.get("x-forwarded-proto")?.split(",")[0].trim() ?? (local ? "http" : "https");
+  return `${proto}://${host}`;
 }
 
 export default async function MissionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -48,6 +60,34 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
         <WorryForm options={await audienceChoices(kid.id)} sendLabel={open && m.drops_now > 0 ? "보내고 물방울 받기" : "보내기"} />
       </MissionShell>
     );
+  }
+
+  // A game stays open after its mission is done: to play once more, or to help a friend who has
+  // not finished a game for two. It gives nothing a second time.
+  if (m.kind === "game") {
+    const game = findGame(m.game_id);
+    const open = m.state === "available";
+    const again = m.state === "done";
+    const againLine = `이미 완료한 미션이에요. ${game && game.players > 1 ? "친구를 도와 한 번 더 할 수 있어요." : "한 번 더 해도 좋아요."}`;
+    // A game on its own game server.
+    if (game?.host === "hosted" && (open || again)) {
+      const launch = await openLaunch(kid.id, m.id, await pageOrigin());
+      if (launch) {
+        return (
+          <MissionShell reward={open ? reward : undefined} title={m.title} sub={open ? (capNote ?? (m.description || game.description)) : againLine}>
+            <HostedGame title={game.title} playersLine={playersLine(game)} goal={game.goal} together={game.players > 1} open={open} launch={launch} />
+          </MissionShell>
+        );
+      }
+    }
+    // A game inside the app, played again just for fun: no start token, nothing is sent to the server.
+    if (game?.host === "local" && again) {
+      return (
+        <MissionShell title={m.title} sub={againLine}>
+          <GamePlayer missionId={m.id} gameId={game.id} token="" practice />
+        </MissionShell>
+      );
+    }
   }
 
   if (m.state !== "available") {
@@ -143,7 +183,8 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
     }
     case "game": {
       const game = findGame(m.game_id);
-      if (!game) break;
+      // A hosted game is handled above; here it means its game server is not set up.
+      if (!game || game.host !== "local") break;
       return (
         <MissionShell reward={reward} title={m.title} sub={capNote ?? (m.description || game.description)}>
           <GamePlayer missionId={m.id} gameId={game.id} token={await issueGameToken(kid.id, m.id, game.id)} />

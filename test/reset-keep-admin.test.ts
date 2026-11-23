@@ -55,6 +55,9 @@ beforeEach(async () => {
   await q.query("insert into talent_grants (event_id, child_id, points_at_open, talents) values ($1,$2,100,10)", [ev.id, child.id]);
   await q.query("insert into talent_ledger (event_id, child_id, delta, kind, reason) values ($1,$2,-1,'payment','과자')", [ev.id, child.id]);
   await q.query("insert into forest_weeks (week_start, gained) values ('2026-11-15', 1)");
+  const launchId = "a".repeat(64);
+  await q.query("insert into game_launches (launch_id, child_id, mission_id, game_id, secret_hex, week_start) values ($1,$2,$3,'shepherd-coop',$4,'2026-11-15')", [launchId, child.id, mission.id, "b".repeat(64)]);
+  await q.query("insert into game_results (game_id, result_id, round_id, child_id, mission_id, launch_id, completed_at) values ('shepherd-coop','r:1:p1','r:1',$1,$2,$3,now())", [child.id, mission.id, launchId]);
 });
 
 describe("reset that keeps the admin", () => {
