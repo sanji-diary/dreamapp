@@ -1,6 +1,6 @@
 import "server-only";
 import { db, one } from "@/lib/db";
-import { getSettings } from "@/lib/game";
+import { getSettings, weekCap } from "@/lib/game";
 import { findGame } from "@/games/registry";
 import { newToken } from "@/lib/pin";
 import { isOpenOn, rotationFor, weekMissions as missionsOpenInWeek } from "@/lib/plan";
@@ -363,7 +363,7 @@ export interface DropCheck {
  */
 export async function weeklyDropCheck(staff: Staff, week: string = weekStart()): Promise<DropCheck | null> {
   if (staff.role !== "admin") return null;
-  const cap = (await getSettings(db)).weeklyDropCap;
+  const cap = weekCap(await getSettings(db), weekStart(week));
   const missions = await missionsOpenInWeek(db, weekStart(week));
   const classes = await listClasses(db);
   const totals = classes.map((c) => ({

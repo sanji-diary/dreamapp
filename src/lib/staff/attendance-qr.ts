@@ -1,6 +1,8 @@
 import "server-only";
 import { comingSunday, weeklyAttendanceCode } from "@/lib/attendance-code";
 import { db } from "@/lib/db";
+import { extraAttendanceDay } from "@/lib/event";
+import { getSettings } from "@/lib/game";
 import { newToken } from "@/lib/pin";
 import { isOpenOn, rotationFor } from "@/lib/plan";
 import { todayKst, weekStart } from "@/lib/time";
@@ -24,6 +26,8 @@ export interface AttendanceQr {
   canEnable: { id: number; title: string } | null;
   /** The Sunday the QR is for. */
   sunday: string;
+  /** Today is not a Sunday, but an event period has the attendance QR open: this QR works today too. */
+  openToday: boolean;
 }
 
 async function attendanceMissions(date: string): Promise<Mission[]> {
@@ -42,6 +46,7 @@ export async function attendanceQr(staff: Staff, today: string = todayKst()): Pr
     mission: withQr && withQr.qr_code ? { id: withQr.id, title: withQr.title, code: weeklyAttendanceCode(withQr.qr_code, sunday) } : null,
     canEnable: !withQr && without && staff.role === "admin" ? { id: without.id, title: without.title } : null,
     sunday,
+    openToday: extraAttendanceDay((await getSettings(db)).event, today),
   };
 }
 

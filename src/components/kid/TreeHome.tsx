@@ -34,7 +34,7 @@ interface Props {
   intro: boolean;
   /** The season and the special time the scene is dressed for today. */
   look: HomeLook;
-  /** It is Sunday and the attendance QR is still waiting for this child: offer "출석 체크". */
+  /** The attendance QR is open today (a Sunday, or an event day) and still waiting for this child: offer "출석 체크". */
   checkIn: boolean;
   /** Gifts from teachers in the last week. The ones this phone has not shown yet are announced. */
   gifts: KidGift[];

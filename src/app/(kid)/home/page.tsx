@@ -42,7 +42,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         welcomeDrops={welcome}
         intro={sp.new === "1" && tree.level === 1 && tree.given === 0}
         look={homeLook(todayKst(), choice)}
-        checkIn={canCheckIn(missions)}
+        checkIn={canCheckIn(missions, todayKst(), settings.event)}
         gifts={gifts}
       />
     </>

@@ -30,6 +30,7 @@ export default async function AttendanceQrPage({ searchParams }: PageProps<"/sta
       {m ? (
         <>
           <div className="flex flex-col gap-2.5 print:hidden">
+            {state.openToday ? <Notice>오늘은 행사 기간이라 주일이 아니어도 이 QR을 찍을 수 있어요.</Notice> : null}
             <p className="m-0 text-[14px] leading-[21px] text-sub">
               아이가 앱 첫 화면의 ‘출석 체크’를 누르고 이 QR을 찍으면 출석이 기록되고 보상이 들어가요. 이 화면을 그대로 보여 주거나, 인쇄해서 붙여 주세요. QR은 주일마다 바뀌어요.
             </p>
@@ -51,7 +52,7 @@ export default async function AttendanceQrPage({ searchParams }: PageProps<"/sta
             small="휴대폰 카메라로 찍어도 돼요. 처음이라면 먼저 내 QR 카드를 찍고 비밀번호를 눌러요."
           />
           <div className="flex flex-col gap-1.5 print:hidden">
-            <Small>주일에만 찍을 수 있고, 한 아이에 한 번만 들어가요. 선생님이 먼저 결석으로 적은 아이는 찍어도 바뀌지 않아요.</Small>
+            <Small>주일에만 찍을 수 있고(관리자가 설정에서 행사 기간을 열면 그 기간에도), 한 아이에 한 번만 들어가요. 선생님이 먼저 결석으로 적은 아이는 찍어도 바뀌지 않아요.</Small>
             <Small>이 QR은 {formatKoreanDate(state.sunday)}에만 써요. 지난 QR은 찍어도 출석이 되지 않으니, 주일마다 새로 인쇄하거나 이 화면을 보여 주세요.</Small>
             <Small>같은 날 QR 사진을 받아서 찍는 것까지는 막지 못해요. 틀린 출석은 출석부에서 고칠 수 있어요.</Small>
             {staff.role === "admin" ? (

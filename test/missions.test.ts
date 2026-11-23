@@ -20,13 +20,15 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined, set: () => {}, delete: () => {} }) }));
 
 import { db, one, resetDbForTests } from "@/lib/db";
-import { completeMission, dropBalance, pointBalance, recordAttendance } from "@/lib/game";
+import { completeMission, dropBalance, getSettings, missionsForChild, pointBalance, recordAttendance, weekCap } from "@/lib/game";
 import { completeMissionAction } from "@/lib/kid/actions";
 import { checkGameToken, issueGameToken, MAX_AGE_MS, MIN_PLAY_MS, winGame } from "@/lib/kid/game-proof";
 import { weeklyAttendanceCode } from "@/lib/attendance-code";
+import { canCheckIn } from "@/lib/kid/check-in";
 import { isQrCode, scanQr } from "@/lib/kid/qr";
 import { answerQuiz, startQuiz } from "@/lib/kid/quiz";
 import { parseQuiz, passNeed, publicQuiz, scoreQuiz, validateQuiz } from "@/lib/quiz";
+import { saveSettings } from "@/lib/staff/admin-misc";
 import { defaultMissionInput, duplicateToNextWeek, getMission, saveMission } from "@/lib/staff/admin-missions";
 import { addDays, todayKst, weekStart } from "@/lib/time";
 import type { QuizQuestion, Staff } from "@/lib/types";
@@ -236,6 +238,109 @@ describe("QR self check-in for attendance", () => {
     await recordAttendance(null, s.kid, SUN, null);
     expect(await db.query("select id from attendance where child_id = $1", [s.kid])).toHaveLength(0);
     expect(await dropBalance(db, s.kid)).toBe(0);
+  });
+});
+
+describe("event period (설정 > 행사 기간)", () => {
+  const SUN = WS;
+  const usual = { weeklyDropCap: 12, levelNeeds: [2, 4, 6, 8, 10, 10], classGoal: 30, harvestBonusPoints: 50 };
+  const code = (sunday: string) => weeklyAttendanceCode("att-code-001", sunday);
+
+  it("opens the attendance QR on its days: once a day, this week's QR or the coming Sunday's, and nothing on the attendance board", async () => {
+    await s.add("attendance", { code: "att-code-001", starts: addDays(SUN, -70), ends: addDays(SUN, 70) });
+    const tue = addDays(SUN, 2);
+    const wed = addDays(SUN, 3);
+    expect(await saveSettings(s.admin, { ...usual, event: { from: tue, to: wed, attendanceQr: true, weeklyDropCap: null } })).toMatchObject({ ok: true });
+    const event = (await getSettings()).event;
+    expect(event).toEqual({ from: tue, to: wed, attendanceQr: true, weeklyDropCap: null });
+
+    // Sunday is as always: the mark on the board and the reward.
+    expect(await scanQr(s.kid, code(SUN), SUN)).toMatchObject({ ok: true, kind: "attendance" });
+    expect(await db.query("select id from attendance")).toHaveLength(1);
+    expect(await dropBalance(db, s.kid)).toBe(2);
+
+    // Monday is outside the period.
+    const mon = addDays(SUN, 1);
+    expect(canCheckIn(await missionsForChild(db, s.kid, mon), mon, event)).toBe(false);
+    expect(await scanQr(s.kid, code(SUN), mon)).toEqual({ ok: false, reason: "not_sunday" });
+
+    // Tuesday: the mission is open again for the day, although it was done on Sunday.
+    expect(canCheckIn(await missionsForChild(db, s.kid, tue), tue, event)).toBe(true);
+    expect(await scanQr(s.kid, code(addDays(SUN, -7)), tue)).toEqual({ ok: false, reason: "expired" });
+    expect(await scanQr(s.kid, code(SUN), tue)).toMatchObject({ ok: true, kind: "attendance" });
+    expect(await scanQr(s.kid, code(SUN), tue)).toEqual({ ok: false, reason: "already" });
+    expect(canCheckIn(await missionsForChild(db, s.kid, tue), tue, event)).toBe(false);
+    expect(await dropBalance(db, s.kid)).toBe(4);
+
+    // Wednesday: the QR the teacher's screen shows on a weekday is the coming Sunday's.
+    expect(await scanQr(s.kid, code(addDays(SUN, 7)), wed)).toMatchObject({ ok: true, kind: "attendance" });
+    expect(await scanQr(s.kid, code(SUN), wed)).toEqual({ ok: false, reason: "already" });
+    expect(await dropBalance(db, s.kid)).toBe(6);
+    expect(await pointBalance(db, s.kid)).toBe(30);
+
+    // Only Sunday is on the attendance board.
+    expect(await db.query<{ date: string }>("select date from attendance")).toEqual([{ date: SUN }]);
+
+    // Thursday the period is over, and next Sunday is an ordinary Sunday with its own QR.
+    expect(await scanQr(s.kid, code(addDays(SUN, 7)), addDays(SUN, 4))).toEqual({ ok: false, reason: "not_sunday" });
+    expect((await missionsForChild(db, s.kid, addDays(SUN, 4))).map((m) => m.state)).toEqual(["done"]);
+    expect(await scanQr(s.kid, code(addDays(SUN, 7)), addDays(SUN, 7))).toMatchObject({ ok: true, kind: "attendance" });
+  });
+
+  it("a period without the attendance switch leaves the QR to Sundays", async () => {
+    await s.add("attendance", { code: "att-code-001" });
+    const tue = addDays(SUN, 2);
+    expect(await saveSettings(s.admin, { ...usual, event: { from: tue, to: tue, attendanceQr: false, weeklyDropCap: 20 } })).toMatchObject({ ok: true });
+    expect(await scanQr(s.kid, code(SUN), tue)).toEqual({ ok: false, reason: "not_sunday" });
+  });
+
+  it("raises the weekly drop cap for the weeks it touches, and only those", async () => {
+    const ids: number[] = [];
+    for (let i = 0; i < 4; i++) ids.push(await s.add("self", { starts: SUN, ends: addDays(SUN, 20) }));
+    // Usual cap 3; the event (Wednesday of this week) allows 5.
+    const wed = addDays(SUN, 3);
+    expect(await saveSettings(s.admin, { ...usual, weeklyDropCap: 3, event: { from: wed, to: wed, attendanceQr: false, weeklyDropCap: 5 } })).toMatchObject({ ok: true });
+    const settings = await getSettings();
+    expect(weekCap(settings, SUN)).toBe(5);
+    expect(weekCap(settings, addDays(SUN, 7))).toBe(3);
+    expect(weekCap(settings, addDays(SUN, -7))).toBe(3);
+
+    // The cap counts for the whole week of the event, Monday included.
+    const mon = addDays(SUN, 1);
+    expect((await missionsForChild(db, s.kid, mon)).map((m) => m.drops_now)).toEqual([2, 2, 2, 2]);
+    for (const id of ids) await completeMission(s.kid, id, { date: mon });
+    expect(await dropBalance(db, s.kid)).toBe(5);
+
+    // Next week the usual cap is back.
+    const next = addDays(SUN, 8);
+    for (const id of ids) await completeMission(s.kid, id, { date: next });
+    expect(await dropBalance(db, s.kid)).toBe(8);
+  });
+
+  it("is checked before it is saved, can be cleared, and is left alone by callers that do not send it", async () => {
+    const d = addDays(SUN, 2);
+    const save = (event: { from: string; to: string; attendanceQr: boolean; weeklyDropCap: number | null }) => saveSettings(s.admin, { ...usual, event });
+    expect(await save({ from: d, to: addDays(d, -1), attendanceQr: true, weeklyDropCap: null })).toMatchObject({ ok: false });
+    expect(await save({ from: d, to: "", attendanceQr: true, weeklyDropCap: null })).toMatchObject({ ok: false });
+    expect(await save({ from: "2027-02-30", to: "2027-03-01", attendanceQr: true, weeklyDropCap: null })).toMatchObject({ ok: false });
+    expect(await save({ from: d, to: addDays(d, 31), attendanceQr: true, weeklyDropCap: null })).toMatchObject({ ok: false });
+    expect(await save({ from: d, to: addDays(d, 30), attendanceQr: true, weeklyDropCap: null })).toMatchObject({ ok: true });
+    // A cap below the usual one, or above the limit.
+    expect(await save({ from: d, to: d, attendanceQr: false, weeklyDropCap: 11 })).toMatchObject({ ok: false });
+    expect(await save({ from: d, to: d, attendanceQr: false, weeklyDropCap: 201 })).toMatchObject({ ok: false });
+    // Dates with nothing to do, and something to do without dates.
+    expect(await save({ from: d, to: d, attendanceQr: false, weeklyDropCap: null })).toMatchObject({ ok: false });
+    expect(await save({ from: "", to: "", attendanceQr: true, weeklyDropCap: null })).toMatchObject({ ok: false });
+    // Nothing above replaced the period saved earlier.
+    expect((await getSettings()).event).toEqual({ from: d, to: addDays(d, 30), attendanceQr: true, weeklyDropCap: null });
+    // Only admins.
+    expect(await saveSettings({ ...s.admin, role: "head" }, { ...usual, event: { from: d, to: d, attendanceQr: true, weeklyDropCap: null } })).toMatchObject({ ok: false });
+    // A save without the event keeps it; empty dates clear it.
+    expect(await saveSettings(s.admin, usual)).toMatchObject({ ok: true });
+    expect((await getSettings()).event).not.toBeNull();
+    expect(await save({ from: "", to: "", attendanceQr: false, weeklyDropCap: null })).toMatchObject({ ok: true });
+    expect((await getSettings()).event).toBeNull();
+    expect(await scanQr(s.kid, code(SUN), d)).toEqual({ ok: false, reason: "unknown" });
   });
 });
 

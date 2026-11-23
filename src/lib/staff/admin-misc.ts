@@ -1,5 +1,6 @@
 import "server-only";
 import { db, one } from "@/lib/db";
+import type { EventPeriod } from "@/lib/event";
 import { getSettings, type Settings } from "@/lib/game";
 import { ROTATING_MAX } from "@/lib/plan";
 import { ensureJoinCode, newJoinCode, selfJoinState } from "@/lib/self-join";
@@ -356,13 +357,25 @@ export async function adminSettings(staff: Staff): Promise<Settings | null> {
 /** The most welcome-back drops the settings screen allows. */
 export const WELCOME_BACK_MAX = 5;
 
+/** The longest event period, in days, and the highest weekly cap it may set. */
+export const EVENT_MAX_DAYS = 31;
+export const EVENT_CAP_MAX = 200;
+
+/** What the settings screen sends for the event period: the two dates as typed ("" when left empty). */
+export interface EventInput {
+  from: string;
+  to: string;
+  attendanceQr: boolean;
+  weeklyDropCap: number | null;
+}
+
 /**
- * The settings screen. `welcomeBackDrops` and `rotatingPerWeek` may be left out (older callers);
- * a value left out is not changed.
+ * The settings screen. `welcomeBackDrops`, `rotatingPerWeek` and `event` may be left out (older
+ * callers); a value left out is not changed. An event with both dates empty clears the period.
  */
 export async function saveSettings(
   staff: Staff,
-  input: { weeklyDropCap: number; levelNeeds: number[]; classGoal: number; harvestBonusPoints: number; welcomeBackDrops?: number; rotatingPerWeek?: number },
+  input: { weeklyDropCap: number; levelNeeds: number[]; classGoal: number; harvestBonusPoints: number; welcomeBackDrops?: number; rotatingPerWeek?: number; event?: EventInput },
 ): Promise<Result> {
   if (!admin(staff)) return deny;
   const int = (n: number, min: number, max: number) => Number.isInteger(n) && n >= min && n <= max;
@@ -372,6 +385,21 @@ export async function saveSettings(
   if (!int(input.harvestBonusPoints, 0, 10000)) return fail("수확 보너스는 0 이상으로 적어 주세요");
   if (input.welcomeBackDrops !== undefined && !int(input.welcomeBackDrops, 0, WELCOME_BACK_MAX)) return fail(`반가워 물방울은 0에서 ${WELCOME_BACK_MAX} 사이로 적어 주세요`);
   if (input.rotatingPerWeek !== undefined && !int(input.rotatingPerWeek, 0, ROTATING_MAX)) return fail(`순환 미션 수는 0에서 ${ROTATING_MAX} 사이로 적어 주세요`);
+  let event: EventPeriod | null | undefined;
+  if (input.event !== undefined) {
+    const e = input.event;
+    if (e.from === "" && e.to === "") {
+      if (e.attendanceQr || e.weeklyDropCap !== null) return fail("행사 기간의 시작일과 끝나는 날을 적어 주세요");
+      event = null;
+    } else {
+      if (!isDate(e.from) || !isDate(e.to)) return fail("행사 기간의 시작일과 끝나는 날을 모두 적어 주세요");
+      if (e.from > e.to) return fail("행사 기간의 끝나는 날이 시작일보다 빨라요");
+      if (addDays(e.from, EVENT_MAX_DAYS - 1) < e.to) return fail(`행사 기간은 ${EVENT_MAX_DAYS}일까지 정할 수 있어요`);
+      if (e.weeklyDropCap !== null && !int(e.weeklyDropCap, input.weeklyDropCap, EVENT_CAP_MAX)) return fail(`행사 주 한도는 평소 한도(${input.weeklyDropCap}개)에서 ${EVENT_CAP_MAX}개 사이로 적어 주세요`);
+      if (!e.attendanceQr && e.weeklyDropCap === null) return fail("행사 기간에 할 것을 골라 주세요. 출석 QR 받기를 켜거나 행사 주 한도를 적으면 돼요");
+      event = { from: e.from, to: e.to, attendanceQr: e.attendanceQr, weeklyDropCap: e.weeklyDropCap };
+    }
+  }
   const before = await getSettings(db);
   const set = (key: string, value: unknown) =>
     db.query("insert into settings (key, value) values ($1, $2) on conflict (key) do update set value = excluded.value", [key, JSON.stringify(value)]);
@@ -381,6 +409,7 @@ export async function saveSettings(
   await set("harvest_bonus_points", input.harvestBonusPoints);
   if (input.welcomeBackDrops !== undefined) await set("welcome_back_drops", input.welcomeBackDrops);
   if (input.rotatingPerWeek !== undefined) await set("rotating_per_week", input.rotatingPerWeek);
+  if (event !== undefined) await set("event_period", event);
   await audit(db, staff.id, "settings_update", "settings", null, { before, after: input });
   return { ok: true };
 }

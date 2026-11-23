@@ -1,7 +1,8 @@
 import "server-only";
 import { weeklyAttendanceCode } from "@/lib/attendance-code";
 import { db, one } from "@/lib/db";
-import { completeMission, missionsForChild, recordAttendance } from "@/lib/game";
+import { attendanceOpenOn } from "@/lib/event";
+import { completeMission, getSettings, missionsForChild, recordAttendance } from "@/lib/game";
 import { isOpenOn, rotationFor } from "@/lib/plan";
 import { addDays, isSunday, todayKst, weekStart } from "@/lib/time";
 import type { Mission } from "@/lib/types";
@@ -19,14 +20,16 @@ export type ScanResult = { ok: true; completionId: number; kind: "qr" | "attenda
  *
  * Works only for the mission that owns the code, only while it is open (active, and on its dates,
  * every week, or in this week's rotation, depending on how it is scheduled), and only for children
- * the mission is meant for. An attendance QR works on Sundays only. For an attendance mission the
- * scan also marks the child present today (staff_id null = self check-in), unless a teacher already
- * marked them: a teacher's mark is never overwritten, and after an 'absent' mark the child is sent
- * to the teacher.
+ * the mission is meant for. An attendance QR works on Sundays, and on the extra days of an event
+ * period an admin has opened for it (src/lib/event.ts). On a Sunday the scan also marks the child
+ * present (staff_id null = self check-in), unless a teacher already marked them: a teacher's mark
+ * is never overwritten, and after an 'absent' mark the child is sent to the teacher. On an extra
+ * day only the mission is finished: the attendance board stays a record of Sunday worship.
  *
  * The attendance QR changes every Sunday (src/lib/attendance-code.ts): only the code of this week
  * finishes the mission. An older one (or the QR from before it changed weekly) answers "expired",
- * next Sunday's answers that it is not open yet.
+ * next Sunday's answers that it is not open yet. On an extra day the QR of the coming Sunday is
+ * accepted as well: it is the one the teacher's screen shows on a weekday.
  *
  * Honest limit: the code is a link. A child who photographs this Sunday's poster, or is sent the
  * link by a friend, can open it from home that same Sunday. Teachers can still correct the
@@ -56,15 +59,18 @@ export async function scanQr(childId: number, code: string, date: string = today
   if (!found) return { ok: false, reason: "unknown" };
   const m = found.m;
   if (found.when === "past") return { ok: false, reason: "expired" };
-  if (found.when === "next") return { ok: false, reason: isSunday(date) ? "closed" : "not_sunday" };
+  const sunday = isSunday(date);
+  const openDay = m.kind !== "attendance" || attendanceOpenOn((await getSettings(db)).event, date);
+  if (found.when === "next" && (sunday || !openDay)) return { ok: false, reason: sunday ? "closed" : "not_sunday" };
   if (!isOpenOn(m, date, m.mode === "pool" ? await rotationFor(db, weekStart(date)) : [])) return { ok: false, reason: "closed" };
-  if (m.kind === "attendance" && !isSunday(date)) return { ok: false, reason: "not_sunday" };
+  if (!openDay) return { ok: false, reason: "not_sunday" };
   const mine = (await missionsForChild(db, childId, date)).find((x) => x.id === m.id);
   if (!mine) return { ok: false, reason: "not_yours" };
   if (mine.state !== "available") return { ok: false, reason: "already" };
 
   let marked: { status: string } | null = null;
-  if (m.kind === "attendance") {
+  const board = m.kind === "attendance" && sunday;
+  if (board) {
     marked = await one<{ status: string }>(db, "select status from attendance where child_id = $1 and date = $2", [childId, date]);
     if (marked?.status === "absent") return { ok: false, reason: "ask_teacher" };
   }
@@ -72,6 +78,6 @@ export async function scanQr(childId: number, code: string, date: string = today
   const r = await completeMission(childId, m.id, { viaQr: m.qr_code ?? code, date });
   if (!r.ok) return { ok: false, reason: r.reason === "already_done" ? "already" : "closed" };
   // Only the mark: this scan has completed its own mission, and must not finish a second attendance mission open today.
-  if (m.kind === "attendance" && !marked) await recordAttendance(null, childId, date, "present", undefined, { markOnly: true });
+  if (board && !marked) await recordAttendance(null, childId, date, "present", undefined, { markOnly: true });
   return { ok: true, completionId: r.completionId, kind: m.kind === "attendance" ? "attendance" : "qr" };
 }

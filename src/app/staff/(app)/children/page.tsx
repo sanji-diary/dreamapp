@@ -7,12 +7,13 @@ import { AutoForm } from "@/components/staff/widgets";
 import { requireStaff } from "@/lib/auth";
 import { canApprove, canWriteVisits } from "@/lib/authz";
 import { db } from "@/lib/db";
-import { getSettings } from "@/lib/game";
+import { getSettings, weekCap } from "@/lib/game";
 import { homeroomNames } from "@/lib/kid/queries";
 import { approveScope, canWriteAnyVisits, hasScope, listClasses } from "@/lib/staff/access";
 import { canSeeNewJoiners, childStats, getChildDetail, listChildren, newJoinerCount, type ChildDetail, type ChildListItem, type ChildStat } from "@/lib/staff/children";
 import { homeKind, shortClassName } from "@/lib/staff/home";
 import { shortDate, toInt } from "@/lib/staff/util";
+import { weekStart } from "@/lib/time";
 import { LEVEL_NAMES } from "@/lib/types";
 
 export const metadata = { title: "우리 반 · 꿈의숲키우기" };
@@ -518,7 +519,7 @@ export default async function ChildrenPage({ searchParams }: PageProps<"/staff/c
       {/* Below lg: cards. One across on a folded cover screen, two on a phone, three or four on an unfolded phone or a tablet. */}
       <ul className="m-0 grid list-none grid-cols-2 gap-2.5 p-0 max-[329px]:grid-cols-1 min-[640px]:grid-cols-3 min-[840px]:grid-cols-4 lg:hidden">
         {shown.map((k) => (
-          <KidCard key={k.id} k={k} st={stats.get(k.id)} cap={settings.weeklyDropCap} showClass={showClass} />
+          <KidCard key={k.id} k={k} st={stats.get(k.id)} cap={weekCap(settings, weekStart())} showClass={showClass} />
         ))}
       </ul>
       {anyFlag ? <p className="m-0 text-[12px] leading-[18px] text-mute lg:hidden">빨간 점은 2주 넘게 결석, 파란 점은 새 고민이 있다는 표시예요.</p> : null}

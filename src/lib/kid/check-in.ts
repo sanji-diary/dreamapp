@@ -1,9 +1,11 @@
-import { isSunday, todayKst } from "@/lib/time";
+import { attendanceOpenOn, type EventPeriod } from "@/lib/event";
+import { todayKst } from "@/lib/time";
 
 /**
- * Whether the tree screen offers "출석 체크" today: it is Sunday, and an attendance mission with a QR
- * is still waiting for this child. After the scan (or once a teacher has marked the child) it is gone.
+ * Whether the tree screen offers "출석 체크" today: the attendance QR is accepted today (a Sunday, or
+ * an extra day of the event period), and an attendance mission with a QR is still waiting for this
+ * child. After the scan (or once a teacher has marked the child) it is gone.
  */
-export function canCheckIn(missions: readonly { kind: string; qr_code: string | null; state: string }[], today: string = todayKst()): boolean {
-  return isSunday(today) && missions.some((m) => m.kind === "attendance" && m.qr_code !== null && m.state === "available");
+export function canCheckIn(missions: readonly { kind: string; qr_code: string | null; state: string }[], today: string = todayKst(), event: EventPeriod | null = null): boolean {
+  return attendanceOpenOn(event, today) && missions.some((m) => m.kind === "attendance" && m.qr_code !== null && m.state === "available");
 }

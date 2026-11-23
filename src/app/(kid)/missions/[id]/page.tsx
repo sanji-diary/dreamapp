@@ -7,7 +7,8 @@ import { QuizMission } from "@/components/kid/QuizMission";
 import { primaryButtonClass } from "@/components/ui";
 import { requireKid } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { missionsForChild } from "@/lib/game";
+import { extraAttendanceDay } from "@/lib/event";
+import { getSettings, missionsForChild } from "@/lib/game";
 import { GamePlayer } from "@/games/GamePlayer";
 import { HostedGame } from "@/games/HostedGame";
 import { findGame, playersLine } from "@/games/registry";
@@ -16,6 +17,7 @@ import { issueGameToken } from "@/lib/kid/game-proof";
 import { openLaunch } from "@/lib/kid/hosted-game";
 import { afterCheckLine, RETURNED_LINE, rewardButton, rewardPill } from "@/lib/kid/mission-text";
 import { parseQuiz, passNeed, publicQuiz } from "@/lib/quiz";
+import { todayKst } from "@/lib/time";
 import { normalizeVerse } from "@/lib/verse";
 
 export const metadata = { title: "미션 · 꿈의숲키우기" };
@@ -168,16 +170,25 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
           </div>
         </MissionShell>
       );
-    case "attendance":
+    case "attendance": {
+      // An event period can open the attendance QR on a day that is not a Sunday.
+      const openToday = m.qr_code !== null && extraAttendanceDay((await getSettings()).event, todayKst());
       return (
         <MissionShell reward={reward} title={m.title} sub={capNote ?? m.description}>
           <MissionNote
             icon={m.icon}
-            lines={m.qr_code ? ["주일 예배에 와서 QR을 찍어 주세요", "교회에 있는 출석 QR을 아래 버튼으로 찍으면 돼요. 선생님이 출석을 확인해 줘도 물방울이 들어와요."] : ["주일 예배에 오면 돼요", "선생님이 출석을 확인하면 물방울이 자동으로 들어와요."]}
+            lines={
+              openToday
+                ? ["오늘은 출석 QR을 찍을 수 있어요", "선생님이 보여 주는 출석 QR을 아래 버튼으로 찍으면 돼요."]
+                : m.qr_code
+                  ? ["주일 예배에 와서 QR을 찍어 주세요", "교회에 있는 출석 QR을 아래 버튼으로 찍으면 돼요. 선생님이 출석을 확인해 줘도 물방울이 들어와요."]
+                  : ["주일 예배에 오면 돼요", "선생님이 출석을 확인하면 물방울이 자동으로 들어와요."]
+            }
           />
           {m.qr_code ? <ScanButton label="출석 QR 찍기" /> : <BackToList />}
         </MissionShell>
       );
+    }
     case "qr":
       return (
         <MissionShell reward={reward} title={m.title} sub={capNote ?? m.description}>

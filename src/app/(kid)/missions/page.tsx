@@ -4,7 +4,7 @@ import { BackLink, Circle, H1, Icon, KidTabBar, Pill, Row, Sub } from "@/compone
 import { findGame } from "@/games/registry";
 import { requireKid } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { dropBalance, getSettings, missionsForChild, weekDropsEarned } from "@/lib/game";
+import { dropBalance, getSettings, missionsForChild, weekCap, weekDropsEarned } from "@/lib/game";
 import { hasUnsettledGame } from "@/lib/kid/hosted-game";
 import { listHeadline, missionSubLine, pillLabel, pillShowsPoints } from "@/lib/kid/mission-text";
 import { weekAwards } from "@/lib/kid/queries";
@@ -20,7 +20,7 @@ export default async function MissionsPage() {
   const [missions, drops, settings, earned, awards, catchUp] = await Promise.all([missionsForChild(db, kid.id), dropBalance(db, kid.id), getSettings(), weekDropsEarned(db, kid.id, ws), weekAwards(kid.id, ws), hasUnsettledGame(kid.id)]);
   // The library hands the missions over in plan order (fixed, rotating, dated); the stable sort keeps that inside each group.
   const list = [...missions].sort((a, b) => ORDER[a.state] - ORDER[b.state]);
-  const { title, sub } = listHeadline(missions, settings.weeklyDropCap, earned);
+  const { title, sub } = listHeadline(missions, weekCap(settings, ws), earned);
 
   return (
     <>

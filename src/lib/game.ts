@@ -1,12 +1,14 @@
 import "server-only";
 import { db, one, type Queryable } from "./db";
+import { dropCapForWeek, extraAttendanceDay, parseEventPeriod, type EventPeriod } from "./event";
 import { openMissions, ROTATING_PER_WEEK_DEFAULT, verseContents, verseKey, versePeriod } from "./plan";
 import { isSunday, todayKst, weekStart } from "./time";
 import type { Mission, Tree, Verse } from "./types";
 
 /**
  * Drops grow the tree; points are the record that becomes 달란트 at year end.
- * Rules (confirmed in the plan): 12 drops a week at most, 40 drops per tree (2,4,6,8,10,10),
+ * Rules (confirmed in the plan): 12 drops a week at most (an admin can change the number, and set
+ * a higher one for the weeks of an event period), 40 drops per tree (2,4,6,8,10,10),
  * trees never wither, nothing is lost by resting.
  */
 export interface Settings {
@@ -18,6 +20,13 @@ export interface Settings {
   welcomeBackDrops: number;
   /** How many rotating missions are picked for a week when nobody chooses them by hand. */
   rotatingPerWeek: number;
+  /** 행사 기간 (src/lib/event.ts): extra attendance days and a higher weekly cap, or null when none is set. */
+  event: EventPeriod | null;
+}
+
+/** The weekly drop cap of the week that starts on `ws`: the usual one, or the event period's. */
+export function weekCap(settings: Settings, ws: string): number {
+  return dropCapForWeek(settings.weeklyDropCap, settings.event, ws);
 }
 
 export async function getSettings(q: Queryable = db): Promise<Settings> {
@@ -30,6 +39,7 @@ export async function getSettings(q: Queryable = db): Promise<Settings> {
     harvestBonusPoints: Number(m.get("harvest_bonus_points") ?? 50),
     welcomeBackDrops: Number(m.get("welcome_back_drops") ?? 2),
     rotatingPerWeek: Number(m.get("rotating_per_week") ?? ROTATING_PER_WEEK_DEFAULT),
+    event: parseEventPeriod(m.get("event_period")),
   };
 }
 
@@ -117,7 +127,9 @@ export async function missionsForChild(q: Queryable, childId: number, date: stri
       : [];
   const settings = await getSettings(q);
   const earned = await weekDropsEarned(q, childId, ws);
-  const room = Math.max(0, settings.weeklyDropCap - earned);
+  const room = Math.max(0, weekCap(settings, ws) - earned);
+  // On an extra attendance day of the event period the attendance mission is open once more, for that day.
+  const extraDay = extraAttendanceDay(settings.event, date);
   const out: MissionForChild[] = [];
   for (const m of missions) {
     const all = tries.filter((d) => d.mission_id === m.id);
@@ -126,6 +138,7 @@ export async function missionsForChild(q: Queryable, childId: number, date: stri
     const today = mine.filter((d) => d.done_on === date);
     let state: MissionState = "available";
     if (m.repeat === "once" && mine.length > 0) state = mine.some((d) => d.status === "pending") ? "pending" : "done";
+    else if (m.repeat === "weekly" && m.kind === "attendance" && m.qr_code !== null && extraDay) state = today.length > 0 ? "done" : "available";
     else if (m.repeat === "weekly" && week.length > 0) state = week.some((d) => d.status === "pending") ? "pending" : "done";
     else if (m.repeat === "daily") {
       const limit = m.weekly_limit ?? 7;
@@ -188,7 +201,7 @@ async function award(q: Queryable, completionId: number): Promise<{ drops: numbe
     [c.child_id, c.mission_id, c.done_on, completionId],
   );
   const kept = Math.max(0, held?.n ?? 0);
-  const drops = Math.max(0, Math.min(c.drops - kept, settings.weeklyDropCap - earned));
+  const drops = Math.max(0, Math.min(c.drops - kept, weekCap(settings, c.week_start) - earned));
   if (drops > 0) {
     await q.query("insert into drop_ledger (child_id, delta, reason, ref_type, ref_id, week_start) values ($1,$2,$3,'mission',$4,$5)", [
       c.child_id,

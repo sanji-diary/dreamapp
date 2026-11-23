@@ -367,6 +367,13 @@ export async function settingsSaveAction(formData: FormData) {
     harvestBonusPoints: n("harvest_bonus_points"),
     welcomeBackDrops: n("welcome_back_drops"),
     rotatingPerWeek: n("rotating_per_week"),
+    event: {
+      from: clean(formData.get("event_from"), 10),
+      to: clean(formData.get("event_to"), 10),
+      attendanceQr: formData.get("event_attendance") === "on",
+      // An empty box means "the usual cap"; anything else must be a number (-1 is refused below).
+      weeklyDropCap: clean(formData.get("event_cap"), 10) === "" ? null : n("event_cap"),
+    },
   });
   finish(r, "/staff/admin/settings", "설정을 저장했어요");
 }
