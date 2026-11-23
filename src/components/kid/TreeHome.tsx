@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon, KidTabBar } from "@/components/ui";
 import { waterAction, type WaterActionResult } from "@/lib/kid/actions";
 import { formatPoints } from "@/lib/kid/korean";
+import type { HomeLook } from "@/lib/kid/home-look";
 import { euro } from "@/lib/time";
 import { LEVEL_NAMES } from "@/lib/types";
 import { TreeScene, useSceneFit, type SceneKind } from "./TreeScene";
@@ -30,6 +31,8 @@ interface Props {
   welcomeDrops: number;
   /** Play the seed drop: the child just got a new seed. */
   intro: boolean;
+  /** The season and the special time the scene is dressed for today. */
+  look: HomeLook;
 }
 
 /**
@@ -136,7 +139,7 @@ export function TreeHome(props: Props) {
 
   return (
     <div ref={containerRef} className="relative flex h-dvh flex-col overflow-hidden bg-ground">
-      <TreeScene level={st.level} kind={kind} intro={intro} toast={toast} fit={fit} />
+      <TreeScene level={st.level} kind={kind} intro={intro} toast={toast} fit={fit} look={props.look} />
       <div className="pointer-events-none relative flex min-h-0 grow flex-col">
         <div className="kid-col flex items-center justify-between gap-2 px-5 pt-[max(14px,env(safe-area-inset-top))]">
           <div className="min-w-0 truncate text-[14px] font-semibold text-sub">{props.kidLabel}</div>

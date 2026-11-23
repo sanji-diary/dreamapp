@@ -1,7 +1,9 @@
 "use client";
 
 import { useLayoutEffect, useState, type CSSProperties, type RefObject } from "react";
+import type { HomeLook } from "@/lib/kid/home-look";
 import { LEVEL_NAMES } from "@/lib/types";
+import { backdropFilter, Falling, GroundDecor, TreeDecor } from "./SeasonDecor";
 
 /**
  * The tree scene from the approved home mock-up. All positions are the mock's pixels on a
@@ -55,7 +57,11 @@ const DROP_X = [150, 170, 190, 210, 230];
 const STAR = "M0 -7 L1.8 -1.8 L7 0 L1.8 1.8 L0 7 L-1.8 1.8 L-7 0 L-1.8 -1.8 Z";
 
 /* eslint-disable @next/next/no-img-element */
-export function TreeScene({ level, kind = "", intro = false, toast = "", fit, creatures = true }: { level: number; kind?: SceneKind; intro?: boolean; toast?: string; fit: SceneFit; creatures?: boolean }) {
+/** How long each stage of the tree takes to sway once; what the tree wears sways with it. */
+const SWAY: Record<number, string> = { 2: "3.6s", 3: "4.2s", 4: "4.8s", 5: "4.8s", 6: "4.8s" };
+
+/** `look`: the season and the special time the scene is dressed for (the home screen passes it). */
+export function TreeScene({ level, kind = "", intro = false, toast = "", fit, creatures = true, look }: { level: number; kind?: SceneKind; intro?: boolean; toast?: string; fit: SceneFit; creatures?: boolean; look?: HomeLook }) {
   const charge = kind === "charge";
   const reveal = kind === "reveal";
   const water = kind === "water";
@@ -69,7 +75,10 @@ export function TreeScene({ level, kind = "", intro = false, toast = "", fit, cr
 
   return (
     <>
-      <img alt="" src="/img/bg.webp" style={abs(left, top, 390, 699, { display: "block", maxWidth: "none", transformOrigin: "195px 512px", transform: `scale(${fit.sb})` })} />
+      {/* The backdrop takes the season's tone; the ground colour under the picture goes with it. */}
+      <div aria-hidden="true" className="bg-ground" style={{ position: "absolute", inset: 0, filter: backdropFilter(look), transition: "filter 0.6s ease" }}>
+        <img alt="" src="/img/bg.webp" style={abs(left, top, 390, 699, { display: "block", maxWidth: "none", transformOrigin: "195px 512px", transform: `scale(${fit.sb})` })} />
+      </div>
       <div
         aria-hidden="true"
         style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, #FFF9D6 0%, #FFF3A8 62%, rgba(255,243,168,0) 100%)", opacity: charge || reveal ? 0.9 : 0, transition: "opacity 0.6s ease" }}
@@ -85,6 +94,7 @@ export function TreeScene({ level, kind = "", intro = false, toast = "", fit, cr
           })}
         />
         <div style={abs(135, 500, 120, 22, { borderRadius: 60, background: "radial-gradient(ellipse, rgba(120,132,40,0.28) 0%, rgba(120,132,40,0) 70%)" })} />
+        {look ? <GroundDecor look={look} /> : null}
         <div style={abs(0, 0, 390, 600, { transformOrigin: "195px 512px", animation: treeAnim })}>
           {level === 1 ? (
             <>
@@ -108,7 +118,13 @@ export function TreeScene({ level, kind = "", intro = false, toast = "", fit, cr
           {level === 4 ? <img alt="" src="/img/tree-big.webp" style={abs(70, 211, 251, 301, { maxWidth: "none", transformOrigin: "50% 98%", animation: "sway 4.8s ease-in-out infinite" })} /> : null}
           {level === 5 ? <img alt="" src="/img/tree-flower.webp" style={abs(68, 207, 255, 305, { maxWidth: "none", transformOrigin: "50% 98%", animation: "sway 4.8s ease-in-out infinite" })} /> : null}
           {level >= 6 ? <img alt="" src="/img/tree-fruit.webp" style={abs(68, 208, 254, 304, { maxWidth: "none", transformOrigin: "50% 98%", animation: "sway 4.8s ease-in-out infinite" })} /> : null}
+          {look ? (
+            <div style={abs(0, 0, 390, 600, { transformOrigin: "195px 506px", animation: SWAY[level] && !intro ? `sway ${SWAY[level]} ease-in-out infinite` : "none" })}>
+              <TreeDecor look={look} level={level} />
+            </div>
+          ) : null}
         </div>
+        {look ? <Falling look={look} /> : null}
         {LEAF_X.map((x, i) => (
           <img key={x} alt="" src="/img/icon-leaf.webp" style={abs(x, 480, 18, 18, { opacity: 0, animation: charge ? `leafUp 0.9s ease-out ${0.55 + i * 0.07}s both` : "none" })} />
         ))}

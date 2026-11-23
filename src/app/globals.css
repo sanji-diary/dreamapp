@@ -88,6 +88,11 @@ select {
 @keyframes flap { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.35); } }
 @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 @keyframes birdIn { 0% { transform: translate(150px, -90px); } 18% { transform: translate(0, 0); } 22% { transform: translate(0, -6px); } 26% { transform: translate(0, 0); } 74% { transform: translate(0, 0); } 78% { transform: translate(0, -6px); } 82% { transform: translate(0, 0); } 100% { transform: translate(-190px, -110px); } }
+/* The season and the church year on the tree screen (src/components/kid/SeasonDecor.tsx). */
+@keyframes snowFall { 0% { opacity: 0; transform: translate(0, 0); } 10% { opacity: 0.95; } 85% { opacity: 0.95; } 100% { opacity: 0; transform: translate(-24px, 300px); } }
+@keyframes flame { 0%, 100% { transform: scale(1, 1) rotate(-3deg); } 50% { transform: scale(0.92, 1.12) rotate(3deg); } }
+@keyframes bulb { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes slideUp { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
 
 /* Soil rim drawn over the seed and the sprout so they sit inside the mound (140x68 mound image) */

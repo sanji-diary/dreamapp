@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
+import { saveLookChoice } from "@/lib/look-setting";
 import { readQuizJson } from "@/lib/quiz";
 import { saveUpload } from "@/lib/uploads";
 import { adjustPoints, archiveClass, copyPreviousWorship, deleteNotice, deletePost, moveChildren, moveClass, reissueJoinCode, saveClass, saveNotice, savePost, saveSettings, saveWorship, setSelfJoin } from "./admin-misc";
@@ -367,4 +368,11 @@ export async function settingsSaveAction(formData: FormData) {
     rotatingPerWeek: n("rotating_per_week"),
   });
   finish(r, "/staff/admin/settings", "설정을 저장했어요");
+}
+
+/** "첫 화면 모습": the season and the special time every child's tree screen is dressed for. */
+export async function lookSaveAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const r = await saveLookChoice(staff, { season: clean(formData.get("season"), 20), festival: clean(formData.get("festival"), 20) });
+  finish(r, "/staff/admin/look", "첫 화면 모습을 바꿨어요");
 }

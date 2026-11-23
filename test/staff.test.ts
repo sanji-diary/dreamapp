@@ -8,6 +8,7 @@ import { db, one, resetDbForTests } from "@/lib/db";
 import { completeMission, dropBalance, getSettings, pointBalance } from "@/lib/game";
 import { staffTabs } from "@/lib/staff/access";
 import { joinCodeOpen } from "@/lib/self-join";
+import { getLookChoice, saveLookChoice } from "@/lib/look-setting";
 import { adjustPoints, attendanceCsv, balances, moveChildren, pointsCsv, reissueJoinCode, saveSettings, setSelfJoin, sharedJoin } from "@/lib/staff/admin-misc";
 import { duplicateToNextWeek, listMissions, saveMission, weeklyDropCheck, defaultMissionInput } from "@/lib/staff/admin-missions";
 import { createStaff, listStaff, updateStaff } from "@/lib/staff/admin-staff";
@@ -583,6 +584,20 @@ describe("admin: missions, points, settings, exports", () => {
     expect(await saveSettings(s.staff.admin, { ...good, weeklyDropCap: 0 })).toMatchObject({ ok: false });
     expect(await saveSettings(s.staff.admin, good)).toMatchObject({ ok: true });
     expect((await weeklyDropCheck(s.staff.admin))?.cap).toBe(10);
+  });
+
+  it("the tree screen's look is set by admins only, and starts on 자동", async () => {
+    expect(await getLookChoice()).toEqual({ season: "auto", festival: "auto" });
+    expect(await saveLookChoice(s.staff.head, { season: "winter", festival: "auto" })).toMatchObject({ ok: false });
+    expect(await saveLookChoice(s.staff.admin, { season: "monsoon", festival: "auto" })).toMatchObject({ ok: false });
+    expect(await saveLookChoice(s.staff.admin, { season: "winter", festival: "" })).toMatchObject({ ok: false });
+    expect(await getLookChoice()).toEqual({ season: "auto", festival: "auto" });
+    expect(await saveLookChoice(s.staff.admin, { season: "winter", festival: "none" })).toMatchObject({ ok: true });
+    expect(await getLookChoice()).toEqual({ season: "winter", festival: "none" });
+    expect(await saveLookChoice(s.staff.admin, { season: "auto", festival: "auto" })).toMatchObject({ ok: true });
+    expect(await getLookChoice()).toEqual({ season: "auto", festival: "auto" });
+    // The other settings are left as they were.
+    expect((await getSettings()).weeklyDropCap).toBe(12);
   });
 
   it("settings keep the welcome-back drops and the rotating count when they are left out, and check them when given", async () => {
