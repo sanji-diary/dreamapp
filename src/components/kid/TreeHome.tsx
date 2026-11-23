@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Icon, KidTabBar } from "@/components/ui";
 import { waterAction, type WaterActionResult } from "@/lib/kid/actions";
 import { formatPoints } from "@/lib/kid/korean";
+import type { KidGift } from "@/lib/kid/gifts";
 import type { HomeLook } from "@/lib/kid/home-look";
 import { euro } from "@/lib/time";
 import { LEVEL_NAMES } from "@/lib/types";
@@ -33,6 +34,44 @@ interface Props {
   intro: boolean;
   /** The season and the special time the scene is dressed for today. */
   look: HomeLook;
+  /** It is Sunday and the attendance QR is still waiting for this child: offer "출석 체크". */
+  checkIn: boolean;
+  /** Gifts from teachers in the last week. The ones this phone has not shown yet are announced. */
+  gifts: KidGift[];
+}
+
+// Which gifts this phone has already announced: the id of the latest one, kept on the phone.
+const GIFT_KEY = "dream-gift-seen";
+const GIFT_EVENT = "dream-gift-seen";
+function giftSubscribe(cb: () => void) {
+  window.addEventListener(GIFT_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(GIFT_EVENT, cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+function giftSeen(): number {
+  try {
+    return Number(window.localStorage.getItem(GIFT_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+function markGiftsSeen(id: number) {
+  try {
+    window.localStorage.setItem(GIFT_KEY, String(id));
+  } catch {
+    // Without storage the note simply comes back next time.
+  }
+  window.dispatchEvent(new Event(GIFT_EVENT));
+}
+
+/** "물방울 2개와 20P" */
+function giftWords(drops: number, points: number): string {
+  const d = drops > 0 ? `물방울 ${drops}개` : "";
+  const p = points > 0 ? formatPoints(points) : "";
+  return d && p ? `${d}와 ${p}` : d || p;
 }
 
 /**
@@ -56,6 +95,9 @@ export function TreeHome(props: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const fit = useSceneFit(containerRef, cardRef);
+  // On the server (and before the phone answers) every gift counts as seen, so nothing flashes.
+  const seenGift = useSyncExternalStore(giftSubscribe, giftSeen, () => Number.MAX_SAFE_INTEGER);
+  const newGifts = props.gifts.filter((g) => g.id > seenGift);
 
   useEffect(() => {
     // The "new seed" flag is for one viewing only; a reload should not replay it.
@@ -182,6 +224,29 @@ export function TreeHome(props: Props) {
         </div>
         <div className="grow" />
         <div ref={cardRef} className="pointer-events-auto mx-auto mb-3 flex w-[calc(100%-32px)] max-w-[528px] flex-col gap-3 rounded-3xl bg-white px-[18px] pt-5 pb-[18px] shadow-[0_8px_24px_rgba(25,31,40,0.08)]">
+          {newGifts.length > 0 ? (
+            <div role="status" className="flex items-center gap-2.5 rounded-2xl bg-[#FFF4D6] py-2 pr-2 pl-3.5">
+              <Icon name="pouch" size={34} className="shrink-0 max-[359px]:hidden" />
+              <span className="flex min-w-0 grow flex-col">
+                <span className="text-[15px] leading-[21px] font-bold tracking-[-0.3px] break-keep text-ink">
+                  선생님이 {giftWords(newGifts.reduce((n, g) => n + g.drops, 0), newGifts.reduce((n, g) => n + g.points, 0))}를 줬어요
+                </span>
+                <span className="text-[13px] leading-[18px] font-medium break-keep text-sub">{newGifts.map((g) => g.reason).join(" · ")}</span>
+              </span>
+              <button type="button" onClick={() => markGiftsSeen(newGifts[newGifts.length - 1].id)} className="h-11 shrink-0 cursor-pointer rounded-xl border-0 bg-white px-3 text-[14px] font-bold text-ink2">
+                고마워요
+              </button>
+            </div>
+          ) : null}
+          {props.checkIn && !busy ? (
+            <Link href="/scan" className="flex h-[56px] items-center justify-between rounded-2xl bg-navy pr-3 pl-5 whitespace-nowrap text-white no-underline">
+              <span className="flex flex-col">
+                <span className="text-[16px] font-bold tracking-[-0.3px]">출석 체크</span>
+                <span className="text-[12px] font-medium text-[#E8F3FF]">교회에 있는 QR을 찍어요</span>
+              </span>
+              <Icon name="stamp" size={40} />
+            </Link>
+          ) : null}
           <div className="flex items-baseline justify-between">
             <div className="text-[17px] font-bold tracking-[-0.3px]">
               레벨 {st.level} {name}

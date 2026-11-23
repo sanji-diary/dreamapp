@@ -267,6 +267,13 @@ function ActivityTab({ c, missions, here, allWritings }: { c: ChildDetail; missi
           <StatTile value={`${c.tree.given} / ${c.tree.need}`} label="이 단계에 준 물" />
           <StatTile value={`${c.drops}개`} label="남은 물방울" />
         </div>
+        {c.can.proxy && c.active ? (
+          <div>
+            <PillLink href={`/staff/gift?child=${c.id}`} tone="gray" label={`${c.name}에게 선물 주기`}>
+              물방울·포인트 선물 주기
+            </PillLink>
+          </div>
+        ) : null}
         {/* A child without a phone cannot water the tree: the teacher does it with the child's drops. */}
         {c.can.proxy && c.active && !c.has_phone ? (
           c.tree.level >= 6 && c.tree.given >= c.tree.need ? (

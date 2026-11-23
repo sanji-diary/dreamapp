@@ -19,6 +19,8 @@ export interface ShellNav {
   attendance: boolean;
   worries: boolean;
   admin: boolean;
+  /** May give gifts (drops or points apart from missions). */
+  gift: boolean;
   /** Fifth tab on phones (see fifthTab in lib/staff/access). */
   fifth: "more" | "attendance";
 }
@@ -157,6 +159,11 @@ export function Sidebar({ nav, badges, teachers }: { nav: ShellNav; badges: Shel
           {nav.worries ? (
             <NavItem href="/staff/worries" icon="chat" badge={badges.worries}>
               고민 상담
+            </NavItem>
+          ) : null}
+          {nav.gift ? (
+            <NavItem href="/staff/gift" icon="send">
+              선물 주기
             </NavItem>
           ) : null}
         </MenuGroup>

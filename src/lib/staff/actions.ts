@@ -9,6 +9,7 @@ import { db, one } from "@/lib/db";
 import { saveUpload } from "@/lib/uploads";
 import { saveAttendance, type AttStatus } from "./attendance";
 import { addVisit, createChild, deleteVisit, getChildDetail, proxyComplete, proxyHarvest, proxyWater, reissueCard, resetPin, setChildActive, setConsent, updateChild, updateVisit, type ChildInput } from "./children";
+import { giveGift } from "./gifts";
 import { INVITE_COOKIE, STATE_COOKIE, authorizeUrl, devLoginAllowed, kakaoConfigured } from "./kakao";
 import { publicOrigin } from "./origin";
 import { dismissReports, hideComment, replyWorry, reviewSubmission } from "./review";
@@ -213,4 +214,12 @@ export async function replyWorryAction(formData: FormData) {
   const id = toInt(formData.get("id"));
   if (id === null) redirect("/staff/worries");
   finish(await replyWorry(staff, id, clean(formData.get("content"), 2000)), `/staff/worries/${id}`, "답장을 보냈어요");
+}
+
+/** "선물 주기": drops, points or both for the chosen children, apart from any mission. */
+export async function giftAction(formData: FormData) {
+  const staff = await requireStaff();
+  const childIds = formData.getAll("child").map(toInt).filter((id): id is number => id !== null);
+  const r = await giveGift(staff, { childIds, drops: toInt(formData.get("drops")) ?? -1, points: toInt(formData.get("points")) ?? -1, reason: clean(formData.get("reason"), 40) });
+  finish(r, "/staff/gift", r.ok ? `${r.count}명에게 선물을 줬어요` : undefined);
 }

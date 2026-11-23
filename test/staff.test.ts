@@ -5,10 +5,16 @@ process.env.DREAM_SEED = "off";
 
 import { ROLE_PRESETS } from "@/lib/authz";
 import { db, one, resetDbForTests } from "@/lib/db";
-import { completeMission, dropBalance, getSettings, pointBalance } from "@/lib/game";
+import { completeMission, dropBalance, getSettings, missionsForChild, pointBalance, weekDropsEarned } from "@/lib/game";
 import { staffTabs } from "@/lib/staff/access";
 import { joinCodeOpen } from "@/lib/self-join";
+import { canCheckIn } from "@/lib/kid/check-in";
+import { giftsForKid } from "@/lib/kid/gifts";
+import { scanQr } from "@/lib/kid/qr";
+import { qrCodeFromText } from "@/lib/kid/scan-text";
 import { getLookChoice, saveLookChoice } from "@/lib/look-setting";
+import { attendanceQr, enableAttendanceQr } from "@/lib/staff/attendance-qr";
+import { GIFT_MAX_DROPS, GIFT_MAX_POINTS, giftChildren, giveGift, recentGifts } from "@/lib/staff/gifts";
 import { adjustPoints, attendanceCsv, balances, moveChildren, pointsCsv, reissueJoinCode, saveSettings, setSelfJoin, sharedJoin } from "@/lib/staff/admin-misc";
 import { duplicateToNextWeek, listMissions, saveMission, weeklyDropCheck, defaultMissionInput } from "@/lib/staff/admin-missions";
 import { createStaff, listStaff, updateStaff } from "@/lib/staff/admin-staff";
@@ -615,5 +621,135 @@ describe("admin: missions, points, settings, exports", () => {
     expect(await moveChildren(s.staff.head, [s.kidA], s.B)).toMatchObject({ ok: false });
     expect(await moveChildren(s.staff.admin, [s.kidA, s.kidB], s.B)).toMatchObject({ ok: true, moved: 1 });
     expect(await getChildDetail(s.staff.homeroom, s.kidA)).toBeNull();
+  });
+});
+
+describe("gifts: drops and points apart from missions", () => {
+  const gift = { drops: 2, points: 20, reason: "말씀 암송" };
+
+  it("a teacher gives to the children of the classes they see, an admin to everyone", async () => {
+    // 교사 기본 may not confirm missions, so may not give either.
+    expect(await giveGift(s.staff.basic, { ...gift, childIds: [s.kidA] })).toMatchObject({ ok: false });
+    expect(await giftChildren(s.staff.basic)).toEqual([]);
+    // The teacher of another class.
+    expect(await giveGift(s.staff.other, { ...gift, childIds: [s.kidA] })).toMatchObject({ ok: false });
+    // One child out of reach refuses the whole gift.
+    expect(await giveGift(s.staff.homeroom, { ...gift, childIds: [s.kidA, s.kidB] })).toMatchObject({ ok: false });
+    expect(await dropBalance(db, s.kidA)).toBe(0);
+    expect((await giftChildren(s.staff.homeroom)).map((k) => k.id)).toEqual([s.kidA]);
+
+    expect(await giveGift(s.staff.homeroom, { ...gift, childIds: [s.kidA] })).toEqual({ ok: true, count: 1 });
+    expect(await dropBalance(db, s.kidA)).toBe(2);
+    expect(await pointBalance(db, s.kidA)).toBe(20);
+    expect(await giveGift(s.staff.admin, { drops: 1, points: 0, reason: "행사 참여", childIds: [s.kidA, s.kidB, s.kidA] })).toEqual({ ok: true, count: 2 });
+    expect(await dropBalance(db, s.kidA)).toBe(3);
+    expect(await dropBalance(db, s.kidB)).toBe(1);
+    expect(await pointBalance(db, s.kidB)).toBe(0);
+  });
+
+  it("only gives: a number, a reason and a child are needed, within the limits", async () => {
+    const to = { childIds: [s.kidA] };
+    expect(await giveGift(s.staff.admin, { ...to, drops: 0, points: 0, reason: "칭찬" })).toMatchObject({ ok: false });
+    expect(await giveGift(s.staff.admin, { ...to, drops: -1, points: 0, reason: "칭찬" })).toMatchObject({ ok: false });
+    expect(await giveGift(s.staff.admin, { ...to, drops: 0, points: -10, reason: "칭찬" })).toMatchObject({ ok: false });
+    expect(await giveGift(s.staff.admin, { ...to, drops: GIFT_MAX_DROPS + 1, points: 0, reason: "칭찬" })).toMatchObject({ ok: false });
+    expect(await giveGift(s.staff.admin, { ...to, drops: 0, points: GIFT_MAX_POINTS + 1, reason: "칭찬" })).toMatchObject({ ok: false });
+    expect(await giveGift(s.staff.admin, { ...to, drops: 1.5, points: 0, reason: "칭찬" })).toMatchObject({ ok: false });
+    expect(await giveGift(s.staff.admin, { ...to, drops: 1, points: 0, reason: "   " })).toMatchObject({ ok: false });
+    expect(await giveGift(s.staff.admin, { childIds: [], drops: 1, points: 0, reason: "칭찬" })).toMatchObject({ ok: false });
+    expect(await giveGift(s.staff.admin, { childIds: [999999], drops: 1, points: 0, reason: "칭찬" })).toMatchObject({ ok: false });
+    await db.query("update children set active = false where id = $1", [s.kidB]);
+    expect(await giveGift(s.staff.admin, { childIds: [s.kidB], drops: 1, points: 0, reason: "칭찬" })).toMatchObject({ ok: false });
+    expect(await dropBalance(db, s.kidA)).toBe(0);
+    expect(await giveGift(s.staff.admin, { ...to, drops: GIFT_MAX_DROPS, points: GIFT_MAX_POINTS, reason: "칭찬" })).toMatchObject({ ok: true });
+  });
+
+  it("is apart from the weekly cap, and the child is told once per gift", async () => {
+    await giveGift(s.staff.admin, { childIds: [s.kidA], drops: GIFT_MAX_DROPS, points: 0, reason: "행사 참여" });
+    expect(await weekDropsEarned(db, s.kidA, WS)).toBe(0);
+    await giveGift(s.staff.homeroom, { childIds: [s.kidA], drops: 1, points: 30, reason: "말씀 암송" });
+    const told = await giftsForKid(s.kidA);
+    expect(told.map(({ drops, points, reason }) => ({ drops, points, reason }))).toEqual([
+      { drops: GIFT_MAX_DROPS, points: 0, reason: "행사 참여" },
+      { drops: 1, points: 30, reason: "말씀 암송" },
+    ]);
+    expect(told[0].id).toBeLessThan(told[1].id);
+    expect(await giftsForKid(s.kidB)).toEqual([]);
+    // Older than a week: no longer announced, still in the ledger.
+    await db.query("update drop_ledger set created_at = now() - interval '8 days' where child_id = $1", [s.kidA]);
+    await db.query("update point_ledger set created_at = now() - interval '8 days' where child_id = $1", [s.kidA]);
+    expect(await giftsForKid(s.kidA)).toEqual([]);
+    expect(await dropBalance(db, s.kidA)).toBe(GIFT_MAX_DROPS + 1);
+  });
+
+  it("keeps a record: an admin sees every gift, a teacher only the ones they gave", async () => {
+    await giveGift(s.staff.homeroom, { childIds: [s.kidA], drops: 1, points: 0, reason: "말씀 암송" });
+    await giveGift(s.staff.admin, { childIds: [s.kidA, s.kidB], drops: 0, points: 50, reason: "행사 참여" });
+    expect((await recentGifts(s.staff.admin)).map(({ who, drops, points, reason, staff_name }) => ({ who, drops, points, reason, staff_name }))).toEqual([
+      { who: "가은 외 1명", drops: 0, points: 50, reason: "행사 참여", staff_name: "관리자" },
+      { who: "가은", drops: 1, points: 0, reason: "말씀 암송", staff_name: "담임" },
+    ]);
+    expect((await recentGifts(s.staff.homeroom)).map((g) => g.reason)).toEqual(["말씀 암송"]);
+    expect(await recentGifts(s.staff.basic)).toEqual([]);
+    const rows = await db.query<{ staff_id: number; ref_type: string }>("select staff_id, ref_type from point_ledger where child_id = $1", [s.kidB]);
+    expect(rows).toEqual([{ staff_id: s.ids.admin, ref_type: "gift" }]);
+  });
+});
+
+describe("the attendance QR", () => {
+  const SUNDAY = WS;
+  const mission = () =>
+    db.query<{ id: number }>("insert into missions (title, description, kind, icon, points, drops, repeat, starts_on, ends_on, mode) values ('주일 예배 출석', '', 'attendance', 'stamp', 20, 2, 'weekly', $1, $1, 'fixed') returning id", [WS]);
+
+  it("reads only the mission links of this app", () => {
+    expect(qrCodeFromText("https://dream.example/q/AbCd1234_-xy")).toBe("AbCd1234_-xy");
+    expect(qrCodeFromText("  http://localhost:3000/q/AbCd1234_-xy/ ")).toBe("AbCd1234_-xy");
+    expect(qrCodeFromText("https://dream.example/q/AbCd1234_-xy?from=poster")).toBe("AbCd1234_-xy");
+    expect(qrCodeFromText("https://dream.example/q/short")).toBeNull();
+    expect(qrCodeFromText("https://dream.example/staff/q/AbCd1234_-xy")).toBeNull();
+    expect(qrCodeFromText("https://dream.example/q/AbCd1234_-xy/../../staff")).toBeNull();
+    expect(qrCodeFromText("AbCd1234_-xy")).toBeNull();
+    expect(qrCodeFromText("javascript:alert(1)//q/AbCd1234_-xy")).toBeNull();
+  });
+
+  it("is turned on by an admin and shown to teachers who take attendance", async () => {
+    expect(await attendanceQr(s.staff.basic)).toBeNull();
+    expect((await attendanceQr(s.staff.admin))?.canEnable).toBeNull(); // no attendance mission yet
+    expect(await enableAttendanceQr(s.staff.admin)).toMatchObject({ ok: false });
+    const [m] = await mission();
+    expect(await attendanceQr(s.staff.homeroom)).toMatchObject({ mission: null, canEnable: null });
+    expect(await attendanceQr(s.staff.admin)).toMatchObject({ mission: null, canEnable: { id: m.id } });
+    expect(await enableAttendanceQr(s.staff.homeroom)).toMatchObject({ ok: false });
+    expect(await enableAttendanceQr(s.staff.admin)).toMatchObject({ ok: true });
+    const shown = await attendanceQr(s.staff.homeroom, SUNDAY);
+    expect(shown).toMatchObject({ mission: { id: m.id }, sunday: SUNDAY });
+    // Turning it on again keeps this week's QR (a printed poster stays good).
+    expect(await enableAttendanceQr(s.staff.admin)).toMatchObject({ ok: true });
+    expect((await attendanceQr(s.staff.admin, SUNDAY))?.mission?.code).toBe(shown?.mission?.code);
+    // During the week the page already shows the QR of the Sunday to come, which is a different one.
+    const next = await attendanceQr(s.staff.admin, addDays(SUNDAY, 2));
+    expect(next?.sunday).toBe(addDays(SUNDAY, 7));
+    expect(next?.mission?.code).not.toBe(shown?.mission?.code);
+  });
+
+  it("offers 출석 체크 on Sunday until the child has checked in, and the scan gives the reward once", async () => {
+    await mission();
+    await enableAttendanceQr(s.staff.admin);
+    const code = (await attendanceQr(s.staff.admin, SUNDAY))?.mission?.code ?? "";
+    const monday = addDays(SUNDAY, 1);
+    expect(canCheckIn(await missionsForChild(db, s.kidA, SUNDAY), SUNDAY)).toBe(true);
+    expect(canCheckIn(await missionsForChild(db, s.kidA, monday), monday)).toBe(false);
+    expect(await scanQr(s.kidA, code, monday)).toEqual({ ok: false, reason: "not_sunday" });
+
+    expect(await scanQr(s.kidA, code, SUNDAY)).toMatchObject({ ok: true, kind: "attendance" });
+    expect(await dropBalance(db, s.kidA)).toBe(2);
+    expect(await pointBalance(db, s.kidA)).toBe(20);
+    expect(await one(db, "select status from attendance where child_id = $1 and date = $2", [s.kidA, SUNDAY])).toEqual({ status: "present" });
+    expect(await scanQr(s.kidA, code, SUNDAY)).toEqual({ ok: false, reason: "already" });
+    expect(await dropBalance(db, s.kidA)).toBe(2);
+    expect(canCheckIn(await missionsForChild(db, s.kidA, SUNDAY), SUNDAY)).toBe(false);
+    // Without a QR on the mission there is nothing to offer.
+    await db.query("update missions set qr_code = null");
+    expect(canCheckIn(await missionsForChild(db, s.kidB, SUNDAY), SUNDAY)).toBe(false);
   });
 });

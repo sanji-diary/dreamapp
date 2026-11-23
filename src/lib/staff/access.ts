@@ -62,6 +62,7 @@ export function quickActions(s: Staff, festivalOpen: boolean) {
     attendance: hasScope(attendanceScope(s)),
     visit: canWriteAnyVisits(s),
     proxy: hasScope(approveScope(s)),
+    gift: hasScope(approveScope(s)),
     festival: festivalOpen,
   };
 }

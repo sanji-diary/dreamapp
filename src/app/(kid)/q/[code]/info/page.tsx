@@ -10,6 +10,7 @@ const NOTES: Record<string, { icon: string; title: string; lines: string[] }> = 
   closed: { icon: "cloud", title: "지금은 열려 있지 않아요", lines: ["이 QR은 정해진 날에만 찍을 수 있어요.", "언제 찍는지 선생님께 물어봐 주세요."] },
   not_sunday: { icon: "stamp", title: "출석 QR은 주일에 찍을 수 있어요", lines: ["주일 예배에 와서 다시 찍어 주세요.", "그날 선생님이 출석을 확인해 줘도 물방울이 들어와요."] },
   not_yours: { icon: "cloud", title: "다른 반 친구들의 미션이에요", lines: ["이 QR은 다른 친구들을 위한 거예요.", "내 미션은 미션 목록에서 볼 수 있어요."] },
+  expired: { icon: "stamp", title: "지난 출석 QR이에요", lines: ["출석 QR은 주일마다 바뀌어요.", "교회에 새로 있는 이번 주 QR을 찍어 주세요."] },
   ask_teacher: { icon: "pray", title: "선생님께 말해 주세요", lines: ["오늘 출석이 다르게 적혀 있어요.", "선생님께 왔다고 말하면 바로 고쳐 주세요."] },
   unknown: { icon: "cloud", title: "QR을 다시 찍어 볼까요?", lines: ["이 QR로는 미션을 찾지 못했어요.", "교회에 붙어 있는 QR을 다시 찍어 보고, 계속 안 되면 선생님께 보여 주세요."] },
 };

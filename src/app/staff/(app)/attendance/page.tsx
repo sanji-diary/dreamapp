@@ -148,6 +148,11 @@ export default async function AttendancePage({ searchParams }: PageProps<"/staff
           );
         })}
       </nav>
+      {/* The QR children scan to check in by themselves ("출석 체크" in the app). */}
+      <Link href="/staff/attendance/qr" className="flex min-h-11 items-center justify-between gap-2 rounded-[14px] bg-fill px-4 py-2 text-[14px] font-semibold text-ink2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-staff lg:hidden">
+        아이들이 찍는 출석 QR
+        <LineIcon name="next" size={16} stroke={2.2} className="shrink-0 text-sub" />
+      </Link>
 
       {/* ---------- from lg: the month ---------- */}
       <div className="hidden lg:block">
@@ -159,6 +164,7 @@ export default async function AttendancePage({ searchParams }: PageProps<"/staff
               <BarLink href={href(step.prev.date)}>‹ {step.prev.label}</BarLink>
               {step.next ? <BarLink href={href(step.next.date)}>{step.next.label} ›</BarLink> : null}
               <DateJump id="att-date-wide" date={date} today={today} query={classQuery} />
+              <BarLink href="/staff/attendance/qr">출석 QR</BarLink>
               {staff.role === "admin" ? (
                 // The file is made by a route handler that checks for an admin again: every class, the last 26 Sundays.
                 <a href="/staff/admin/export/attendance" download title="모든 반의 최근 26주 출석부 (CSV 파일)" className={barButtonClass()}>

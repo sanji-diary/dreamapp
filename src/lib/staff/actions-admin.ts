@@ -10,6 +10,7 @@ import { adjustPoints, archiveClass, copyPreviousWorship, deleteNotice, deletePo
 import { weekStart } from "@/lib/time";
 import { copyWeek, duplicateToNextWeek, getMission, saveMission, setMissionActive, setMissionChallenge } from "./admin-missions";
 import { clearWeekVerses, createDefaultFixedMissions, resetWeekRotation, saveWeekVerses, setRotatingPerWeek, setWeekRotation } from "./admin-plan";
+import { enableAttendanceQr } from "./attendance-qr";
 import { createStaff, getStaffRow, renewInvite, setStaffSwitch, updateStaff } from "./admin-staff";
 import type { Verse } from "@/lib/types";
 import { clean, cleanOrNull, fail, isDate, toInt, type Result } from "./util";
@@ -375,4 +376,10 @@ export async function lookSaveAction(formData: FormData) {
   const staff = await requireAdmin();
   const r = await saveLookChoice(staff, { season: clean(formData.get("season"), 20), festival: clean(formData.get("festival"), 20) });
   finish(r, "/staff/admin/look", "첫 화면 모습을 바꿨어요");
+}
+
+/** "출석 QR 켜기": gives the attendance mission a QR, so children can check in with the app. */
+export async function attendanceQrOnAction() {
+  const staff = await requireAdmin();
+  finish(await enableAttendanceQr(staff), "/staff/attendance/qr", "출석 QR을 켰어요");
 }

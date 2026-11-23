@@ -20,6 +20,23 @@ import { normalizeVerse } from "@/lib/verse";
 
 export const metadata = { title: "미션 · 꿈의숲키우기" };
 
+/** Opens the camera of the app for a QR posted at church; the list stays one tap away below it. */
+function ScanButton({ label }: { label: string }) {
+  return (
+    <>
+      <div className="grow" />
+      <div className="flex flex-col gap-1 px-5 pt-3 pb-[max(28px,env(safe-area-inset-bottom))]">
+        <Link href="/scan" className={`${primaryButtonClass} h-[54px] rounded-[14px] text-[17px] no-underline`}>
+          {label}
+        </Link>
+        <Link href="/missions" className="flex h-11 items-center justify-center text-[15px] font-semibold text-sub underline underline-offset-2">
+          미션 목록으로
+        </Link>
+      </div>
+    </>
+  );
+}
+
 function BackToList({ label = "미션 목록으로" }: { label?: string }) {
   return (
     <>
@@ -156,16 +173,16 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
         <MissionShell reward={reward} title={m.title} sub={capNote ?? m.description}>
           <MissionNote
             icon={m.icon}
-            lines={m.qr_code ? ["주일 예배에 와서 QR을 찍어 주세요", "교회에 붙어 있는 출석 QR을 휴대폰 카메라로 찍으면 돼요. 선생님이 출석을 확인해 줘도 물방울이 들어와요."] : ["주일 예배에 오면 돼요", "선생님이 출석을 확인하면 물방울이 자동으로 들어와요."]}
+            lines={m.qr_code ? ["주일 예배에 와서 QR을 찍어 주세요", "교회에 있는 출석 QR을 아래 버튼으로 찍으면 돼요. 선생님이 출석을 확인해 줘도 물방울이 들어와요."] : ["주일 예배에 오면 돼요", "선생님이 출석을 확인하면 물방울이 자동으로 들어와요."]}
           />
-          <BackToList />
+          {m.qr_code ? <ScanButton label="출석 QR 찍기" /> : <BackToList />}
         </MissionShell>
       );
     case "qr":
       return (
         <MissionShell reward={reward} title={m.title} sub={capNote ?? m.description}>
-          <MissionNote icon={m.icon} lines={["QR을 찍으면 완료돼요", "교회에 붙어 있는 QR을 휴대폰 카메라로 찍어 주세요."]} />
-          <BackToList />
+          <MissionNote icon={m.icon} lines={["QR을 찍으면 완료돼요", "교회에 있는 QR을 아래 버튼으로 찍어 주세요."]} />
+          <ScanButton label="QR 찍기" />
         </MissionShell>
       );
     case "teacher":

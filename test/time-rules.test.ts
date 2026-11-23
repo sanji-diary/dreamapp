@@ -17,6 +17,7 @@ import { kidLogin } from "@/lib/auth";
 import { ROLE_PRESETS } from "@/lib/authz";
 import { db, one, resetDbForTests } from "@/lib/db";
 import { completeMission, dropBalance, getSettings, missionsForChild, pointBalance, recordAttendance, reviewCompletion, waterTree, weekDropsEarned, welcomeBackToday } from "@/lib/game";
+import { weeklyAttendanceCode } from "@/lib/attendance-code";
 import { scanQr } from "@/lib/kid/qr";
 import { attendanceStreak, lockMinutes } from "@/lib/kid/queries";
 import { hashPin, PIN_LOCK_MINUTES, PIN_MAX_FAILS } from "@/lib/pin";
@@ -402,7 +403,7 @@ describe("a child who comes back after being away (반가워 물방울)", () => 
   it("a QR self check-in on Sunday brings it too", async () => {
     await db.query("insert into missions (title, kind, drops, points, repeat, starts_on, ends_on, qr_code) values ('주일 예배 출석','attendance',2,20,'weekly',$1,$2,'att-code-001')", [SUN1, SAT1]);
     await rollTaken(D20, D27);
-    expect(await scanQr(s.kid, "att-code-001", SUN1)).toMatchObject({ ok: true, kind: "attendance" });
+    expect(await scanQr(s.kid, weeklyAttendanceCode("att-code-001", SUN1), SUN1)).toMatchObject({ ok: true, kind: "attendance" });
     expect(await dropBalance(db, s.kid)).toBe(4);
     expect(await welcomeRows()).toEqual([{ delta: 2, week_start: SUN1 }]);
     expect(await weekDropsEarned(db, s.kid, SUN1)).toBe(2);

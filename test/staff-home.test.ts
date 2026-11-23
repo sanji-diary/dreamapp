@@ -90,11 +90,11 @@ describe("phone tab bar and the + sheet", () => {
   });
 
   it("the sheet offers only what the teacher may do", () => {
-    expect(quickActions(s.staff.homeroom, false)).toEqual({ attendance: true, visit: true, proxy: true, festival: false });
+    expect(quickActions(s.staff.homeroom, false)).toEqual({ attendance: true, visit: true, proxy: true, gift: true, festival: false });
     // 부장 reads visit notes but does not write them.
-    expect(quickActions(s.staff.head, true)).toEqual({ attendance: true, visit: false, proxy: true, festival: true });
-    expect(quickActions(s.staff.admin, false)).toMatchObject({ attendance: true, visit: true, proxy: true });
-    expect(quickActions(s.staff.basic, false)).toEqual({ attendance: false, visit: false, proxy: false, festival: false });
+    expect(quickActions(s.staff.head, true)).toEqual({ attendance: true, visit: false, proxy: true, gift: true, festival: true });
+    expect(quickActions(s.staff.admin, false)).toMatchObject({ attendance: true, visit: true, proxy: true, gift: true });
+    expect(quickActions(s.staff.basic, false)).toEqual({ attendance: false, visit: false, proxy: false, gift: false, festival: false });
     expect(quickActions(s.staff.basic, true).festival).toBe(true);
     expect(canWriteAnyVisits({ ...s.staff.homeroom, can_visits: false })).toBe(false);
     expect(canWriteAnyVisits({ ...s.staff.homeroom, class_ids: [] })).toBe(false);
