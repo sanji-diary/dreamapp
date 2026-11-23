@@ -138,11 +138,28 @@ export function TreeHome(props: Props) {
     <div ref={containerRef} className="relative flex h-dvh flex-col overflow-hidden bg-ground">
       <TreeScene level={st.level} kind={kind} intro={intro} toast={toast} fit={fit} />
       <div className="pointer-events-none relative flex min-h-0 grow flex-col">
-        <div className="kid-col flex items-center justify-between px-5 pt-[max(14px,env(safe-area-inset-top))]">
-          <div className="text-[14px] font-semibold text-sub">{props.kidLabel}</div>
-          <div className="flex h-[34px] items-center gap-1 rounded-[17px] bg-white pr-[13px] pl-2 text-[15px] font-bold tracking-[-0.2px]">
-            <Icon name="persimmon" size={24} />
-            <span aria-label={`내 포인트 ${formatPoints(props.points)}`}>{formatPoints(props.points)}</span>
+        <div className="kid-col flex items-center justify-between gap-2 px-5 pt-[max(14px,env(safe-area-inset-top))]">
+          <div className="min-w-0 truncate text-[14px] font-semibold text-sub">{props.kidLabel}</div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* The shared forest. The pill looks 34px tall; the invisible edge around it makes a 44px target. */}
+            <Link
+              href="/forest"
+              aria-label="우리 숲 보기"
+              className="pointer-events-auto relative flex h-[34px] items-center gap-1 rounded-[17px] bg-white pr-3 pl-2 text-[15px] font-bold tracking-[-0.2px] text-ink no-underline after:absolute after:-inset-[5px] after:content-[''] max-[359px]:pr-2"
+            >
+              <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24">
+                <circle cx="8" cy="9" r="5" fill="#93c683" />
+                <circle cx="16" cy="8" r="6" fill="#7fb86f" />
+                <rect x="7" y="12" width="2" height="8" rx="1" fill="#b5804f" />
+                <rect x="15" y="12" width="2" height="9" rx="1" fill="#b5804f" />
+                <path d="M2 21 C8 18.5 16 18.5 22 21" stroke="#c9dd90" strokeWidth="2" fill="none" strokeLinecap="round" />
+              </svg>
+              <span className="max-[359px]:hidden">우리 숲</span>
+            </Link>
+            <div className="flex h-[34px] items-center gap-1 rounded-[17px] bg-white pr-[13px] pl-2 text-[15px] font-bold tracking-[-0.2px]">
+              <Icon name="persimmon" size={24} />
+              <span aria-label={`내 포인트 ${formatPoints(props.points)}`}>{formatPoints(props.points)}</span>
+            </div>
           </div>
         </div>
         <div className="kid-col flex items-start justify-between gap-3 px-5 pt-[18px] transition-opacity duration-300" style={{ opacity: wet || reveal ? 0 : 1 }}>

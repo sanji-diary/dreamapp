@@ -130,3 +130,22 @@ select {
   max-width: 560px;
   margin-inline: auto;
 }
+
+/* "우리 숲" sky: stars that twinkle at night and the rainbow behind the island (src/components/kid/ForestMap.tsx). */
+.forest-stars {
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 18%, #fff, transparent), radial-gradient(1.4px 1.4px at 28% 8%, #fff, transparent),
+    radial-gradient(2px 2px at 44% 22%, #fff7c4, transparent), radial-gradient(1.4px 1.4px at 62% 12%, #fff, transparent),
+    radial-gradient(1.8px 1.8px at 78% 26%, #fff, transparent), radial-gradient(1.4px 1.4px at 90% 10%, #fff7c4, transparent),
+    radial-gradient(1.6px 1.6px at 20% 40%, #fff, transparent), radial-gradient(1.4px 1.4px at 54% 38%, #fff, transparent),
+    radial-gradient(2px 2px at 86% 44%, #fff, transparent), radial-gradient(1.4px 1.4px at 6% 52%, #fff, transparent),
+    radial-gradient(1.6px 1.6px at 70% 50%, #fff7c4, transparent);
+  animation: forestTwinkle 3.2s ease-in-out infinite alternate;
+}
+@keyframes forestTwinkle { from { filter: brightness(0.7); } to { filter: brightness(1.25); } }
+.forest-rainbow {
+  background: radial-gradient(circle, transparent 0 56%, rgba(198, 178, 239, 0.55) 56% 58.5%, rgba(159, 205, 242, 0.55) 58.5% 61%, rgba(169, 220, 157, 0.55) 61% 63.5%, rgba(247, 224, 138, 0.6) 63.5% 66%, rgba(248, 196, 140, 0.6) 66% 68.5%, rgba(246, 166, 160, 0.6) 68.5% 71%, transparent 71%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .forest-stars { animation: none; }
+}

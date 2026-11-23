@@ -33,6 +33,7 @@ truncate table
   posts, post_likes, comments, comment_reports,
   notices, worship,
   talent_events, talent_grants, talent_ledger,
+  forest_weeks,
   staff_classes, classes,
   audit_log
   continue identity;

@@ -54,6 +54,7 @@ beforeEach(async () => {
   const [ev] = await q.query<{ id: number }>("insert into talent_events (name, points_per_talent) values ('잔치', 10) returning id");
   await q.query("insert into talent_grants (event_id, child_id, points_at_open, talents) values ($1,$2,100,10)", [ev.id, child.id]);
   await q.query("insert into talent_ledger (event_id, child_id, delta, kind, reason) values ($1,$2,-1,'payment','과자')", [ev.id, child.id]);
+  await q.query("insert into forest_weeks (week_start, gained) values ('2026-11-15', 1)");
 });
 
 describe("reset that keeps the admin", () => {
