@@ -4,7 +4,7 @@ process.env.PGLITE_DIR = "memory";
 process.env.DREAM_SEED = "off";
 
 import { db, resetDbForTests } from "@/lib/db";
-import { bonusFor, easterSunday, eventOn, FOREST_ITEMS, FOREST_SIZE, forestState, iga, seasonOn, thanksgivingSunday, timeOfDay } from "@/lib/forest";
+import { auroraNight, bonusFor, easterSunday, eventOn, FOREST_ITEMS, FOREST_SIZE, forestState, iga, seasonOn, thanksgivingSunday, timeOfDay } from "@/lib/forest";
 import { addDays } from "@/lib/time";
 
 describe("forest rules", () => {
@@ -122,6 +122,11 @@ describe("the forest's weeks", () => {
 
   it("dresses for the day it is", async () => {
     expect(await forestState(db, "2026-12-24")).toMatchObject({ event: "christmas", season: "winter" });
+    // Sunday opens the church doors; the northern lights come on some winter nights only.
+    expect(await forestState(db, "2026-12-27")).toMatchObject({ sunday: true, aurora: true });
+    expect(await forestState(db, "2026-12-28")).toMatchObject({ sunday: false, aurora: false });
+    expect(["2027-01-03", "2027-01-04", "2027-01-06"].map((d) => auroraNight(d, "winter"))).toEqual([true, false, true]);
+    expect(auroraNight("2027-07-03", "summer")).toBe(false);
     expect(await forestState(db, "2027-02-07")).toMatchObject({ event: "seollal", season: "spring" });
   });
 });

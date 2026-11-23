@@ -1,5 +1,5 @@
 import type { Queryable } from "@/lib/db";
-import { addDays, todayKst, weekStart } from "@/lib/time";
+import { addDays, isSunday, todayKst, weekStart } from "@/lib/time";
 
 /**
  * The shared forest ("우리 숲"): one island where the whole department's forest grows round the church.
@@ -83,6 +83,14 @@ export function timeOfDay(now: Date, season: Season): TimeOfDay {
   return hour >= morning && hour < dusk ? "day" : hour >= dusk && hour < dark ? "evening" : "night";
 }
 
+/**
+ * Northern lights over the forest: on winter nights, but only every third day of the month,
+ * so that seeing them is a small surprise. (Night itself is decided on the screen, by the clock.)
+ */
+export function auroraNight(date: string, season: Season): boolean {
+  return season === "winter" && Number(date.slice(8, 10)) % 3 === 0;
+}
+
 const within = (date: string, center: string, before: number, after: number) => date >= addDays(center, -before) && date <= addDays(center, after);
 
 /**
@@ -114,6 +122,10 @@ export interface ForestState {
   event: ForestEvent | null;
   /** Names of this week's new things, for the screen. */
   freshNames: string[];
+  /** Today is Sunday: the church doors stand open. */
+  sunday: boolean;
+  /** Tonight the northern lights may be seen (see auroraNight). */
+  aurora: boolean;
 }
 
 /** How busy a finished week was: 0, 1 or 2 extra things. */
@@ -152,13 +164,16 @@ export async function forestState(q: Queryable, today: string = todayKst()): Pro
   const count = Math.min(FOREST_SIZE, total);
   const fresh = now ? count - Math.min(FOREST_SIZE, total - now.gained) : 0;
   const event = eventOn(today);
+  const season = event ? EVENTS[event].season : seasonOn(today);
   return {
     count,
     fresh,
     rain: fresh > 0 && (now?.bonus ?? 0) > 0,
-    season: event ? EVENTS[event].season : seasonOn(today),
+    season,
     event,
     freshNames: FOREST_ITEMS.slice(count - fresh, count),
+    sunday: isSunday(today),
+    aurora: auroraNight(today, season),
   };
 }
 

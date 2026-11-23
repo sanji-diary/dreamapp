@@ -1,12 +1,17 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import type { ForestEvent, Season, TimeOfDay } from "@/lib/forest";
+import { iga, type ForestEvent, type Season, type TimeOfDay } from "@/lib/forest";
 
 /**
  * The 3D island of "우리 숲" (approved prototype: https://claude.ai/artifact/RHfnpLLzemBGoiJXrex4Fj).
  * The church stands in the middle; trees, flowers, water, animals and the sky's friends appear one by one
  * as `count` goes from 1 to 64, in the order of FOREST_ITEMS. Everything is built from simple shapes,
  * so nothing has to be downloaded. Loaded only on the forest screen (the library is large).
+ *
+ * The forest is alive: wind in the grass and the trees, animals that walk about, light on the ground
+ * in the evening. It answers a touch (an animal jumps, a tree drops leaves, the church bell rings,
+ * the pond ripples), and when this week's new things are shown for the first time the camera goes
+ * to each one as it comes up.
  */
 
 export interface SceneState {
@@ -17,6 +22,24 @@ export interface SceneState {
   time: TimeOfDay;
   rain: boolean;
   event: ForestEvent | null;
+  /** Sunday: the church doors stand open, the bell swings and music rises from the roof. */
+  sunday: boolean;
+}
+
+export interface SceneOptions {
+  reducedMotion: boolean;
+  /** The child started to turn the island. */
+  onInteract?: () => void;
+  /** Names of this week's new things, in order, when they should be shown coming up one by one. */
+  reveal?: string[];
+  /** The small label that follows a new thing while it is shown; the scene moves and fills it. */
+  tag?: HTMLElement | null;
+  /** A short line for the child, for a new thing that is up in the sky or all over the meadow. */
+  onSay?: (text: string) => void;
+  /** The rain of a busy week has passed (a rainbow can come out). */
+  onRainOver?: () => void;
+  /** Whether sounds may be played now. */
+  soundOn?: () => boolean;
 }
 
 export interface ForestScene {
@@ -29,7 +52,7 @@ export interface ForestScene {
 type Anim = (t: number, dt: number) => void;
 type Vec = number[];
 
-export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, initial: SceneState, opts: { reducedMotion: boolean; onInteract?: () => void }): ForestScene {
+export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, initial: SceneState, opts: SceneOptions): ForestScene {
   const REDUCED = opts.reducedMotion;
 
   /* ---------------- seeded randomness, so the forest is the same every time ---------------- */
@@ -239,7 +262,8 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     const g = new THREE.Group();
     const canopy: THREE.Mesh[] = [];
     const fruit: THREE.Mesh[] = [];
-    g.userData = { kind, canopy, fruit, tone: Math.floor(rnd() * 4), big };
+    const caps: THREE.Mesh[] = [];
+    g.userData = { kind, canopy, caps, fruit, tone: Math.floor(rnd() * 4), big };
     if (kind === "cone") {
       g.add(part(G.trunk, shared("#8d5f3d"), [1, 0.75, 1], [0, 0.22, 0]));
       [[0.5, 0.6, 0.48], [0.38, 0.55, 0.82], [0.26, 0.5, 1.12]].forEach(([r, h, y]) => {
@@ -258,6 +282,11 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
         const y = (birch ? 0.88 : 0.8) + (i === 0 ? 0.12 : between(-0.05, 0.1));
         const m = part(G.ball, mat("#7cbf6a"), [r, r * 0.9, r], [Math.cos(a) * off, y, Math.sin(a) * off]);
         g.add(m); canopy.push(m);
+      }
+      { // a lighter cap on the sunny side, so the crown reads as round
+        const top = canopy[0], r = top.scale.x;
+        const cap = part(G.ball, mat("#9fd28a"), [r * 0.66, r * 0.5, r * 0.66], [top.position.x + r * 0.22, top.position.y + r * 0.42, top.position.z + r * 0.18]);
+        cap.castShadow = false; g.add(cap); caps.push(cap);
       }
       if (kind === "fruit") {
         for (let i = 0; i < 7; i++) {
@@ -326,6 +355,8 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
   /* ---------- the 64 things, built from shapes ---------- */
   const things: THREE.Object3D[][] = Array.from({ length: 64 }, () => []); // index = number - 1
   const anim: Anim[] = []; // per-frame updates
+  // things that later parts want to reach: the animals, the pond, the waterfall, the flags
+  const REF: { pond?: THREE.Mesh; fall?: THREE.Group; fallFoot?: Vec; frog?: THREE.Group; rabbit?: THREE.Group; deer?: THREE.Group; lamb?: THREE.Group; hog?: THREE.Group; turtle?: THREE.Group; snail?: THREE.Group; owl?: THREE.Group; squirrel?: THREE.Group; ducks: THREE.Group[]; flags: THREE.Mesh[] } = { ducks: [], flags: [] };
   function addThing(step: number, obj: THREE.Object3D) {
     // A single shape keeps its own size inside a wrapper, so growing to full size never blows it up.
     let o = obj;
@@ -495,6 +526,7 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     pond.add(pw, ps);
     for (let a = 0; a < Math.PI * 2; a += 0.42) pond.add(part(G.ballLo, shared("#cfc9bf"), [0.1, 0.06, 0.09], [POND.x + Math.cos(a) * (POND.r + 0.04), pondY + 0.02, POND.z + Math.sin(a) * (POND.r + 0.04)]));
     addThing(20, pond);
+    REF.pond = pw;
     // 21 lily pads
     const lilies = new THREE.Group();
     [[0.35, -0.25], [-0.4, 0.2], [0.1, 0.45]].forEach(([dx, dz]) => {
@@ -507,6 +539,7 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     [-0.035, 0.035].forEach((dx) => { frog.add(part(G.ball, shared("#79bf69"), 0.025, [dx, 0.085, 0.04])); frog.add(part(G.ballLo, shared("#26331f"), 0.012, [dx, 0.095, 0.06])); });
     frog.position.set(POND.x + 0.35, pondY + 0.05, POND.z - 0.25);
     addThing(22, frog);
+    REF.frog = frog;
     // 23 a fish that jumps now and then
     const fish = new THREE.Group();
     fish.add(part(G.ball, shared("#f4a04e"), [0.09, 0.045, 0.04]));
@@ -549,6 +582,7 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     fall.add(sheet);
     for (let i = 0; i < 5; i++) fall.add(part(G.ballLo, new THREE.MeshStandardMaterial({ color: "#ffffff", transparent: true, opacity: 0.7 }), between(0.08, 0.14), [end[0] + out.x * 0.15 + between(-0.12, 0.12), edgeY - 2.35 + between(-0.05, 0.08), end[1] + out.y * 0.15 + between(-0.12, 0.12)]));
     addThing(60, fall);
+    REF.fall = fall; REF.fallFoot = [end[0] + out.x * 0.15, edgeY - 2.3, end[1] + out.y * 0.15];
     anim.push((t, dt) => { if (fall.visible) fallTex.offset.y -= dt * 0.9; shimmer.offset.x -= dt * 0.12; });
   }
 
@@ -623,7 +657,6 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     rabbit.add(part(G.ball, shared("#fbf9f5"), [0.1, 0.085, 0.08], [0, 0.08, 0]), part(G.ball, shared("#fbf9f5"), 0.06, [0.08, 0.15, 0]));
     [-0.025, 0.025].forEach((z) => rabbit.add(part(G.ball, shared("#fbf9f5"), [0.015, 0.06, 0.02], [0.07, 0.24, z])));
     addThing(41, rabbit);
-    anim.push((t) => { if (!rabbit.visible) return; const a = t * 0.35; const x = 1.3 + Math.cos(a) * 0.5, z = 3.0 + Math.sin(a) * 0.35; rabbit.position.set(x, H(x, z) + Math.abs(Math.sin(t * 5)) * 0.07, z); rabbit.rotation.y = -a; });
     const hog = new THREE.Group();
     hog.add(part(G.ball, shared("#a8774f"), [0.1, 0.06, 0.08], [0, 0.04, 0]), part(G.ball, shared("#ead2b0"), [0.04, 0.035, 0.04], [0.09, 0.035, 0]));
     addThing(42, placeAt(hog, -3.0, 2.6));
@@ -656,10 +689,12 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
       d.add(part(G.ball, shared(col), [0.08 * s, 0.05 * s, 0.06 * s]), part(G.ball, shared(col), 0.04 * s, [0.06 * s, 0.06 * s, 0]));
       const b = part(G.cone, shared("#f2a93b"), [0.015 * s, 0.035 * s, 0.015 * s], [0.1 * s, 0.06 * s, 0]); b.rotation.z = -Math.PI / 2; d.add(b);
       addThing(45, d);
+      REF.ducks.push(d);
       anim.push((t) => { if (!d.visible) return; const a = t * 0.3 - i * 0.45; d.position.set(POND.x + Math.cos(a) * 0.55, H(POND.x, POND.z) + 0.1, POND.z + Math.sin(a) * 0.45); d.rotation.y = -a - Math.PI / 2; });
     });
     // 47 a flock of sparrows
     [0, 1, 2].forEach((i) => { const b = bird("#b9a58f"); b.scale.setScalar(0.7); addThing(47, b); circler(b, 4.6 + i * 0.25, 3.6 + i * 0.15, -0.35, i * 0.35); });
+    Object.assign(REF, { rabbit, deer, lamb, hog, turtle, snail: sn, owl, squirrel: sq });
   }
 
   /* ---------- the path and what stands along it ---------- */
@@ -702,6 +737,7 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
       const x = fa[0] + (fb[0] - fa[0]) * u, z = fa[1] + (fb[1] - fa[1]) * u;
       const y = H(x, z) + 0.5 - Math.sin(u * Math.PI) * 0.08;
       const flag = part(G.cone, mat(RIBBON[i], { side: THREE.DoubleSide }), [0.05, 0.09, 0.01], [x, y, z]); flag.rotation.z = Math.PI; flag.rotation.y = Math.atan2(fb[1] - fa[1], fb[0] - fa[0]); flags.add(flag);
+      REF.flags.push(flag);
     }
     addThing(35, flags);
   }
@@ -716,6 +752,12 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
   }
   const warmGlow = glowTexture("rgba(255,246,200,1)", "rgba(255,206,110,0.55)");
   const glows: THREE.Sprite[] = [];
+  const pools: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[] = []; // warm light lying on the ground under a lamp, at a door, round a fire
+  function localPool(size: number) {
+    const m = new THREE.Mesh(G.disc, new THREE.MeshBasicMaterial({ map: warmGlow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+    m.rotation.x = -Math.PI / 2; m.scale.setScalar(size); m.position.y = 0.035; m.renderOrder = 2;
+    pools.push(m); return m;
+  }
   function glowSprite(size: number, tex: THREE.Texture = warmGlow) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     s.scale.setScalar(size); glows.push(s); return s;
@@ -727,6 +769,7 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
       l.add(part(G.cyl, shared("#8a6a4e"), [0.016, 0.42, 0.016], [0, 0.21, 0]));
       l.add(part(G.box, mat("#ffe08a", { emissive: "#ffcf5a", emissiveIntensity: 0.6 }), [0.08, 0.1, 0.08], [0, 0.46, 0]));
       const gs = glowSprite(0.55); gs.position.set(0, 0.46, 0); l.add(gs);
+      l.add(localPool(0.6));
       addThing(36, placeAt(l, x, z));
     });
     // 63 string lights on posts round the back of the church yard
@@ -1321,6 +1364,504 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     }
   }
 
+  const lipMat = new THREE.MeshStandardMaterial({ color: "#8cc26e", roughness: 0.95 }); // the turf folding over the island's edge
+  /* ======================================================================================
+     The forest moves, answers a touch, and now and then has a surprise
+     (the fifth version of the approved prototype). Nothing above was moved for it.
+     ====================================================================================== */
+
+  /* ---------- wind: grass and flowers bend, in the shader so it costs nothing ---------- */
+  const windU = { value: 0 };
+  function swayInWind(material: THREE.Material, amount: number, y0: number, height: number) {
+    material.onBeforeCompile = (sh) => {
+      sh.uniforms.uWind = windU;
+      sh.vertexShader = "uniform float uWind;\n" + sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
+        #ifdef USE_INSTANCING
+          float wPh = instanceMatrix[3].x * 1.7 + instanceMatrix[3].z * 1.3;
+          float wBend = (sin(uWind * 1.7 + wPh) + 0.6 * sin(uWind * 0.63 + wPh * 0.5)) * ${amount.toFixed(4)} * clamp((position.y - (${y0.toFixed(4)})) / ${height.toFixed(4)}, 0.0, 1.0);
+          transformed.x += wBend; transformed.z += wBend * 0.5;
+        #endif`);
+    };
+    material.needsUpdate = true;
+  }
+  if (!REDUCED) {
+    swayInWind(grassMat, 0.05, -0.1, 0.2);
+    swayInWind(stems.material, 0.035, -0.08, 0.16);
+    swayInWind(heads.material, 0.035, -1.0, 0.01); // the whole flower head moves with the top of its stem
+  }
+
+  /* ---------- more kinds of trees: maples that turn red, slim poplars, a willow by the pond ---------- */
+  LEAF.spring.maple = ["#b9df92", "#a8d683"]; LEAF.summer.maple = ["#58a653", "#4c9a4b", "#67b25e"]; LEAF.autumn.maple = ["#e2533a", "#ec6f3f", "#d9432f"]; LEAF.winter.maple = LEAF.winter.round;
+  LEAF.spring.poplar = ["#bfe08f", "#aed880"]; LEAF.summer.poplar = ["#74b862", "#66ad58"]; LEAF.autumn.poplar = ["#f3cf58", "#eec04a"]; LEAF.winter.poplar = LEAF.winter.round;
+  LEAF.spring.willow = ["#cfe69a", "#c0de8a"]; LEAF.summer.willow = ["#8fc873", "#80bd66"]; LEAF.autumn.willow = ["#e6d36a", "#dcc75c"]; LEAF.winter.willow = ["#e9eef1", "#dbe6de"];
+  function reshape(tree: THREE.Group, kind: "maple" | "poplar" | "willow") {
+    const u = tree.userData;
+    [...(u.canopy as THREE.Mesh[]), ...(u.caps as THREE.Mesh[])].forEach((m) => tree.remove(m));
+    const canopy: THREE.Mesh[] = [], caps: THREE.Mesh[] = [];
+    Object.assign(u, { canopy, caps, kind });
+    const add = (r: number, sy: number, x: number, y: number, z: number) => { const m = part(G.ball, mat("#7cbf6a"), [r, r * sy, r], [x, y, z]); tree.add(m); canopy.push(m); return m; };
+    let top: THREE.Mesh;
+    if (kind === "poplar") { add(0.23, 1.5, 0, 0.78, 0); add(0.19, 1.5, 0, 1.12, 0); top = add(0.13, 1.5, 0, 1.42, 0); }
+    else if (kind === "maple") { [[0, 0.86, 0, 0.36], [0.3, 0.78, 0.08, 0.3], [-0.28, 0.76, -0.1, 0.3], [0.05, 0.8, 0.3, 0.28], [-0.06, 0.8, -0.3, 0.27]].forEach(([x, y, z, r]) => add(r, 0.62, x, y, z)); top = canopy[0]; }
+    else { [[0, 0.95, 0, 0.34], [0.2, 0.86, 0.1, 0.26], [-0.2, 0.86, -0.08, 0.26]].forEach(([x, y, z, r]) => add(r, 0.8, x, y, z)); top = canopy[0]; }
+    const r = top.scale.x;
+    const cap = part(G.ball, mat("#9fd28a"), [r * 0.66, top.scale.y * 0.5, r * 0.66], [top.position.x + r * 0.22, top.position.y + top.scale.y * 0.5, top.position.z + r * 0.18]);
+    cap.castShadow = false; tree.add(cap); caps.push(cap);
+  }
+  {
+    // The first round tree of each group carries the birdhouse, the swing or the tree house: those stay as they are.
+    trees.filter((t) => !t.userData.first && t.userData.kind === "round").forEach((t, i) => { if (i === 0) return; if (i % 3 === 1) reshape(t, "maple"); else if (i % 4 === 2) reshape(t, "poplar"); });
+    trees.filter((t) => t.userData.first && t.userData.kind === "round").forEach((t, i) => { if (i > 0 && i % 5 === 2) reshape(t, "poplar"); });
+  }
+  const strands: THREE.Group[] = []; // the willow's hanging branches
+  {
+    let spot: Vec | null = null;
+    const toCentre = Math.atan2(-POND.z, -POND.x);
+    search: for (const gap of [0.55, 0.45, 0.38]) for (const d of [POND.r + 0.62, POND.r + 0.8, POND.r + 1.0]) for (let k = 0; k < 21; k++) {
+      const a = toCentre + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.3;
+      const x = POND.x + Math.cos(a) * d, z = POND.z + Math.sin(a) * d;
+      if (Math.hypot(x, z) > 4.2 || yardDist(x, z) < 0.5) continue;
+      if (distToLine(x, z, INFLOW) < 0.4 || distToLine(x, z, OUTFLOW) < 0.4 || distToLine(x, z, PATH) < 0.5) continue;
+      if (Math.hypot(x - (POND.x - 0.78), z - (POND.z + 0.62)) < 0.4) continue; // the turtle's walk
+      if (trees.some((t) => Math.hypot(t.position.x - x, t.position.z - z) < gap)) continue;
+      spot = [x, z]; break search;
+    }
+    if (spot) {
+      const w = makeTree("round");
+      reshape(w, "willow");
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + rnd() * 0.3, len = between(0.34, 0.52);
+        const hang = new THREE.Group();
+        hang.position.set(Math.cos(a) * 0.36, 0.92, Math.sin(a) * 0.36);
+        const leaf = part(G.ball, mat("#8fc873"), [0.035, len / 2, 0.035], [0, -len / 2, 0]);
+        hang.add(leaf); w.add(hang); (w.userData.canopy as THREE.Mesh[]).push(leaf);
+        hang.userData.ph = a * 2; strands.push(hang);
+      }
+      placeAt(w, spot[0], spot[1]);
+      w.rotation.y = rnd() * 6;
+      Object.assign(w.userData, { at: 20, var: 1.15 });
+      w.visible = false;
+      island.add(w); trees.push(w);
+    }
+  }
+
+  /* ---------- under the island: a grassy lip, vines, roots, drifting rocks and mist ---------- */
+  const seasonalCrowns: THREE.MeshStandardMaterial[] = [];
+  const vines: THREE.Group[] = [], islets: THREE.Group[] = [], mist: THREE.Sprite[] = [];
+  const mistTex = glowTexture("rgba(255,255,255,0.9)", "rgba(255,255,255,0.35)");
+  {
+    const rimY = (a: number) => H(Math.cos(a) * ISLAND_R, Math.sin(a) * ISLAND_R);
+    const mouth = OUTFLOW[OUTFLOW.length - 1]; // where the waterfall leaves the island
+    for (let i = 0; i < 84; i++) {
+      const a = (i / 84) * Math.PI * 2 + between(-0.03, 0.03), r = ISLAND_R + between(-0.1, 0.02);
+      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      if (Math.hypot(x - mouth[0], z - mouth[1]) < 0.45) continue;
+      const b = part(G.ball, lipMat, [between(0.2, 0.3), between(0.06, 0.1), between(0.3, 0.46)], [x, rimY(a) - 0.045, z]);
+      b.rotation.y = -a; b.castShadow = false; island.add(b);
+    }
+    for (let i = 0; i < 16; i++) {
+      const a = between(0, Math.PI * 2), len = between(0.45, 1.25), r = ISLAND_R + 0.07;
+      if (Math.hypot(Math.cos(a) * r - mouth[0], Math.sin(a) * r - mouth[1]) < 0.5) continue;
+      const v = new THREE.Group();
+      const stem = part(G.cyl, lipMat, [0.012, len, 0.012], [0, -len / 2, 0]); stem.castShadow = false; v.add(stem);
+      for (let k = 0; k < 4; k++) { const leaf = part(G.ballLo, lipMat, [0.055, 0.03, 0.045], [between(-0.03, 0.03), (-len * (k + 1)) / 4.3, between(-0.02, 0.02)]); leaf.castShadow = false; v.add(leaf); }
+      v.position.set(Math.cos(a) * r, rimY(a) - 0.1, Math.sin(a) * r);
+      v.userData.ph = a * 3;
+      island.add(v); vines.push(v);
+    }
+    const topY = H(ISLAND_R, 0) - 0.02;
+    for (let i = 0; i < 9; i++) {
+      const a = between(0, Math.PI * 2), y = between(-2.7, -0.9);
+      const rr = ISLAND_R - (ISLAND_R - 0.7) * ((topY - y) / 3.4);
+      const root = part(G.cone, shared("#8a6a52"), [0.07, between(0.5, 1.0), 0.07], [Math.cos(a) * rr * 0.97, y, Math.sin(a) * rr * 0.97]);
+      root.rotation.set(Math.PI + between(-0.35, 0.35), 0, between(-0.35, 0.35));
+      island.add(root);
+    }
+    [[6.5, 0.15, 0.9, 0.3], [7.0, -1.1, 0.62, 2.4], [6.3, -0.5, 0.5, 4.4]].forEach(([r, y, s, ph], i) => {
+      const g = new THREE.Group();
+      g.add(part(G.ballLo, shared("#a98b6f"), [0.5, 0.42, 0.46], [0, -0.2, 0]));
+      g.add(part(G.ballLo, shared("#93775f"), [0.28, 0.3, 0.26], [0.1, -0.55, 0.05]));
+      g.add(part(G.ball, lipMat, [0.52, 0.12, 0.48], [0, 0.08, 0]));
+      if (i !== 2) {
+        g.add(part(G.trunk, shared("#9b6a43"), [0.7, 0.6, 0.7], [0.05, 0.3, 0]));
+        const crownMat = mat("#7cbf6a");
+        g.add(part(G.ball, crownMat, [0.26, 0.24, 0.26], [0.05, 0.62, 0])); seasonalCrowns.push(crownMat);
+      } else g.add(part(G.ball, lipMat, 0.14, [-0.1, 0.2, 0.05]));
+      g.scale.setScalar(s); g.userData = { r, y, ph };
+      island.add(g); islets.push(g);
+    });
+    for (let i = 0; i < 6; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, transparent: true, depthWrite: false, opacity: 0.4 }));
+      s.scale.set(between(3.2, 4.6), between(1.2, 1.8), 1);
+      s.userData = { a: (i / 6) * Math.PI * 2, r: between(1.2, 2.6), y: between(-3.9, -3.3) };
+      scene.add(s); mist.push(s);
+    }
+    const fall = REF.fall, foot = REF.fallFoot;
+    if (fall && foot) { // spray where the waterfall ends
+      const spray = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, transparent: true, depthWrite: false, opacity: 0.55 }));
+      spray.position.set(foot[0], foot[1], foot[2]); spray.scale.set(0.9, 0.6, 1);
+      fall.add(spray);
+      anim.push((t) => { if (fall.visible) spray.scale.set(0.9 + Math.sin(t * 2.3) * 0.12, 0.6 + Math.sin(t * 3.1) * 0.08, 1); });
+    }
+  }
+  anim.push((t) => {
+    vines.forEach((v) => { v.rotation.z = Math.sin(t * 0.9 + v.userData.ph) * 0.07; v.rotation.x = Math.sin(t * 0.7 + v.userData.ph * 1.7) * 0.05; });
+    strands.forEach((h) => { h.rotation.z = Math.sin(t * 1.1 + h.userData.ph) * 0.13; h.rotation.x = Math.sin(t * 0.8 + h.userData.ph * 1.3) * 0.1; });
+    islets.forEach((g) => { const u = g.userData, a = t * 0.03 + u.ph; g.position.set(Math.cos(a) * u.r, u.y + Math.sin(t * 0.5 + u.ph) * 0.12, Math.sin(a) * u.r); g.rotation.y = t * 0.05 + u.ph; });
+    mist.forEach((s) => { const u = s.userData, a = u.a + t * 0.04; s.position.set(Math.cos(a) * u.r, u.y + Math.sin(t * 0.3 + u.a) * 0.1, Math.sin(a) * u.r); });
+    REF.flags.forEach((f, i) => { f.rotation.x = Math.sin(t * 3.2 + i * 0.9) * 0.35; });
+  });
+
+  /* ---------- light on the ground: at the church door, by the glass hall ---------- */
+  {
+    const door = localPool(0.62); door.position.set(0.08, 0.02, 1.3); churchBld.add(door);
+    const hall = localPool(0.5); hall.position.set(-1.5, 0.02, -0.28); churchBld.add(hall);
+  }
+
+  /* ---------- a campfire by the log seat (it comes with the seat) ---------- */
+  {
+    const fire = new THREE.Group();
+    // a clear place close to the log
+    let at: Vec = [-1.32, 3.68];
+    search: for (const d of [0.42, 0.5, 0.58]) for (let k = 0; k < 12; k++) {
+      const a = 3.6 + k * 0.52, x = -1.0 + Math.cos(a) * d, z = 3.95 + Math.sin(a) * d;
+      if (Math.hypot(x, z) > 4.2) continue;
+      if (distToLine(x, z, PATH) < 0.5 || distToLine(x, z, PATH2) < 0.45) continue;
+      if (trees.some((t) => Math.hypot(t.position.x - x, t.position.z - z) < 0.5)) continue;
+      at = [x, z]; break search;
+    }
+    for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; fire.add(part(G.ballLo, shared("#b9b3aa"), [0.045, 0.035, 0.04], [Math.cos(a) * 0.13, 0.02, Math.sin(a) * 0.13])); }
+    [0, 1, 2].forEach((i) => { const lg = part(G.cyl, shared("#8a5a36"), [0.022, 0.2, 0.022], [0, 0.05, 0]); lg.rotation.set(Math.PI / 2 - 0.35, (i / 3) * Math.PI * 2, 0); fire.add(lg); });
+    const flames = ([["#ff9a3c", 0.07, 0.2], ["#ffd24a", 0.045, 0.14], ["#fff3b0", 0.025, 0.08]] as [string, number, number][]).map(([c, r, h]) => {
+      const f = new THREE.Mesh(G.cone, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+      f.scale.set(r, h, r); f.position.y = 0.05 + h / 2; f.userData.h = h; fire.add(f); return f;
+    });
+    const fireGlow = glowSprite(0.9); fireGlow.position.y = 0.16; fire.add(fireGlow);
+    fire.add(localPool(0.9));
+    const fireLight = new THREE.PointLight("#ffb561", 0, 2.8, 1.5); fireLight.position.y = 0.3; fire.add(fireLight);
+    const smokeTex = glowTexture("rgba(205,205,210,0.75)", "rgba(190,190,196,0.3)");
+    const puffs = [0, 1, 2, 3, 4].map(() => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0 })); fire.add(s); return s; });
+    placeAt(fire, at[0], at[1]);
+    addThing(40, fire);
+    anim.push((t) => {
+      if (!fire.visible) return;
+      const lit = current.time !== "day", night = current.time === "night";
+      flames.forEach((f, i) => {
+        f.visible = lit;
+        const k = REDUCED ? 1 : 1 + Math.sin(t * (9 + i * 3) + i) * 0.18 + Math.sin(t * 23 + i * 2) * 0.08;
+        f.scale.y = f.userData.h * k; f.position.y = 0.05 + (f.userData.h * k) / 2;
+      });
+      fireLight.intensity = lit ? (night ? 3.2 : 2.2) * (REDUCED ? 1 : 0.85 + Math.sin(t * 11) * 0.1 + Math.sin(t * 27) * 0.05) : 0;
+      puffs.forEach((s, i) => {
+        const u = REDUCED ? (i + 0.5) / 5 : (t * 0.22 + i / 5) % 1;
+        s.position.set(Math.sin(u * 3 + i) * 0.07 + u * 0.18, 0.2 + u * 1.15, Math.cos(u * 2 + i) * 0.05);
+        s.scale.setScalar(0.12 + u * 0.36);
+        s.material.opacity = Math.sin(u * Math.PI) * (night ? 0.16 : lit ? 0.26 : 0.2);
+      });
+    });
+  }
+
+  /* ---------- the friends of the forest walk about ---------- */
+  function roam(obj: THREE.Object3D, cx: number, cz: number, rx: number, rz: number, speed: number, bob: number, bobSpeed: number, phase = 0) {
+    anim.push((t) => {
+      if (!obj.visible) return;
+      const a = t * speed + phase, s = Math.sign(speed) || 1;
+      const x = cx + Math.cos(a) * rx, z = cz + Math.sin(a) * rz;
+      obj.position.set(x, H(x, z) + Math.abs(Math.sin(t * bobSpeed)) * bob, z);
+      obj.rotation.y = Math.atan2(-Math.cos(a) * rz * s, -Math.sin(a) * rx * s);
+    });
+  }
+  function stroll(obj: THREE.Object3D, pts: Vec[], speed: number, hop: number, hopSpeed: number) { // there and back along a line of points
+    const segs: { a: Vec; b: Vec; len: number; start: number }[] = [];
+    let total = 0;
+    for (let i = 0; i < pts.length - 1; i++) { const len = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); segs.push({ a: pts[i], b: pts[i + 1], len, start: total }); total += len; }
+    anim.push((t) => {
+      if (!obj.visible) return;
+      let d = REDUCED ? total * 0.4 : (t * speed) % (2 * total);
+      const back = d > total; if (back) d = 2 * total - d;
+      const sg = segs.find((q) => d <= q.start + q.len) ?? segs[segs.length - 1];
+      const u = (d - sg.start) / sg.len;
+      const x = sg.a[0] + (sg.b[0] - sg.a[0]) * u, z = sg.a[1] + (sg.b[1] - sg.a[1]) * u;
+      const dx = (sg.b[0] - sg.a[0]) * (back ? -1 : 1), dz = (sg.b[1] - sg.a[1]) * (back ? -1 : 1);
+      obj.position.set(x, H(x, z) + Math.abs(Math.sin(t * hopSpeed)) * hop, z);
+      obj.rotation.y = Math.atan2(-dz, dx);
+    });
+  }
+  const friends: THREE.Object3D[] = [];
+  {
+    const F = REF;
+    // the rabbit hops down the path to the flower arch and back
+    if (F.rabbit) { stroll(F.rabbit, [[-2.05, 2.2], [-1.4, 2.48], [-0.6, 2.78], [0.0, 3.05], [0.14, 3.6], [0.16, 3.85]], 0.34, 0.07, 5); friends.push(F.rabbit); }
+    if (F.deer) { roam(F.deer, -1.0, -3.4, 0.3, 0.2, 0.12, 0.012, 4, 0.8); friends.push(F.deer); }
+    if (F.lamb) { roam(F.lamb, 2.3, -2.6, 0.32, 0.22, -0.2, 0.03, 5.5, 1.0); friends.push(F.lamb); }
+    if (F.hog) { roam(F.hog, -3.0, 2.6, 0.24, 0.12, 0.14, 0.006, 9); friends.push(F.hog); }
+    if (F.turtle) { roam(F.turtle, POND.x - 0.78, POND.z + 0.62, 0.16, 0.08, -0.05, 0.004, 3); friends.push(F.turtle); }
+    if (F.snail) { roam(F.snail, 1.0, 3.9, 0.07, 0.04, 0.03, 0, 1); friends.push(F.snail); }
+    const frog = F.frog;
+    if (frog) { // the frog hops on its lily pad now and then
+      const frogAt = frog.position.clone();
+      anim.push((t) => {
+        if (!frog.visible) return;
+        const k = REDUCED ? 1 : (t * 0.27) % 1;
+        frog.position.set(frogAt.x, frogAt.y + (k < 0.12 ? Math.sin((k / 0.12) * Math.PI) * 0.16 : 0), frogAt.z);
+        frog.rotation.y = Math.floor(t * 0.27) * 1.3;
+      });
+      friends.push(frog);
+    }
+    const owl = F.owl;
+    if (owl) { // the owl looks round
+      const owlAt = owl.position.clone();
+      anim.push((t) => { if (!owl.visible) return; owl.position.copy(owlAt); owl.rotation.y = Math.sin(t * 0.5) * 0.9 * Math.min(1, Math.abs(Math.sin(t * 0.17)) * 2); });
+      friends.push(owl);
+    }
+    if (F.squirrel) { F.squirrel.userData.freeTurn = true; friends.push(F.squirrel); } // nothing else turns the squirrel, so its turn is set, not added
+    friends.push(...F.ducks);
+  }
+
+  /* ---------- sound: small and soft, made on the spot; silent unless the child turned it on ---------- */
+  let audio: AudioContext | null = null;
+  function tone(freq: number, dur: number, gain: number, type: OscillatorType = "sine", when = 0, slideTo = 0) {
+    if (!opts.soundOn?.()) return;
+    try {
+      audio = audio ?? new (window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      if (audio.state === "suspended") void audio.resume();
+      const t0 = audio.currentTime + when, o = audio.createOscillator(), g = audio.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t0);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(audio.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+    } catch {
+      // no sound on this device
+    }
+  }
+  const bellSound = () => { [0, 0.6].forEach((w) => { tone(784, 1.9, 0.15, "sine", w); tone(1568, 1.2, 0.06, "sine", w); tone(2349, 0.7, 0.025, "sine", w); }); };
+  const hopSound = () => tone(520, 0.16, 0.07, "triangle", 0, 880);
+  const plipSound = () => tone(980, 0.14, 0.06, "sine", 0, 620);
+  const rustleSound = () => { tone(1800, 0.08, 0.012, "triangle"); tone(1300, 0.1, 0.012, "triangle", 0.06); };
+  const popSound = () => { tone(660, 0.12, 0.06, "triangle", 0, 990); tone(1320, 0.22, 0.04, "sine", 0.1); };
+
+  /* ---------- little pictures that rise and fade: hearts, notes, rings ---------- */
+  const drawn = (size: number, draw: (x: CanvasRenderingContext2D) => void) => new THREE.CanvasTexture(draw2d(size, size, draw));
+  const heartTex = drawn(64, (x) => { x.fillStyle = "#ff8fa8"; x.beginPath(); x.moveTo(32, 54); x.bezierCurveTo(4, 34, 10, 10, 32, 22); x.bezierCurveTo(54, 10, 60, 34, 32, 54); x.fill(); });
+  const noteTex = drawn(64, (x) => { x.fillStyle = "#ffd95a"; x.strokeStyle = "#ffd95a"; x.lineWidth = 5; x.beginPath(); x.ellipse(22, 46, 11, 8, -0.4, 0, Math.PI * 2); x.fill(); x.beginPath(); x.moveTo(31, 44); x.lineTo(31, 10); x.lineTo(48, 16); x.stroke(); });
+  const ringTex = drawn(64, (x) => { x.strokeStyle = "rgba(255,244,200,0.95)"; x.lineWidth = 4; x.beginPath(); x.arc(32, 32, 26, 0, Math.PI * 2); x.stroke(); });
+  const risers: THREE.Sprite[] = [];
+  function riseAt(pos: THREE.Vector3, tex: THREE.Texture, n = 3, base = 0.2, spread = 0.18) {
+    for (let i = 0; i < n; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 }));
+      s.position.set(pos.x + (Math.random() - 0.5) * spread * 2, pos.y + Math.random() * 0.1, pos.z + (Math.random() - 0.5) * spread * 2);
+      s.userData = { life: 1, delay: i * 0.12, base };
+      scene.add(s); risers.push(s);
+    }
+  }
+  // rings that widen and fade: from the bell, on the water, where something new comes up
+  const rings: { obj: THREE.Object3D; material: THREE.Material; geometry?: THREE.BufferGeometry; k: number; grow: number }[] = [];
+  function ringAt(pos: THREE.Vector3, grow: number, flat: boolean, delay = 0, color = "#fff4c8") {
+    let obj: THREE.Object3D, material: THREE.Material, geometry: THREE.BufferGeometry | undefined;
+    if (flat) {
+      geometry = new THREE.RingGeometry(0.86, 1, 40);
+      material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+      obj = new THREE.Mesh(geometry, material); obj.rotation.x = -Math.PI / 2;
+    } else {
+      material = new THREE.SpriteMaterial({ map: ringTex, color, transparent: true, depthWrite: false, opacity: 0 });
+      obj = new THREE.Sprite(material as THREE.SpriteMaterial);
+    }
+    obj.position.copy(pos); obj.scale.setScalar(0.01);
+    scene.add(obj); rings.push({ obj, material, geometry, k: -delay, grow });
+  }
+
+  /* ---------- touching things ---------- */
+  type Tap = (point: THREE.Vector3) => void;
+  const taps: THREE.Object3D[] = [];
+  const hops: THREE.Object3D[] = [];
+  function onTap(obj: THREE.Object3D, fn: Tap) { obj.userData.tap = fn; taps.push(obj); }
+  const worldPos = (obj: THREE.Object3D, lift = 0) => { const p = obj.getWorldPosition(new THREE.Vector3()); p.y += lift; return p; };
+  function shown(o: THREE.Object3D) { for (let p: THREE.Object3D | null = o; p; p = p.parent) if (!p.visible) return false; return true; }
+  const hopNow = (obj: THREE.Object3D) => { obj.userData.hop = 1; if (!hops.includes(obj)) hops.push(obj); };
+  const hitMat = new THREE.MeshBasicMaterial();
+  friends.forEach((obj) => {
+    const hit = new THREE.Mesh(G.ballLo, hitMat); hit.scale.setScalar(0.34); hit.position.y = 0.12; hit.visible = false; // a bigger target for small fingers
+    obj.add(hit);
+    onTap(obj, () => {
+      if (obj.userData.hop > 0) return;
+      hopNow(obj);
+      riseAt(worldPos(obj, 0.3), heartTex, 3, 0.2);
+      hopSound();
+    });
+  });
+  // leaves that come down when a tree is shaken
+  const bitTex = (color: string, round = false) => drawn(32, (x) => { x.fillStyle = color; x.beginPath(); if (round) x.arc(16, 16, 9, 0, Math.PI * 2); else x.ellipse(16, 16, 11, 6.5, 0.6, 0, Math.PI * 2); x.fill(); });
+  const BITS = { petal: bitTex("#f8c3d3"), green: bitTex("#7dbd66"), spring: bitTex("#b5dc8c"), gold: bitTex("#f0b24a"), red: bitTex("#e2603c"), snow: bitTex("#ffffff", true) };
+  const bits: THREE.Sprite[] = [];
+  function dropLeaves(tree: THREE.Object3D) {
+    const kind = tree.userData.kind as string, s = current.season;
+    const tex = s === "winter" ? BITS.snow : s === "autumn" ? (kind === "maple" ? BITS.red : BITS.gold) : s === "spring" ? (kind === "blossom" ? BITS.petal : BITS.spring) : BITS.green;
+    const base = worldPos(tree), size = tree.scale.x;
+    for (let i = 0; i < 9; i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, rotation: Math.random() * 6 }));
+      const a = Math.random() * Math.PI * 2, d = Math.random() * 0.36 * size;
+      sp.position.set(base.x + Math.cos(a) * d, base.y + (0.7 + Math.random() * 0.45) * size, base.z + Math.sin(a) * d);
+      sp.scale.setScalar(0.11);
+      sp.userData = { floor: base.y + 0.03, vy: 0.25 + Math.random() * 0.25, ph: Math.random() * 6, rest: 1.2 };
+      scene.add(sp); bits.push(sp);
+    }
+  }
+  trees.forEach((t) => onTap(t, () => { if (t.userData.shake > 0.3) return; t.userData.shake = 1; if (!REDUCED) dropLeaves(t); rustleSound(); }));
+
+  /* ---------- the church: a bell over the door, doors that open, light inside ---------- */
+  const churchFx = { swing: 0, pulse: 0, door: 0, peek: 0, base: 0, auto: 4, note: 1 };
+  const bell = new THREE.Group();
+  const inside = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.18), new THREE.MeshBasicMaterial({ color: "#ffd98a", transparent: true, opacity: 0 }));
+  const doorLeaves: THREE.Group[] = [];
+  {
+    const gold = new THREE.MeshStandardMaterial({ color: "#d9a441", roughness: 0.35, metalness: 0.6, side: THREE.DoubleSide });
+    // a small bracket on the porch, and the bell hanging from it
+    porchFrame.add(part(G.box, shared("#8f8a82"), [0.016, 0.016, 0.07], [0, 0.6, 0.31]));
+    const profile = [[0.0, 0], [0.012, 0], [0.02, -0.012], [0.028, -0.04], [0.04, -0.06], [0.046, -0.066]].map(([x, y]) => new THREE.Vector2(x, y));
+    const cup = new THREE.Mesh(new THREE.LatheGeometry(profile, 20), gold); cup.castShadow = true;
+    bell.add(cup, part(G.ballLo, gold, 0.012, [0, -0.066, 0]));
+    bell.position.set(0, 0.592, 0.335);
+    porchFrame.add(bell);
+    // the doors: two leaves that swing out, and a warm room behind them
+    inside.position.set(0, 0.09, 0.2835); porchFrame.add(inside);
+    const leafMat = new THREE.MeshStandardMaterial({ color: "#3a4650", roughness: 0.35, metalness: 0.1, side: THREE.DoubleSide });
+    [-1, 1].forEach((sd) => {
+      const hinge = new THREE.Group(); hinge.position.set(sd * 0.25, 0.09, 0.285);
+      const leaf = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 0.18), leafMat);
+      leaf.position.x = -sd * 0.125; hinge.add(leaf); hinge.userData.sd = sd; hinge.visible = false;
+      porchFrame.add(hinge); doorLeaves.push(hinge);
+    });
+  }
+  onTap(churchBld, () => {
+    churchFx.swing = 1; churchFx.pulse = 1; churchFx.peek = 4.5;
+    bellSound();
+    const p = worldPos(bell);
+    [0, 0.35, 0.7].forEach((d) => ringAt(p, 1.5, false, d));
+  });
+
+  /* ---------- the pond: rings on the water ---------- */
+  {
+    const pond = REF.pond, frog = REF.frog;
+    if (pond) onTap(pond, (point) => {
+      const p = new THREE.Vector3(point.x, pond.getWorldPosition(new THREE.Vector3()).y + 0.012, point.z);
+      [0, 0.22].forEach((d) => ringAt(p, 0.42, true, d, "#ffffff"));
+      plipSound();
+      if (frog && shown(frog) && !(frog.userData.hop > 0)) hopNow(frog);
+    });
+  }
+
+  const ray = new THREE.Raycaster();
+  let pressed: { x: number; y: number; t: number } | null = null;
+  const onPointerDown = (e: PointerEvent) => { pressed = { x: e.clientX, y: e.clientY, t: performance.now() }; };
+  const onPointerUp = (e: PointerEvent) => {
+    if (!pressed) return;
+    const moved = Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y), held = performance.now() - pressed.t;
+    pressed = null;
+    if (moved > 8 || held > 500) return; // that was a turn of the island, not a touch
+    const r = canvas.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    const hit = ray.intersectObjects(taps.filter((o) => shown(o) && o.scale.x > 0.2), true)[0];
+    if (!hit) return;
+    let o: THREE.Object3D | null = hit.object;
+    while (o && !o.userData.tap) o = o.parent;
+    if (o) (o.userData.tap as Tap)(hit.point);
+  };
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointerup", onPointerUp);
+
+  /* ---------- the moment something new comes up ---------- */
+  const tagEl = opts.tag ?? null;
+  const tagText = (text: string) => { const b = tagEl?.querySelector("b"); if (b) b.textContent = text; };
+  const showTag = (on: boolean) => { if (tagEl) tagEl.hidden = !on; };
+  // a soft light that shows through the leaves, so the new thing can be found even behind a tree
+  const beacon = new THREE.Sprite(new THREE.SpriteMaterial({ map: warmGlow, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+  beacon.visible = false; beacon.renderOrder = 5; scene.add(beacon);
+  interface Shot { pos: THREE.Vector3; target: THREE.Vector3 }
+  interface RevealStep { name: string; objs: THREE.Object3D[] }
+  const reveal: { steps: RevealStep[]; phase: "idle" | "prep" | "in" | "show" | "wait" | "back"; t: number; from: Shot | null; to: Shot | null; home: Shot | null; objs: THREE.Object3D[]; name: string; startIn: number } =
+    { steps: [], phase: "idle", t: 0, from: null, to: null, home: null, objs: [], name: "", startIn: -1 };
+  const shot = (): Shot => ({ pos: camera.position.clone(), target: controls.target.clone() });
+  const boxOf = (objs: THREE.Object3D[]) => {
+    const box = new THREE.Box3();
+    objs.forEach((o) => {
+      const s = o.scale.x;
+      if (o.userData.hold) o.scale.setScalar(o.userData.great ? o.userData.big : 1);
+      o.updateWorldMatrix(true, true); box.expandByObject(o);
+      if (o.userData.hold) o.scale.setScalar(s);
+    });
+    return box;
+  };
+  function nextReveal() {
+    beacon.visible = false;
+    const st = reveal.steps.shift();
+    if (!st) { reveal.phase = "back"; reveal.t = 0; reveal.from = shot(); reveal.to = reveal.home; showTag(false); return; }
+    reveal.objs = st.objs; reveal.name = st.name; reveal.phase = "prep"; reveal.t = 0;
+  }
+  function endReveal() {
+    reveal.steps = []; reveal.phase = "idle"; reveal.startIn = -1; showTag(false); beacon.visible = false;
+    things.forEach((l) => l.forEach((o) => { o.userData.hold = false; o.userData.boost = 0; }));
+    controls.autoRotate = !REDUCED;
+  }
+  function stepReveal(dt: number) {
+    if (reveal.startIn >= 0) { // a moment after the screen opens, go and look at each new thing
+      reveal.startIn -= dt;
+      if (reveal.startIn < 0) { reveal.home = shot(); controls.autoRotate = false; nextReveal(); }
+      return;
+    }
+    if (reveal.phase === "idle") return;
+    reveal.t += dt;
+    const ease = (k: number) => { const c = Math.max(0, Math.min(1, k)); return c * c * (3 - 2 * c); };
+    if (reveal.phase === "prep" && reveal.t > 0.12) {
+      const box = boxOf(reveal.objs), c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+      const far = box.isEmpty() || Math.hypot(c.x, c.z) > 6.2 || c.y > 2.2;
+      if (far) { // up in the sky or all over the meadow: no trip, just say so
+        reveal.objs.forEach((o) => (o.userData.hold = false));
+        opts.onSay?.(`${iga(reveal.name)} 생겼어요!`); popSound();
+        reveal.phase = "wait"; reveal.t = 0; return;
+      }
+      const reach = Math.max(size.x, size.z);
+      const d = Math.min(HOME.dist * 0.8, Math.max(8.2, reach * 2.2 + 6.6));
+      const dir = new THREE.Vector3(c.x, 0, c.z);
+      if (dir.length() < 0.9) dir.copy(camera.position).sub(controls.target).setY(0);
+      dir.normalize();
+      const el = 0.95; // from well above, so the trees at the edge do not stand in the way
+      reveal.from = shot();
+      reveal.to = { pos: new THREE.Vector3(c.x + dir.x * d * Math.cos(el), c.y + d * Math.sin(el), c.z + dir.z * d * Math.cos(el)), target: c.clone() };
+      reveal.phase = "in"; reveal.t = 0;
+    } else if ((reveal.phase === "in" || reveal.phase === "back") && reveal.from && reveal.to) {
+      const len = reveal.phase === "in" ? 1.3 : 1.4, k = ease(reveal.t / len);
+      camera.position.lerpVectors(reveal.from.pos, reveal.to.pos, k);
+      controls.target.lerpVectors(reveal.from.target, reveal.to.target, k);
+      if (reveal.t >= len) {
+        if (reveal.phase === "back") { endReveal(); return; }
+        // here it comes: a little too big, then it settles
+        reveal.objs.forEach((o) => { o.userData.hold = false; o.userData.v = 0.2; o.userData.boost = 0.6; });
+        const box = boxOf(reveal.objs), c = box.getCenter(new THREE.Vector3());
+        ringAt(new THREE.Vector3(c.x, box.min.y + 0.04, c.z), Math.max(0.5, Math.min(1.6, box.getSize(new THREE.Vector3()).length() * 0.7)), true, 0, "#fff1a8");
+        reveal.objs.forEach(sparkleAt);
+        popSound();
+        tagText(reveal.name); showTag(true);
+        reveal.phase = "show"; reveal.t = 0;
+      }
+    } else if (reveal.phase === "show") {
+      const box = boxOf(reveal.objs), k = reveal.t;
+      reveal.objs.forEach((o) => (o.userData.boost = 0.6 * Math.max(0, 1 - k / 1.5)));
+      if (!box.isEmpty()) {
+        const c = box.getCenter(new THREE.Vector3());
+        beacon.visible = true; beacon.position.copy(c);
+        beacon.scale.setScalar(Math.max(1.0, box.getSize(new THREE.Vector3()).length() * 1.3) * (1 + Math.sin(k * 6) * 0.12));
+        beacon.material.opacity = Math.min(1, k * 3) * Math.min(1, (2.1 - k) * 3) * 0.75;
+        const p = c.clone(); p.y = box.max.y + 0.12; p.project(camera);
+        if (tagEl) { tagEl.style.left = `${((p.x + 1) / 2) * view.clientWidth}px`; tagEl.style.top = `${((1 - p.y) / 2) * view.clientHeight}px`; }
+      }
+      if (k > 2.1) nextReveal();
+    } else if (reveal.phase === "wait" && reveal.t > 1.5) nextReveal();
+  }
+  controls.addEventListener("start", () => { if (reveal.phase !== "idle" || reveal.startIn >= 0) endReveal(); });
+
+  /* ---------- the rain of a busy week passes after a while ---------- */
+  const rainFx = { left: 0, key: -1 };
+
   /* ---------------- applying the state ---------------- */
   const GROUND: Record<Season, string[][]> = {
     spring: [["#cfdc9f", "#c3d290"], ["#bbd98f", "#abcf80"], ["#a8d386", "#99c978"], ["#9acd7c", "#8cc26e"]],
@@ -1349,6 +1890,7 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
       col.setXYZ(i, c.r, c.g, c.b);
     }
     col.needsUpdate = true;
+    lipMat.color.copy(cb).offsetHSL(0, 0.02, -0.035); // the turf over the edge follows the meadow
   }
 
   function paintTrees(season: Season) {
@@ -1361,11 +1903,14 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
         if (u.great && season !== "winter") color = LEAF[season === "autumn" ? "autumn" : "summer"].round[(i + 1) % 3];
         (m.material as THREE.MeshStandardMaterial).color.set(color);
       });
+      const crown = (u.canopy as THREE.Mesh[])[u.kind === "poplar" ? 2 : 0].material as THREE.MeshStandardMaterial;
+      (u.caps as THREE.Mesh[]).forEach((m) => (m.material as THREE.MeshStandardMaterial).color.copy(crown.color).offsetHSL(0.012, 0.03, 0.06));
       (u.fruit as THREE.Mesh[]).forEach((f) => (f.visible = season === "autumn" || !!u.great || (u.kind === "fruit" && season === "summer")));
     });
     grassMat.color.set({ spring: "#86c06f", summer: "#6fb35f", autumn: "#bdb465", winter: "#dfe6ec" }[season]);
     heads.visible = stems.visible = season !== "winter";
     winterOnly.forEach((o) => (o.visible = season === "winter"));
+    seasonalCrowns.forEach((m) => m.color.set(LEAF[season].round[0]));
     const flake = FLAKES[season];
     fallPts.visible = !!flake && !REDUCED;
     if (flake) { fallPts.material.map = flake; fallPts.material.size = season === "winter" ? 0.13 : 0.17; fallPts.material.needsUpdate = true; }
@@ -1381,7 +1926,9 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     sun.position.set(evening ? 11 : 7, evening ? 5 : 13, evening ? 2 : 6);
     const glowOn = night ? 1 : evening ? 0.8 : 0;
     glows.forEach((g) => (g.material.opacity = glowOn));
-    churchGlass.forEach((m) => (m.emissiveIntensity = night ? 0.85 : evening ? 0.5 : 0));
+    churchFx.base = night ? 0.85 : evening ? 0.5 : 0; // the windows; the loop adds a flash when the bell rings
+    pools.forEach((m) => (m.material.opacity = night ? 0.7 : evening ? 0.42 : 0));
+    mist.forEach((m) => (m.material.opacity = night ? 0.2 : evening ? 0.32 : 0.42));
     flies.material.opacity = night ? 1 : evening ? 0.85 : 0.35;
   }
 
@@ -1406,7 +1953,13 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     grass.count = GRASS_STEPS.filter((n) => n <= count).length;
     heads.count = stems.count = flowerList.filter((f) => f.step <= count).length;
     flies.visible = count >= 55;
-    rain.visible = s.rain && count < 64 && !REDUCED;
+    if (rainFx.key !== count) { // the rain of a busy week falls for a while when the forest is opened, then passes
+      rainFx.key = count;
+      const rains = s.rain && count < 64;
+      rainFx.left = rains && !REDUCED ? 7 : 0;
+      rain.visible = rainFx.left > 0; rain.material.opacity = 0.45;
+      if (rains && REDUCED) opts.onRainOver?.();
+    }
     (Object.keys(EVENT_ITEMS) as ForestEvent[]).forEach((key) => EVENT_ITEMS[key].forEach((o) => (o.visible = key === s.event)));
     paintGround(s.season, count);
     paintTrees(s.season);
@@ -1437,32 +1990,93 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
   observer.observe(view);
   resize();
   apply(initial);
+  if (opts.reveal && opts.reveal.length > 0 && !REDUCED) { // this week's new things wait, then come up one by one
+    const count = Math.max(0, Math.min(64, initial.count)), from = Math.max(0, count - opts.reveal.length);
+    for (let i = from; i < count; i++) { things[i].forEach((o) => (o.userData.hold = true)); reveal.steps.push({ name: opts.reveal[i - from], objs: things[i] }); }
+    reveal.startIn = 1.1;
+  }
 
   /* ---------------- the loop ---------------- */
   const clock = new THREE.Clock();
   let raf = 0;
   const grow = (o: THREE.Object3D) => {
-    if (!o.visible) return;
-    const target = o.userData.target ?? 0;
+    if (!o.visible || o.userData.hold) return;
+    const target = (o.userData.target ?? 0) * (1 + (o.userData.boost || 0));
     if (REDUCED) { o.scale.setScalar(Math.max(0.001, target)); return; }
     const s = o.scale.x;
     const v = (o.userData.v ?? 0) * 0.78 + (target - s) * 0.16;
     o.userData.v = v;
     o.scale.setScalar(Math.max(0.001, s + v));
   };
-  function frame() {
-    raf = requestAnimationFrame(frame);
-    const dt = Math.min(clock.getDelta(), 0.05);
-    const t = clock.elapsedTime;
+  let elapsed = 0;
+  function tick(dt: number) {
+    elapsed += dt;
+    const t = elapsed;
     island.position.y = REDUCED ? 0 : Math.sin(t * 0.6) * 0.07;
     trees.forEach(grow);
     things.forEach((list) => list.forEach(grow));
-    if (!REDUCED) {
-      trees.forEach((tr, i) => { if (tr.visible) tr.rotation.z = Math.sin(t * 0.8 + i) * 0.012; });
-      anim.forEach((fn) => fn(t, dt));
-    } else {
-      anim.forEach((fn) => fn(0, 0));
+    // wind in the trees, in gusts; a tree that was touched shakes for a moment
+    windU.value = REDUCED ? 0 : t;
+    trees.forEach((tr, i) => {
+      if (!tr.visible) return;
+      const u = tr.userData, p = tr.position;
+      u.shake = Math.max(0, (u.shake || 0) - dt * 1.7);
+      const gust = REDUCED ? 0 : 0.6 + 0.4 * Math.sin(t * 0.23 + p.x * 0.3);
+      tr.rotation.z = Math.sin(t * 1.1 + p.x * 0.8 + p.z * 0.5) * 0.028 * gust + Math.sin(t * 34 + i) * 0.07 * u.shake;
+      tr.rotation.x = Math.sin(t * 0.9 + p.z * 0.7 + i) * 0.02 * gust + Math.cos(t * 29 + i) * 0.05 * u.shake;
+    });
+    if (!REDUCED) anim.forEach((fn) => fn(t, dt));
+    else anim.forEach((fn) => fn(0, 0));
+
+    // a friend that was touched jumps and turns once
+    for (let i = hops.length - 1; i >= 0; i--) {
+      const o = hops[i], u = o.userData;
+      u.hop -= dt / 0.7;
+      const k = 1 - Math.max(0, u.hop);
+      o.position.y += Math.sin(k * Math.PI) * 0.26;
+      if (u.freeTurn) { if (u.turn0 === undefined) u.turn0 = o.rotation.y; o.rotation.y = u.turn0 + k * Math.PI * 2; } else o.rotation.y += k * Math.PI * 2;
+      if (u.hop <= 0) { u.hop = 0; if (u.freeTurn) { o.rotation.y = u.turn0; u.turn0 = undefined; } hops.splice(i, 1); }
     }
+    // the church: the bell swings, the windows flash when it rings, the doors open on Sunday
+    if (current.sunday && !REDUCED) {
+      churchFx.auto -= dt; if (churchFx.auto <= 0) { churchFx.swing = Math.max(churchFx.swing, 0.55); churchFx.auto = 7; }
+      churchFx.note -= dt; if (churchFx.note <= 0) { riseAt(worldPos(churchBld, 1.55), noteTex, 1, 0.24, 0.5); churchFx.note = 1.5; }
+    }
+    churchFx.swing = Math.max(0, churchFx.swing - dt * 0.45);
+    bell.rotation.z = Math.sin(t * 9) * 0.6 * churchFx.swing;
+    churchFx.pulse = Math.max(0, churchFx.pulse - dt * 0.8);
+    churchGlass.forEach((m) => (m.emissiveIntensity = churchFx.base + churchFx.pulse * 0.9));
+    churchFx.peek = Math.max(0, churchFx.peek - dt);
+    const doorTo = current.sunday || churchFx.peek > 0 ? 1 : 0;
+    churchFx.door = REDUCED ? doorTo : churchFx.door + (doorTo - churchFx.door) * Math.min(1, dt * 4);
+    inside.material.opacity = churchFx.door;
+    doorLeaves.forEach((h) => { h.visible = churchFx.door > 0.02; h.rotation.y = h.userData.sd * churchFx.door * 1.9; });
+    // leaves from a shaken tree
+    for (let i = bits.length - 1; i >= 0; i--) {
+      const sp = bits[i], u = sp.userData;
+      if (sp.position.y > u.floor) { sp.position.y -= u.vy * dt * 1.6; sp.position.x += Math.sin(t * 3 + u.ph) * dt * 0.25; sp.position.z += Math.cos(t * 2.3 + u.ph) * dt * 0.2; sp.material.rotation += dt * 2; }
+      else { u.rest -= dt; sp.material.opacity = Math.max(0, u.rest / 1.2); if (u.rest <= 0) { scene.remove(sp); sp.material.dispose(); bits.splice(i, 1); } }
+    }
+    // hearts and notes rise; rings widen
+    for (let i = risers.length - 1; i >= 0; i--) {
+      const sp = risers[i], u = sp.userData;
+      if (u.delay > 0) { u.delay -= dt; continue; }
+      u.life -= dt / 1.5;
+      sp.position.y += dt * 0.38; sp.position.x += Math.sin(t * 2.2 + i) * dt * 0.08;
+      sp.material.opacity = Math.max(0, Math.min(1, u.life * 2.2));
+      sp.scale.setScalar(u.base * (0.6 + Math.min(1, (1 - u.life) * 4) * 0.4));
+      if (u.life <= 0) { scene.remove(sp); sp.material.dispose(); risers.splice(i, 1); }
+    }
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const r = rings[i];
+      r.k += dt / 0.95;
+      if (r.k < 0) continue;
+      const k = Math.min(1, r.k), e = 1 - (1 - k) * (1 - k);
+      r.obj.scale.setScalar(0.03 + r.grow * e);
+      r.material.opacity = (1 - k) * 0.9;
+      if (r.k >= 1) { scene.remove(r.obj); r.material.dispose(); r.geometry?.dispose(); rings.splice(i, 1); }
+    }
+    stepReveal(dt);
     if (flies.visible) {
       for (let i = 0; i < flyCount; i++) {
         const [x, y, z, ph] = flyBase[i];
@@ -1488,6 +2102,9 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
         rainPos[i * 6 + 1] = y; rainPos[i * 6 + 4] = y - 0.25;
       }
       rainGeo.attributes.position.needsUpdate = true;
+      rainFx.left -= dt;
+      if (rainFx.left < 1.5) rain.material.opacity = 0.45 * Math.max(0, rainFx.left / 1.5);
+      if (rainFx.left <= 0) { rain.visible = false; opts.onRainOver?.(); }
     }
     for (let i = sparkles.length - 1; i >= 0; i--) {
       const s = sparkles[i], u = s.userData;
@@ -1502,6 +2119,10 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     controls.update();
     renderer.render(scene, camera);
   }
+  function frame() {
+    raf = requestAnimationFrame(frame);
+    tick(Math.min(clock.getDelta(), 0.05));
+  }
   raf = requestAnimationFrame(frame);
 
   return {
@@ -1510,6 +2131,10 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
     dispose() {
       cancelAnimationFrame(raf);
       observer.disconnect();
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      showTag(false);
+      void audio?.close();
       controls.dispose();
       const seen = new Set<object>();
       const free = (o: { dispose(): void } | null | undefined) => { if (o && !seen.has(o)) { seen.add(o); o.dispose(); } };
@@ -1523,6 +2148,7 @@ export function createForestScene(canvas: HTMLCanvasElement, view: HTMLElement, 
         }
       });
       Object.values(FLAKES).forEach(free);
+      [heartTex, noteTex, ringTex, ...Object.values(BITS)].forEach(free);
       renderer.dispose();
       // Give the drawing context back now: a browser keeps only a few, and children go back and forth.
       renderer.forceContextLoss();
