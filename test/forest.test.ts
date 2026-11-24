@@ -5,7 +5,10 @@ process.env.DREAM_SEED = "off";
 
 import { db, resetDbForTests } from "@/lib/db";
 import { auroraNight, bonusFor, easterSunday, eventOn, FOREST_ITEMS, FOREST_SIZE, forestState, iga, seasonOn, thanksgivingSunday, timeOfDay } from "@/lib/forest";
+import { applyForestControl, AUTO_FOREST, isAutoForest, readForestControl } from "@/lib/forest-control";
+import { forestView, getForestControl, saveForestControl } from "@/lib/forest-setting";
 import { addDays } from "@/lib/time";
+import type { Staff } from "@/lib/types";
 
 describe("forest rules", () => {
   it("has 64 things, each named once", () => {
@@ -128,5 +131,82 @@ describe("the forest's weeks", () => {
     expect(["2027-01-03", "2027-01-04", "2027-01-06"].map((d) => auroraNight(d, "winter"))).toEqual([true, false, true]);
     expect(auroraNight("2027-07-03", "summer")).toBe(false);
     expect(await forestState(db, "2027-02-07")).toMatchObject({ event: "seollal", season: "spring" });
+  });
+});
+
+describe("the forest set by hand (운영 > 우리 숲)", () => {
+  const SUN = "2026-11-22"; // a Sunday in autumn, in the week of 추수감사절
+  const WED = "2027-01-13"; // an ordinary winter Wednesday
+  const admin: Staff = { id: 0, name: "관리자", role: "admin", can_attendance: true, can_visits: true, can_approve: true, can_view_all: true, can_read_pastor_worries: true, active: true, class_ids: [] };
+
+  beforeEach(async () => {
+    resetDbForTests();
+    admin.id = (await db.query<{ id: number }>("insert into staff (name, role) values ('관리자','admin') returning id"))[0].id;
+  });
+
+  it("reads only what it knows; everything else is auto", () => {
+    expect(readForestControl(null)).toEqual(AUTO_FOREST);
+    expect(readForestControl({ count: "40", fresh: 2, rain: "on", season: "winter", event: "christmas", time: "night", sunday: "on", aurora: "off" })).toEqual({
+      count: 40, fresh: 2, rain: "on", season: "winter", event: "christmas", time: "night", sunday: "on", aurora: "off",
+    });
+    expect(readForestControl({ count: 65, fresh: 4, rain: "storm", season: "monsoon", event: "halloween", time: "noon", sunday: "off", aurora: 1 })).toEqual(AUTO_FOREST);
+    expect(readForestControl({ count: "", fresh: "auto", count_mode: "hand" })).toEqual(AUTO_FOREST);
+    expect(readForestControl({ count: 0, fresh: 0 })).toMatchObject({ count: 0, fresh: 0 });
+    expect(isAutoForest(AUTO_FOREST)).toBe(true);
+    expect(isAutoForest({ ...AUTO_FOREST, time: "night" })).toBe(false);
+  });
+
+  it("with nothing set, the children see the forest by its own rules", async () => {
+    const own = await forestState(db, SUN);
+    expect(await forestView(db, SUN)).toEqual({ ...own, timeFixed: null });
+    expect(applyForestControl(own, AUTO_FOREST, SUN)).toEqual({ ...own, timeFixed: null });
+  });
+
+  it("puts each part set by hand over the forest, and leaves the rest alone", async () => {
+    const own = await forestState(db, WED); // count 1, fresh 1, winter, no special day
+    expect(own).toMatchObject({ count: 1, fresh: 1, season: "winter", event: null, sunday: false });
+
+    // The size alone: nothing is new unless that is set as well, and it does not rain.
+    expect(applyForestControl(own, { ...AUTO_FOREST, count: 40 }, WED)).toMatchObject({ count: 40, fresh: 0, freshNames: [], rain: false, season: "winter" });
+    expect(applyForestControl(own, { ...AUTO_FOREST, count: 40, rain: "on" }, WED).rain).toBe(false);
+    // The last things as new, with rain.
+    expect(applyForestControl(own, { ...AUTO_FOREST, count: 40, fresh: 2, rain: "on" }, WED)).toMatchObject({ count: 40, fresh: 2, freshNames: ["꽃 아치", "통나무 의자"], rain: true });
+    // Never more new things than there are things.
+    expect(applyForestControl(own, { ...AUTO_FOREST, count: 1, fresh: 3 }, WED)).toMatchObject({ count: 1, fresh: 1, freshNames: ["풀밭"] });
+    expect(applyForestControl(own, { ...AUTO_FOREST, count: 0, fresh: 3, rain: "on" }, WED)).toMatchObject({ count: 0, fresh: 0, freshNames: [], rain: false });
+    // Only "new this week" set: the forest's own size, and its own rain is not carried over.
+    expect(applyForestControl(own, { ...AUTO_FOREST, fresh: 0 }, WED)).toMatchObject({ count: 1, fresh: 0, rain: false });
+    expect(applyForestControl({ ...own, rain: true }, { ...AUTO_FOREST, rain: "off" }, WED).rain).toBe(false);
+    expect(applyForestControl({ ...own, rain: true }, AUTO_FOREST, WED).rain).toBe(true);
+
+    // A special day brings its season; a season set by hand comes first; "none" takes the day away.
+    expect(applyForestControl(own, { ...AUTO_FOREST, event: "easter" }, WED)).toMatchObject({ event: "easter", season: "spring" });
+    expect(applyForestControl(own, { ...AUTO_FOREST, event: "easter", season: "summer" }, WED)).toMatchObject({ event: "easter", season: "summer" });
+    expect(applyForestControl(await forestState(db, SUN), { ...AUTO_FOREST, event: "none" }, SUN)).toMatchObject({ event: null, season: "autumn" });
+
+    // Time of day, the Sunday look and the northern lights.
+    expect(applyForestControl(own, { ...AUTO_FOREST, time: "night" }, WED).timeFixed).toBe("night");
+    expect(applyForestControl(own, { ...AUTO_FOREST, sunday: "on" }, WED).sunday).toBe(true);
+    expect(applyForestControl(own, AUTO_FOREST, WED).aurora).toBe(false); // the 13th is not a third day
+    expect(applyForestControl(own, { ...AUTO_FOREST, aurora: "on" }, WED).aurora).toBe(true);
+    expect(applyForestControl(own, { ...AUTO_FOREST, aurora: "off" }, "2027-01-12").aurora).toBe(false);
+  });
+
+  it("is saved by admins only, shown to the children, and the real forest keeps growing underneath", async () => {
+    await forestState(db, SUN);
+    expect(await saveForestControl({ ...admin, role: "head" }, { count: 40 })).toMatchObject({ ok: false });
+    expect(await getForestControl()).toEqual(AUTO_FOREST);
+    expect(await saveForestControl(admin, { count: "40", fresh: "2", rain: "on", season: "auto", event: "christmas", time: "night", sunday: "auto", aurora: "on" })).toMatchObject({ ok: true });
+    expect(await getForestControl()).toEqual({ count: 40, fresh: 2, rain: "on", season: "auto", event: "christmas", time: "night", sunday: "auto", aurora: "on" });
+
+    const later = addDays(SUN, 14);
+    expect(await forestView(db, later)).toMatchObject({ count: 40, fresh: 2, rain: true, event: "christmas", season: "winter", timeFixed: "night", aurora: true });
+    // The weeks were recorded all the same: back on auto, the forest stands where it really is.
+    expect(await db.query("select week_start from forest_weeks")).toHaveLength(3);
+    expect(await saveForestControl(admin, {})).toMatchObject({ ok: true });
+    expect(await forestView(db, later)).toEqual({ ...(await forestState(db, later)), timeFixed: null });
+    expect((await forestView(db, later)).count).toBe(3);
+    // Every change is on record.
+    expect(await db.query("select id from audit_log where action = 'forest_control_update'")).toHaveLength(2);
   });
 });

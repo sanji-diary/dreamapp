@@ -18,6 +18,13 @@ interface Props {
   aurora: boolean;
   /** Day, evening or night when the page was made; the screen keeps it up to date by the clock. */
   time: TimeOfDay;
+  /** An admin fixed the time of day: `time` is shown as given and the clock is not followed. */
+  timeFixed?: boolean;
+  /**
+   * Shown inside the admin's board (운영 > 우리 숲) as a preview: it fills its box instead of the screen,
+   * has no way back of its own, and leaves alone what this phone remembers about the children's forest.
+   */
+  preview?: boolean;
 }
 
 const CHIP: Record<Season, [string, string]> = { spring: ["#fde8ef", "#a1264f"], summer: ["#e3f3e6", "#1d6b3a"], autumn: ["#fdeedd", "#9a4a0a"], winter: ["#e8eef6", "#33507a"] };
@@ -70,12 +77,13 @@ function setSoundOn(on: boolean) {
  * up. Animals, trees, the church and the pond answer a touch. Sound is off until the child turns it on.
  */
 export function ForestMap(props: Props) {
-  const { count, fresh, freshNames, rain, season, event, sunday, aurora } = props;
+  const { count, fresh, freshNames, rain, season, event, sunday, aurora, timeFixed = false, preview = false } = props;
   const viewRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tagRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<ForestScene | null>(null);
-  const [time, setTime] = useState<TimeOfDay>(props.time);
+  const [clock, setClock] = useState<TimeOfDay>(props.time);
+  const time = timeFixed ? props.time : clock;
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const [hint, setHint] = useState(true);
   const [toast, setToast] = useState("");
@@ -106,16 +114,23 @@ export function ForestMap(props: Props) {
 
   // Evening comes while the screen is open: check the clock every minute.
   useEffect(() => {
-    const id = setInterval(() => setTime(timeOfDay(new Date(), season)), 60_000);
-    return () => clearInterval(id);
-  }, [season]);
+    if (timeFixed) return;
+    const tick = () => setClock(timeOfDay(new Date(), season));
+    const first = setTimeout(tick, 0); // the season may have just changed (the admin's preview)
+    const id = setInterval(tick, 60_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
+  }, [season, timeFixed]);
 
   // The scene asks whether it may play a sound each time something is touched.
   useEffect(() => {
     soundRef.current = sound;
   }, [sound]);
 
-  const friend = freshNames.find((n) => FOREST_FRIENDS.has(n));
+  // (The admin's preview greets nobody: the scene would be built again each time the new things change.)
+  const friend = preview ? undefined : freshNames.find((n) => FOREST_FRIENDS.has(n));
   useEffect(() => {
     const view = viewRef.current, canvas = canvasRef.current;
     if (!view || !canvas) return;
@@ -125,7 +140,7 @@ export function ForestMap(props: Props) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const now = latest.current;
     // New things this week that this phone has not shown yet: go and look at each as it comes up.
-    const reveal = !reduced && now.state.fresh > 0 && stored(SEEN_KEY) !== String(now.state.count) ? now.freshNames : undefined;
+    const reveal = !preview && !reduced && now.state.fresh > 0 && stored(SEEN_KEY) !== String(now.state.count) ? now.freshNames : undefined;
     import("./forest/scene").then(
       ({ createForestScene }) => {
         if (gone) return;
@@ -145,7 +160,7 @@ export function ForestMap(props: Props) {
         }
         sceneRef.current = scene;
         setStatus("ready");
-        store(SEEN_KEY, String(now.state.count));
+        if (!preview) store(SEEN_KEY, String(now.state.count));
         const s = scene;
         if (!reveal) timers.push(setTimeout(() => s.sparkleFresh(), 900));
         timers.push(setInterval(() => s.sparkleFresh(), 9000));
@@ -162,7 +177,7 @@ export function ForestMap(props: Props) {
       scene?.dispose();
       sceneRef.current = null;
     };
-  }, [friend, say]);
+  }, [friend, say, preview]);
 
   // A shooting star now and then, at night.
   const night = time === "night", evening = time === "evening";
@@ -192,10 +207,10 @@ export function ForestMap(props: Props) {
   const label = `${chip} 숲. 교회를 둘러싼 우리 숲이에요.${freshNames.length ? ` 이번 주에 ${freshNames.join(", ")}이 생겼어요.` : ""} 손가락으로 돌려 볼 수 있고, 동물과 나무와 교회를 눌러 볼 수 있어요.`;
 
   return (
-    <main data-bleed className="relative flex h-dvh flex-col overflow-hidden bg-white">
-      <header className="relative z-10 flex shrink-0 items-center gap-1 bg-white pt-[env(safe-area-inset-top)] pr-4 pl-1">
-        <div className="flex h-14 grow items-center gap-1">
-          <BackLink href="/home" label="첫 화면으로" />
+    <main data-bleed={preview ? undefined : true} className={`relative flex flex-col overflow-hidden bg-white ${preview ? "h-full" : "h-dvh"}`}>
+      <header className={`relative z-10 flex shrink-0 items-center gap-1 bg-white pr-4 ${preview ? "pl-4" : "pt-[env(safe-area-inset-top)] pl-1"}`}>
+        <div className={`flex grow items-center gap-1 ${preview ? "h-11" : "h-14"}`}>
+          {preview ? null : <BackLink href="/home" label="첫 화면으로" />}
           <h1 className="m-0 grow text-[19px] font-extrabold tracking-[-0.5px]">우리 숲</h1>
           <span className="flex h-[30px] shrink-0 items-center rounded-[15px] px-3 text-[13.5px] font-bold whitespace-nowrap" style={{ background: CHIP[season][0], color: CHIP[season][1] }}>
             {chip} 숲
@@ -248,7 +263,8 @@ export function ForestMap(props: Props) {
         ) : null}
       </div>
 
-      <section className="relative z-10 -mt-5 shrink-0 rounded-t-3xl bg-white shadow-[0_-8px_20px_rgba(25,31,40,0.07)]">
+      {/* In the admin's preview on a phone there is room for the forest only; the words show from sm up. */}
+      <section className={`relative z-10 -mt-5 shrink-0 rounded-t-3xl bg-white shadow-[0_-8px_20px_rgba(25,31,40,0.07)] ${preview ? "max-sm:hidden" : ""}`}>
         <div className="kid-col flex flex-col gap-2.5 px-5 pt-5 pb-[max(18px,env(safe-area-inset-bottom))]">
           <h2 className="m-0 flex items-center gap-1.5 text-[17px] font-extrabold tracking-[-0.3px] break-keep">
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="#ffc94a" className="shrink-0">

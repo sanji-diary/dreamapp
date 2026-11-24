@@ -18,9 +18,10 @@ export const ADMIN_MENU: MenuItem[] = [
   { href: "/staff/admin/talents", label: "달란트", icon: "coin", match: ["/staff/admin/talents", "/staff/admin/points"] },
   { href: "/staff/admin/cards", label: "QR 카드", icon: "qr" },
   { href: "/staff/admin/look", label: "첫 화면 모습", icon: "leaf" },
+  { href: "/staff/admin/forest", label: "우리 숲", icon: "trees" },
 ];
 
-/** The "운영" icon grid on phones (더보기 and /staff/admin): the same places plus 교적부, 첫 화면, 설정 and 포인트 조정. 예배 순서 is reached only from here on phones. */
+/** The "운영" icon grid on phones (더보기 and /staff/admin): the same places plus 교적부, 첫 화면, 우리 숲, 설정 and 포인트 조정. 예배 순서 is reached only from here on phones. */
 export const ADMIN_GRID: MenuItem[] = [
   { href: "/staff/admin/missions", label: "미션", icon: "flag" },
   { href: "/staff/admin/staff", label: "교사·권한", icon: "kids" },
@@ -31,6 +32,7 @@ export const ADMIN_GRID: MenuItem[] = [
   { href: "/staff/admin/talents", label: "달란트", icon: "coin" },
   { href: "/staff/children", label: "교적부", icon: "list" },
   { href: "/staff/admin/look", label: "첫 화면", icon: "leaf" },
+  { href: "/staff/admin/forest", label: "우리 숲", icon: "trees" },
   { href: "/staff/admin/settings", label: "설정", icon: "gear" },
   { href: "/staff/admin/points", label: "포인트 조정", icon: "adjust" },
 ];

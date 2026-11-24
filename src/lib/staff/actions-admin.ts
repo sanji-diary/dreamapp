@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
+import { saveForestControl } from "@/lib/forest-setting";
 import { saveLookChoice } from "@/lib/look-setting";
 import { readQuizJson } from "@/lib/quiz";
 import { saveUpload } from "@/lib/uploads";
@@ -383,6 +384,23 @@ export async function lookSaveAction(formData: FormData) {
   const staff = await requireAdmin();
   const r = await saveLookChoice(staff, { season: clean(formData.get("season"), 20), festival: clean(formData.get("festival"), 20) });
   finish(r, "/staff/admin/look", "첫 화면 모습을 바꿨어요");
+}
+
+/** "우리 숲": what the shared forest shows, part by part. A part posted as "auto" (or not at all) follows the forest's own rules. */
+export async function forestSaveAction(formData: FormData) {
+  const staff = await requireAdmin();
+  const text = (key: string) => clean(formData.get(key), 20);
+  const r = await saveForestControl(staff, {
+    count: text("count_mode") === "hand" ? text("count") : null,
+    fresh: text("fresh"),
+    rain: text("rain"),
+    season: text("season"),
+    event: text("event"),
+    time: text("time"),
+    sunday: text("sunday"),
+    aurora: text("aurora"),
+  });
+  finish(r, "/staff/admin/forest", "우리 숲을 바꿨어요");
 }
 
 /** "출석 QR 켜기": gives the attendance mission a QR, so children can check in with the app. */
