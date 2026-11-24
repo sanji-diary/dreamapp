@@ -13,6 +13,8 @@
  * - host 'hosted': the game runs on its own game server and is shown in a frame. Add it to GAMES
  *   below and describe its server in HOSTED (src/lib/kid/hosted-game.ts). The game server decides
  *   who finished; the app asks it directly before giving anything.
+ *   The game server can be somewhere else (한 마리 어디 갔어?) or this app itself (달걀 홀인원:
+ *   src/app/minigames/egg-hole-in-one and src/lib/kid/egg-game.ts).
  *
  * A finished game mission can be opened again, alone or to help a friend; it gives nothing more.
  * No rankings or penalties in any game. A hosted game may have its own clock; nothing is lost by
@@ -44,6 +46,14 @@ export const GAMES: readonly GameInfo[] = [
     host: "hosted",
     players: 2,
     goal: "5분 안에 양 여섯 마리를 모두 교회로 데려오면 끝나요.",
+  },
+  {
+    id: "egg-hole-in-one",
+    title: "달걀 홀인원",
+    description: "달걀을 당겼다 놓아 봄 정원의 바구니에 쏙 넣어요.",
+    host: "hosted",
+    players: 1,
+    goal: "세 코스에서 달걀 다섯 개를 바구니에 넣으면 끝나요.",
   },
 ];
 

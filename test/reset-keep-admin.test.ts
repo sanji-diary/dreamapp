@@ -58,6 +58,7 @@ beforeEach(async () => {
   const launchId = "a".repeat(64);
   await q.query("insert into game_launches (launch_id, child_id, mission_id, game_id, secret_hex, week_start) values ($1,$2,$3,'shepherd-coop',$4,'2026-11-15')", [launchId, child.id, mission.id, "b".repeat(64)]);
   await q.query("insert into game_results (game_id, result_id, round_id, child_id, mission_id, launch_id, completed_at) values ('shepherd-coop','r:1:p1','r:1',$1,$2,$3,now())", [child.id, mission.id, launchId]);
+  await q.query("insert into egg_rounds (round_id, token_hash, launch_id, expires_at) values ('round-1', $1, $2, now() + interval '1 day')", ["c".repeat(64), launchId]);
 });
 
 describe("reset that keeps the admin", () => {

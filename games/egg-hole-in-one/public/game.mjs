@@ -42,6 +42,7 @@ function readLaunch() {
 function remember() {
   safeWrite('sessionStorage', storageKey, { launch, round, shots, attempts });
 }
+// Paths are relative to the page, so the game also works when an app serves it from a folder.
 async function post(path, payload) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12000);
@@ -78,7 +79,7 @@ async function verify() {
   $('verify-retry').hidden = true;
   $('replay').hidden = true;
   try {
-    const result = await post('/api/rounds/' + encodeURIComponent(round.roundId) + '/finish', { token: round.token, shots });
+    const result = await post('api/rounds/' + encodeURIComponent(round.roundId) + '/finish', { token: round.token, shots });
     if (result.verified !== true || result.roundId !== round.roundId) throw new Error('Round not verified');
     sendResult();
     $('verification').textContent = launch ? '완주 기록을 저장했어요. 앱에서 물방울을 확인해요.' : '달걀 다섯 개가 모두 바구니를 찾았어요.';
@@ -150,7 +151,7 @@ async function startRound() {
   $('instruction').textContent = '봄 정원을 열고 있어요…';
   updateBoard();
   try {
-    const opened = await post('/api/rounds', { rulesVersion: 2, launchId: launch?.id });
+    const opened = await post('api/rounds', { rulesVersion: 2, launchId: launch?.id });
     if (!opened.roundId || !opened.token) throw new Error('Missing game round');
     round = { roundId: opened.roundId, token: opened.token, rulesVersion: opened.rulesVersion ?? 1 };
     ready = true;

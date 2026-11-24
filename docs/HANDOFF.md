@@ -44,7 +44,7 @@ PGLITE_DIR=memory DREAM_SEED=off npx next build
 ## 환경 변수 (값은 Vercel 설정에만 있음)
 
 `DATABASE_URL`, `SESSION_SECRET`, `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET`, `ADMIN_INVITE_CODE`, `APP_URL`.
-선택: `SHEPHERD_GAME_ORIGIN`(〈한 마리 어디 갔어?〉 게임 서버 주소. 없으면 공개 게임 주소를 씀. 비밀 값 아님).
+선택: `SHEPHERD_GAME_ORIGIN`(〈한 마리 어디 갔어?〉 게임 서버 주소. 없으면 공개 게임 주소를 씀. 비밀 값 아님). `EGG_GAME_ORIGIN`(〈달걀 홀인원〉을 다른 게임 서버로 옮길 때만. 없으면 이 앱이 직접 제공함).
 로컬 전용: `PGLITE_DIR`(데이터 폴더), `DREAM_SEED=off`(예시 데이터 끄기).
 
 ## 지켜야 할 약속
@@ -100,6 +100,7 @@ PGLITE_DIR=memory DREAM_SEED=off npx next build
   - 같은 완주는 한 번만 기록(`game_results`의 고유 규칙). 완주 직후 앱을 닫아도 다음에 첫 화면이나 미션 목록을 열 때 다시 물어봐서 넣어 줌(지난주 것까지, 완주한 날짜 기준).
   - 둘이 하는 게임은 두 아이가 각자 자기 계정의 미션에서 열어야 둘 다 받음. 완료한 게임 미션은 혼자 하는 게임이든 둘이 하는 게임이든 다시 열어 할 수 있음(한 번 더 하기, 친구 도와주기). 더 받지는 않음.
   - 〈한 마리 어디 갔어?〉 소스는 `games/shepherd-coop/`(게임만의 테스트는 그 폴더에서 `npm test`). 지금은 공개 게임 주소를 그대로 씀. 게임을 고쳐서 다른 곳에 올리면 Vercel 환경 변수 `SHEPHERD_GAME_ORIGIN`에 새 주소(https://… 까지만)를 넣음.
+  - 〈달걀 홀인원〉(혼자 하는 게임, `games/egg-hole-in-one/`): 게임 서버가 따로 없고 이 앱이 직접 제공함. 게임 화면은 `/minigames/egg-hole-in-one/index.html`(`src/app/minigames/egg-hole-in-one/`가 `games/egg-hole-in-one/public`의 파일을 그대로 보냄), 판 기록은 이 앱의 데이터베이스 표 `egg_rounds`(`src/lib/kid/egg-game.ts`). 세 코스에서 2골·2골·1골을 넣어야 완주이고, 휴대폰이 보낸 던지기를 서버가 게임의 판정 코드(`games/egg-hole-in-one/rounds.mjs`의 `isCompleteRound`)로 다시 돌려 본 뒤에만 완주로 적음. 진입·완료·복귀·한 번만 주기는 양떼 게임과 같은 길(`hosted-game.ts`)을 그대로 씀. 미션에서 열지 않고 주소로 바로 연 판은 보상이 없음. 환경 변수 `EGG_GAME_ORIGIN`에 주소를 넣으면 다른 곳에 올린 게임 서버를 쓰도록 바뀜(평소에는 비워 둠). 게임 화면 파일을 고치면 앱에도 바로 반영됨(복사본 없음).
   - 새 게임 넣기: 게임 목록(`registry.ts`)에 한 줄, 게임 서버가 있으면 `hosted-game.ts`의 `HOSTED`에 주소와 "끝난 것으로 보는 조건"을 한 줄. 게임 서버가 지켜야 할 약속(주소 모양, 끝났다는 알림, 결과 확인 주소)은 `hosted-game.ts` 맨 위에 적혀 있음.
 - 출석 QR: 아이가 주일에 첫 화면의 "출석 체크"를 누르면 앱 안 카메라(`/scan`)가 켜지고, 교회에 있는 출석 QR을 찍으면 출석이 기록되고 출석 미션의 보상이 들어감(한 번만). 휴대폰 카메라 앱으로 찍어도 같음.
   - "출석 체크"는 주일이고, QR이 켜진 출석 미션이 그 아이에게 아직 남아 있을 때만 첫 화면에 보임(`src/lib/kid/check-in.ts`). QR 미션과 출석 미션 화면에도 "QR 찍기" 버튼이 있음.

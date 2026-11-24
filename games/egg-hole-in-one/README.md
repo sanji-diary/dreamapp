@@ -34,4 +34,13 @@ node --check dist/server/index.js
 | 완주 검증과 결과 조회 | `rounds.mjs` |
 | 앱 지갑 연결 | `integration/`, `CLAUDE_CODE_HANDOFF.md` |
 
+## 소년부 앱(꿈의숲키우기)에 연결된 방식
 
+앱이 이 게임을 직접 제공합니다. 따로 올린 게임 서버가 없어도 학생은 앱 안에서 게임을 할 수 있습니다.
+
+- 관리자가 미션 계획에서 "게임" 미션을 만들고 〈달걀 홀인원〉을 고르면 아이의 미션 목록에 나옵니다.
+- 게임 화면: 앱 주소 뒤의 `/minigames/egg-hole-in-one/index.html`. 이 폴더의 `public/` 파일을 앱이 그대로 보냅니다. 복사본이 없으므로 여기서 고치면 앱에도 반영됩니다.
+- 판 기록과 완주 검증: 앱의 `src/lib/kid/egg-game.ts`와 데이터베이스 표 `egg_rounds`. 완주 판정은 이 폴더의 `rounds.mjs`(`isCompleteRound`)와 `public/physics.mjs`를 그대로 불러 씁니다.
+- 보상: 미션에 정한 물방울과 포인트가 한 번만 들어갑니다. 주간 한도와 "한 주에 한 번"도 다른 미션과 같습니다(앱의 `src/lib/kid/hosted-game.ts`).
+- 게임 화면은 서버를 상대 주소(`api/rounds`)로 부릅니다. 그래서 이 폴더를 혼자 실행할 때와 앱 안에서 열 때 모두 같은 파일로 동작합니다.
+- 앱 쪽 검사: 저장소 맨 위에서 `npx vitest run test/egg-game.test.ts`.

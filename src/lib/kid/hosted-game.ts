@@ -4,6 +4,7 @@ import { findGame } from "@/games/registry";
 import { db, one } from "@/lib/db";
 import { completeMissionIn, lockChild, missionsForChild } from "@/lib/game";
 import { addDays, todayKst, weekStart } from "@/lib/time";
+import { eggResults } from "./egg-game";
 
 /**
  * Mission games that run on their own game server ("hosted" games in src/games/registry.ts).
@@ -25,7 +26,10 @@ import { addDays, todayKst, weekStart } from "@/lib/time";
  * app right after the last sheep loses nothing: the next visit asks again (catchUpGames).
  *
  * Another game, alone or together, with another finishing rule, is one more entry in HOSTED and in
- * the registry. A hosted game server must speak this small protocol:
+ * the registry. The game server can also be this app itself (HostedServer.own: 〈달걀 홀인원〉, whose
+ * rounds are kept in this app's database by src/lib/kid/egg-game.ts); everything above stays the same,
+ * only the question in step 3 is asked without the network. A hosted game server must speak this
+ * small protocol:
  * - address: <origin>/#launch=<launch id>&parentOrigin=<this app's origin>
  * - when finished: window.parent.postMessage({ type: "dreamforest.minigame.completed", version: 1,
  *   gameId, launchId, roundId }, parentOrigin)
@@ -35,11 +39,21 @@ import { addDays, todayKst, weekStart } from "@/lib/time";
 export interface HostedServer {
   /** Environment variable that moves the game to another address (a self-hosted copy, a local test server). */
   originEnv: string;
-  defaultOrigin: string;
+  /** Where the game server is; null for a game this app serves itself (see `own`). */
+  defaultOrigin: string | null;
   /** The id the game server calls itself in its message and its answers. */
   remoteId: string;
   /** The finishing rule: true when a result the game server returned is a finished game. */
   finished(result: Record<string, unknown>): boolean;
+  /**
+   * A game this app serves itself: this app is its game server. `page` is where the game is shown
+   * from, at the app's own address; `results` answers what "POST /api/results/verify" would, without
+   * going over the network. Used unless the environment variable moves the game elsewhere.
+   */
+  own?: {
+    page: string;
+    results(launchSecret: string, roundId: string | undefined, after: number): Promise<unknown>;
+  };
 }
 
 export const HOSTED: Record<string, HostedServer> = {
@@ -49,6 +63,14 @@ export const HOSTED: Record<string, HostedServer> = {
     remoteId: "shepherd-coop",
     // All six sheep are in the church.
     finished: (r) => r.savedCount === 6,
+  },
+  "egg-hole-in-one": {
+    originEnv: "EGG_GAME_ORIGIN",
+    defaultOrigin: null,
+    remoteId: "egg-hole-in-one",
+    // All three courses, five eggs in the baskets (two, two and one).
+    finished: (r) => r.completedStages === 3 && r.goals === 5,
+    own: { page: "/minigames/egg-hole-in-one/index.html", results: eggResults },
   },
 };
 
@@ -76,11 +98,20 @@ function exactOrigin(value: string): string | null {
   }
 }
 
-/** Where a hosted game lives, or null when the game is unknown or its address is not usable. */
+/**
+ * The game server's address when the game lives somewhere else. Null when the game is unknown, its
+ * address is not usable, or this app serves it itself (HostedServer.own).
+ */
 export function gameOrigin(gameId: string): string | null {
   const server = HOSTED[gameId];
   if (!server) return null;
-  return exactOrigin(process.env[server.originEnv]?.trim() || server.defaultOrigin);
+  const configured = process.env[server.originEnv]?.trim() || server.defaultOrigin;
+  return configured ? exactOrigin(configured) : null;
+}
+
+/** True when this app is the game's server now: it has its own copy, and nothing moved the game elsewhere. */
+function servedHere(server: HostedServer): boolean {
+  return server.own !== undefined && !process.env[server.originEnv]?.trim();
 }
 
 export interface Launch {
@@ -104,9 +135,12 @@ export async function openLaunch(childId: number, missionId: number, parentOrigi
   if (!m || m.kind !== "game") return null;
   const game = findGame(m.game_id);
   const server = game ? HOSTED[game.id] : undefined;
-  const origin = game ? gameOrigin(game.id) : null;
   const parent = exactOrigin(parentOrigin);
-  if (!game || game.host !== "hosted" || !server || !origin || !parent) return null;
+  if (!game || game.host !== "hosted" || !server || !parent) return null;
+  // A game this app serves itself is shown from the app's own address, the one the child is at.
+  const here = servedHere(server);
+  const origin = here ? parent : gameOrigin(game.id);
+  if (!origin) return null;
 
   const secret = randomBytes(32);
   const fresh = createHash("sha256").update(secret).digest("hex");
@@ -118,7 +152,7 @@ export async function openLaunch(childId: number, missionId: number, parentOrigi
     [fresh, childId, m.id, game.id, secret.toString("hex"), weekStart(date)],
   );
   const launchId = rows[0].launch_id;
-  const url = new URL("/", origin);
+  const url = new URL(here && server.own ? server.own.page : "/", origin);
   url.hash = new URLSearchParams({ launch: launchId, parentOrigin: parent }).toString();
   return { launchId, gameUrl: url.href, gameOrigin: origin, remoteId: server.remoteId };
 }
@@ -133,24 +167,34 @@ class VerifyError extends Error {}
 
 const isId = (v: unknown): v is string => typeof v === "string" && v.trim() !== "" && v.length <= 256;
 
-/** Asks the game server which rounds a launch finished. Throws VerifyError when it cannot be trusted or reached. */
-async function finishedRounds(server: HostedServer, origin: string, secretHex: string, roundId: string | undefined, fetchImpl: typeof fetch): Promise<Verified[]> {
+/** One page of a game server's answer to "which rounds did this launch finish?". */
+type Ask = (secretHex: string, roundId: string | undefined, after: number) => Promise<unknown>;
+
+/** Asking a game server somewhere else, over the network. */
+function askOver(origin: string, fetchImpl: typeof fetch): Ask {
   const url = new URL("/api/results/verify", origin);
+  return async (launchSecret, roundId, after) => {
+    const res = await fetchImpl(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ launchSecret, roundId, after }),
+      cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    return res.json();
+  };
+}
+
+/** Asks the game server which rounds a launch finished. Throws VerifyError when it cannot be trusted or reached. */
+async function finishedRounds(server: HostedServer, ask: Ask, secretHex: string, roundId: string | undefined): Promise<Verified[]> {
   const out: Verified[] = [];
   let after = 0;
   for (let page = 0; page < MAX_PAGES; page++) {
     let data: { gameId?: unknown; results?: unknown; nextCursor?: unknown };
     try {
-      const res = await fetchImpl(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ launchSecret: secretHex, roundId, after }),
-        cache: "no-store",
-        redirect: "error",
-        signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
-      });
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      data = await res.json();
+      data = (await ask(secretHex, roundId, after)) as typeof data;
     } catch {
       throw new VerifyError("unreachable");
     }
@@ -202,12 +246,15 @@ interface LaunchRow {
 
 async function settle(launch: LaunchRow, roundId: string | undefined, present: boolean, deps: HostedDeps): Promise<ClaimResult> {
   const server = HOSTED[launch.game_id];
+  if (!server) return { status: "retry", ...NONE };
+  // This app's own game is asked directly; a game somewhere else, over the network.
   const origin = gameOrigin(launch.game_id);
-  if (!server || !origin) return { status: "retry", ...NONE };
+  const ask: Ask | null = servedHere(server) && server.own ? server.own.results : origin ? askOver(origin, deps.fetchImpl ?? fetch) : null;
+  if (!ask) return { status: "retry", ...NONE };
   const now = deps.now ?? new Date();
   let rounds: Verified[];
   try {
-    rounds = await finishedRounds(server, origin, launch.secret_hex, roundId, deps.fetchImpl ?? fetch);
+    rounds = await finishedRounds(server, ask, launch.secret_hex, roundId);
     // A finished game cannot be older than its launch or lie in the future.
     const earliest = new Date(launch.created_at).getTime() - CLOCK_SLACK_MS;
     if (rounds.some((r) => r.completedAt < earliest || r.completedAt > now.getTime() + CLOCK_SLACK_MS)) throw new VerifyError("bad time");
