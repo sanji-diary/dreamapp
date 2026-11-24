@@ -1,0 +1,1 @@
+ALTER TABLE egg_rounds ADD COLUMN rules_version INTEGER NOT NULL DEFAULT 1;
