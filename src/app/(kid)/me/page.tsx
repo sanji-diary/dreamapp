@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { InstallEntry } from "@/components/kid/InstallGuide";
 import { Chevron, Icon, KidTabBar } from "@/components/ui";
-import { requireKid } from "@/lib/auth";
+import { getStaff, requireKid } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ensureTree, pointBalance } from "@/lib/game";
 import { signOutAction } from "@/lib/kid/actions";
@@ -41,7 +41,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 /* eslint-disable @next/next/no-img-element */
 export default async function MePage() {
   const kid = await requireKid();
-  const [tree, points, week, streak, grown, badges, forest, cls, teachers, unread, talents] = await Promise.all([
+  const [tree, points, week, streak, grown, badges, forest, cls, teachers, unread, talents, staff] = await Promise.all([
     ensureTree(db, kid.id),
     pointBalance(db, kid.id),
     weekPoints(kid.id),
@@ -53,6 +53,8 @@ export default async function MePage() {
     homeroomNames(kid.class_id),
     unreadReplyCount(kid.id),
     kidTalents(kid.id),
+    // A teacher is signed in on this phone as well (a teacher trying the children's screens): show the way back.
+    getStaff(),
   ]);
   const under = [cls, teachers.length > 0 ? `${teachers.join(", ")} 선생님` : ""].filter(Boolean).join(" · ");
 
@@ -172,6 +174,12 @@ export default async function MePage() {
             <span className="grow text-[16px] font-semibold text-ink2">홈 화면에 추가하기</span>
             <Chevron />
           </InstallEntry>
+          {staff ? (
+            <Link href="/staff" prefetch={false} className="flex h-[54px] items-center gap-2 border-b border-line no-underline">
+              <span className="grow text-[16px] font-semibold text-ink2">선생님 화면으로</span>
+              <Chevron />
+            </Link>
+          ) : null}
           <form action={signOutAction}>
             <button type="submit" className="flex h-[54px] w-full cursor-pointer items-center border-0 bg-transparent p-0 text-left text-[16px] font-semibold text-sub">
               로그아웃

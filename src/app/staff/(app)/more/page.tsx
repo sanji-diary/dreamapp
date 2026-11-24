@@ -1,6 +1,6 @@
 import { AdminGrid } from "@/components/staff/AdminMenu";
 import { Chevron, ClayIcon, List, ListRow, Page, PageHeader, PillLink, RoundLink, SectionHead, StatTile, TeacherAvatar, Tile, ctaClass } from "@/components/staff/kit";
-import { requireStaff } from "@/lib/auth";
+import { getKid, requireStaff } from "@/lib/auth";
 import { detailScope } from "@/lib/authz";
 import { fifthTab, staffTabs } from "@/lib/staff/access";
 import { signOutAction } from "@/lib/staff/actions";
@@ -18,6 +18,7 @@ export const metadata = { title: "더보기 · 꿈의숲키우기" };
  * It is the fifth tab for teachers who see every class (and for 교사 기본); a homeroom teacher,
  * whose fifth tab is 출석, opens it from the round button on the home screen.
  * Each block is shown only to those who may use it; the pages behind the links check again.
+ * "아이 화면 보기" crosses to the children's screens with the child signed in on this phone, if any.
  */
 export default async function MorePage() {
   const staff = await requireStaff();
@@ -25,13 +26,14 @@ export default async function MorePage() {
   const isTab = fifthTab(staff) === "more";
   const scope = detailScope(staff);
   const seesAll = scope === null;
-  const [classes, pending, absent, newCount, unread, festival] = await Promise.all([
+  const [classes, pending, absent, newCount, unread, festival, kid] = await Promise.all([
     classStats(staff, weekStart()),
     seesAll ? pendingCount(staff) : 0,
     seesAll ? longAbsent(staff) : [],
     newJoinerCount(staff),
     tabs.worries ? unreadWorryCount(staff) : 0,
     openEvent(),
+    getKid(),
   ]);
   const totals = sumStats(classes);
   const scopeText = seesAll ? "모든 반" : classes.length > 0 ? classes.map((c) => c.name).join(", ") : "담당 반 없음";
@@ -67,6 +69,19 @@ export default async function MorePage() {
           ) : null}
         </List>
       ) : null}
+
+      {/* A child's sign-in and a teacher's are kept apart, so one phone can hold both: this is the way across.
+          The way back is on the child's 나 screen (and on the children's sign-in screen). */}
+      <List>
+        <ListRow
+          href={kid ? "/home" : "/login"}
+          prefetch={false}
+          left={<ClayIcon name="house" size="s" />}
+          title="아이 화면 보기"
+          sub={kid ? `이 휴대폰은 ${kid.name} 아이로 들어가 있어요` : "아이 QR 카드로 들어가면 볼 수 있어요"}
+          right={<Chevron />}
+        />
+      </List>
 
       {seesAll ? (
         <section className="flex flex-col gap-2.5">
