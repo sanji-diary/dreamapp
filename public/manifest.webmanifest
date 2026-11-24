@@ -6,5 +6,8 @@
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "lang": "ko",
-  "icons": [{ "src": "/img/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+  "icons": [
+    { "src": "/img/app-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/img/app-icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }

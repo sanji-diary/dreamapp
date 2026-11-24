@@ -11,6 +11,11 @@ export function kidManifest(token: string | null) {
     background_color: "#ffffff",
     theme_color: "#ffffff",
     lang: "ko",
-    icons: [{ src: "/img/app-icon.png", sizes: "512x512", type: "image/png", purpose: "any" }],
+    icons: [
+      { src: "/img/app-icon.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Android cuts this one to its own shape (circle, squircle, ...), so the picture is drawn
+      // smaller: everything that matters sits inside the middle 80%. iPhones use src/app/apple-icon.png.
+      { src: "/img/app-icon-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
   };
 }
